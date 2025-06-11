@@ -217,7 +217,10 @@ ignore = [
     "S101",    # Use of assert detected
     "S404",    # `subprocess` module is possibly insecure
 ]
-isort.required-imports = ["from __future__ import annotations"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["mqt.debugger"]
+required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api]
 "typing.Callable".msg = "Use collections.abc.Callable instead."

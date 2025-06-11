@@ -1,9 +1,9 @@
 ignore:
   - "extern/**/*"
-  - "**/python"
+  - "bindings/**/*"
   - "test/**/*"
-  - "src/mqt/debugger/dap/**/*"
-  - "src/mqt/debugger/dap/*"
+  - "python/mqt/debugger/dap/**/*"
+  - "python/mqt/debugger/dap/*"
   - "app/*"
   - "src/frontend/**/*"
   - "**/__main__.py"
