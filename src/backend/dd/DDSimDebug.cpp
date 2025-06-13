@@ -377,7 +377,7 @@ Result ddsimStepForward(SimulationState* self) {
       auto qubit = qubitsToMeasure[i];
       auto classicalBit = classicalBits[i];
 
-      auto [pZero, pOne] = ddsim->dd->determineMeasurementProbabilities(
+      auto [pZero, pOne] = dd::Package::determineMeasurementProbabilities(
           ddsim->simulationState, static_cast<dd::Qubit>(qubit));
       auto rnd = generateRandomNumber();
       auto result = rnd < pZero;
@@ -412,7 +412,7 @@ Result ddsimStepForward(SimulationState* self) {
     ddsim->restoreCallReturnStack.clear();
 
     for (const auto qubit : qubitsToMeasure) {
-      auto [pZero, pOne] = ddsim->dd->determineMeasurementProbabilities(
+      auto [pZero, pOne] = dd::Package::determineMeasurementProbabilities(
           ddsim->simulationState, static_cast<dd::Qubit>(qubit));
       auto rnd = generateRandomNumber();
       auto result = rnd < pZero;
@@ -452,7 +452,7 @@ Result ddsimStepForward(SimulationState* self) {
     if (registerValue == exp) {
       currDD = dd::getDD(**ddsim->iterator, *ddsim->dd);
     } else {
-      currDD = ddsim->dd->makeIdent();
+      currDD = dd::Package::makeIdent();
     }
   } else {
     // For all other operations, we just take the next gate to apply.
@@ -528,7 +528,7 @@ Result ddsimStepBackward(SimulationState* self) {
     if (registerValue == exp) {
       currDD = dd::getInverseDD(**ddsim->iterator, *ddsim->dd);
     } else {
-      currDD = ddsim->dd->makeIdent();
+      currDD = dd::Package::makeIdent();
     }
   } else {
     currDD = dd::getInverseDD(

@@ -17,8 +17,9 @@
 #include "backend/debug.h"
 #include "backend/diagnostics.h"
 #include "common.h"
+#include "pybind11/cast.h"
 #include "pybind11/pybind11.h"
-#include "pybind11/stl.h"
+#include "pybind11/stl.h" // NOLINT(misc-include-cleaner)
 
 #include <algorithm>
 #include <cstddef>
@@ -34,6 +35,7 @@ using namespace pybind11::literals;
 
 namespace mqt::debugger {
 
+namespace {
 /**
  * @brief Checks whether the given result is OK, and throws a runtime_error
  * otherwise.
@@ -44,6 +46,7 @@ void checkOrThrow(Result result) {
     throw std::runtime_error("An error occurred while executing the operation");
   }
 }
+} // namespace
 
 /**
  * @brief A representation of statevectors in C++ style, using std::vector
@@ -780,7 +783,7 @@ Returns:
       .def(
           "suggest_new_assertions",
           [](Diagnostics* self) {
-            size_t stringSize = 2 << 17;
+            const size_t stringSize = 2 << 17;
             const size_t count =
                 self->suggestNewAssertions(self, nullptr, nullptr, 0);
             std::vector<size_t> positions(count);

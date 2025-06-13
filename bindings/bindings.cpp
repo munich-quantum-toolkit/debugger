@@ -18,7 +18,7 @@
 #include "python/InterfaceBindings.hpp"
 #include "python/dd/DDSimDebugBindings.hpp"
 
-#include <pybind11/pybind11.h>
+#include <pybind11/detail/common.h>
 
 namespace mqt::debugger {
 

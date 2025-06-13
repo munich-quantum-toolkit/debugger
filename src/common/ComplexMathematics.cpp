@@ -156,8 +156,8 @@ Complex complexAddition(const Complex& c1, const Complex& c2) {
 }
 
 Complex complexMultiplication(const Complex& c1, const Complex& c2) {
-  const double real = c1.real * c2.real - c1.imaginary * c2.imaginary;
-  const double imaginary = c1.real * c2.imaginary + c1.imaginary * c2.real;
+  const double real = (c1.real * c2.real) - (c1.imaginary * c2.imaginary);
+  const double imaginary = (c1.real * c2.imaginary) + (c1.imaginary * c2.real);
   return {real, imaginary};
 }
 
@@ -240,7 +240,7 @@ toEigenMatrix(const std::vector<std::vector<Complex>>& matrix) {
 }
 
 double complexMagnitude(Complex& c) {
-  return std::sqrt(c.real * c.real + c.imaginary * c.imaginary);
+  return std::sqrt((c.real * c.real) + (c.imaginary * c.imaginary));
 }
 
 std::vector<Complex>
