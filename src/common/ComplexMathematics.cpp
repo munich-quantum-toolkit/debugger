@@ -299,11 +299,11 @@ getSubStateVectorAmplitudes(const Statevector& sv,
     throw std::runtime_error("No valid index found");
   }
 
-  std::vector<Complex> amplitudes;
+  std::vector<Complex> amplitudes(traced.size());
 
   for (size_t i = 0; i < traced.size(); i++) {
-    amplitudes.push_back({vectors(static_cast<int>(i), index).real(),
-                          vectors(static_cast<int>(i), index).imag()});
+    amplitudes[i] = {vectors(static_cast<int>(i), index).real(),
+                     vectors(static_cast<int>(i), index).imag()};
   }
   return amplitudes;
 }

@@ -61,20 +61,20 @@ static COMMUTATION_RULE_SUP(OTHER_1Q_GATE_INVARIANTS,
 
 //------------------------------------------------------------------------------
 
-static const std::vector<std::function<CommutationResult(
+const std::vector<std::function<CommutationResult(
     const Assertion*, const std::string&, const std::vector<std::string>&)>>
     GENERAL_COMMUTATION_RULES = {
         BARRIER,
 };
 
-static const std::vector<std::function<CommutationResult(
+const std::vector<std::function<CommutationResult(
     const EntanglementAssertion*, const std::string&,
     const std::vector<std::string>&)>>
     ENTANGLEMENT_COMMUTATION_RULES = {
         TWO_OR_MORE_TARGETS,
 };
 
-static const std::vector<std::function<CommutationResult(
+const std::vector<std::function<CommutationResult(
     const SuperpositionAssertion*, const std::string&,
     const std::vector<std::string>&)>>
     SUPERPOSITION_COMMUTATION_RULES = {

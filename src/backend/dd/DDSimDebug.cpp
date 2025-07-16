@@ -1202,9 +1202,9 @@ Result ddsimGetStateVectorSub(SimulationState* self, size_t subStateSize,
   std::vector<Complex> amplitudes(fullState.numStates);
   const Span<Complex> outAmplitudes(output->amplitudes, output->numStates);
 
-  std::vector<size_t> targetQubits;
+  std::vector<size_t> targetQubits(subStateSize);
   for (size_t i = 0; i < subStateSize; i++) {
-    targetQubits.push_back(qubitsSpan[i]);
+    targetQubits[i] = qubitsSpan[i];
   }
 
   fullState.amplitudes = amplitudes.data();
