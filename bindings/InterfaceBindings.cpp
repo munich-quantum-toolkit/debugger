@@ -14,6 +14,8 @@
  * diagnostics interfaces.
  */
 
+#include "python/InterfaceBindings.hpp"
+
 #include "backend/debug.h"
 #include "backend/diagnostics.h"
 #include "common.h"
