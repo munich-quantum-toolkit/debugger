@@ -30,6 +30,8 @@
 
 namespace mqt::debugger {
 
+namespace {
+
 /**
  * @brief Compute the trace of the square of a given matrix.
  *
@@ -148,6 +150,25 @@ double getSharedInformation(const std::vector<std::vector<Complex>>& matrix) {
   const auto p1 = getPartialTrace(matrix, {0}, 2);
   return getEntropy(p0) + getEntropy(p1) - getEntropy(matrix);
 }
+
+/**
+ * @brief Generate a string representation of a double without trailing zeros.
+ *
+ * @param d The double to convert to a string.
+ * @return The string representation of the double.
+ */
+std::string doubleToString(const double d) {
+  auto string = std::to_string(d);
+  while (string.back() == '0') {
+    string.pop_back();
+  }
+  if (string.back() == '.') {
+    string.pop_back();
+  }
+  return string;
+}
+
+} // namespace
 
 Complex complexAddition(const Complex& c1, const Complex& c2) {
   const double real = c1.real + c2.real;
@@ -285,23 +306,6 @@ getSubStateVectorAmplitudes(const Statevector& sv,
                           vectors(static_cast<int>(i), index).imag()});
   }
   return amplitudes;
-}
-
-/**
- * @brief Generate a string representation of a double without trailing zeros.
- *
- * @param d The double to convert to a string.
- * @return The string representation of the double.
- */
-std::string doubleToString(const double d) {
-  auto string = std::to_string(d);
-  while (string.back() == '0') {
-    string.pop_back();
-  }
-  if (string.back() == '.') {
-    string.pop_back();
-  }
-  return string;
 }
 
 std::string complexToString(const Complex& c) {

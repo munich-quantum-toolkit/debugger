@@ -27,6 +27,8 @@ namespace mqt::debugger {
 #define NO(expression)                                                         \
   (expression) ? CommutationResult::DoesNotCommute : CommutationResult::Unknown;
 
+namespace {
+
 //------------------------------------------------------------------------------
 // General rules
 //------------------------------------------------------------------------------
@@ -155,6 +157,8 @@ bool doesCommute(const std::unique_ptr<Assertion>& assertion,
   }
   return false;
 }
+
+} // namespace
 
 bool doesCommute(const std::unique_ptr<Assertion>& assertion,
                  const Instruction& instruction) {

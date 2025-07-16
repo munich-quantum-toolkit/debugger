@@ -20,7 +20,7 @@
 
 #include <pybind11/detail/common.h>
 
-namespace mqt::debugger {
+namespace {
 
 PYBIND11_MODULE(pydebugger, m) {
   bindDiagnostics(m);
@@ -28,4 +28,4 @@ PYBIND11_MODULE(pydebugger, m) {
   bindBackend(m);
 }
 
-} // namespace mqt::debugger
+} // namespace

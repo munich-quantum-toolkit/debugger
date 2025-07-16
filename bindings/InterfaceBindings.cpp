@@ -34,6 +34,7 @@ namespace py = pybind11;
 using namespace pybind11::literals;
 
 namespace {
+
 /**
  * @brief Checks whether the given result is OK, and throws a runtime_error
  * otherwise.

@@ -39,9 +39,9 @@
 #include <utility>
 #include <vector>
 
-namespace {
+namespace mqt::debugger {
 
-using namespace mqt::debugger;
+namespace {
 
 /**
  * @brief Cast a `Diagnostics` pointer to a `DDDiagnostics` pointer.
@@ -548,8 +548,6 @@ void suggestSplitEqualityAssertion(
   }
 }
 } // namespace
-
-namespace mqt::debugger {
 
 Result createDDDiagnostics(DDDiagnostics* self, DDSimulationState* state) {
   self->simulationState = state;

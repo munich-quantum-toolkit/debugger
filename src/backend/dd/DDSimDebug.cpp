@@ -55,8 +55,9 @@
 #include <utility>
 #include <vector>
 
+namespace mqt::debugger {
+
 namespace {
-using namespace mqt::debugger;
 
 /**
  * @brief Cast a `SimulationState` pointer to a `DDSimulationState` pointer.
@@ -505,8 +506,6 @@ void compileProjectiveMeasurement(
 }
 
 } // namespace
-
-namespace mqt::debugger {
 
 #pragma clang diagnostic push
 Result createDDSimulationState(DDSimulationState* self) {
