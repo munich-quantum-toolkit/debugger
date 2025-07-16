@@ -787,11 +787,17 @@ Returns:
             std::vector<size_t> positions(count);
             std::vector<char*> buffers(count);
             for (auto& b : buffers) {
+              // NOLINTBEGIN(cppcoreguidelines-owning-memory,
+              // cppcoreguidelines-pro-type-reinterpret-cast,
+              // cppcoreguidelines-pro-bounds-pointer-arithmetic)
               char* buffer = reinterpret_cast<char*>(
                   malloc(sizeof(char) * stringSize)); // NOLINT
               for (size_t i = 0; i < stringSize; i++) {
                 buffer[i] = '\0';
               }
+              // NOLINTEND(cppcoreguidelines-owning-memory,
+              // cppcoreguidelines-pro-type-reinterpret-cast,
+              // cppcoreguidelines-pro-bounds-pointer-arithmetic)
               b = buffer;
             }
 
