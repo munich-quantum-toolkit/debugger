@@ -22,7 +22,6 @@
 #include "backend/debug.h"
 #include "pybind11/pybind11.h"
 
-namespace {
 using namespace mqt::debugger;
 
 void bindBackend(pybind11::module& m) {
@@ -52,5 +51,3 @@ Returns:
 Args:
     state (SimulationState): The simulation state to delete.)");
 }
-
-} // namespace

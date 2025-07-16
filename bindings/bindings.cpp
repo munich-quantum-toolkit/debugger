@@ -20,12 +20,8 @@
 
 #include <pybind11/detail/common.h>
 
-namespace {
-
 PYBIND11_MODULE(pydebugger, m) {
   bindDiagnostics(m);
   bindFramework(m);
   bindBackend(m);
 }
-
-} // namespace
