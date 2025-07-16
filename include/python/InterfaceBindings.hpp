@@ -18,7 +18,7 @@
 
 #include "pybind11/pybind11.h"
 
-namespace mqt::debugger {
+namespace {
 
 /**
  * @brief Binds the main debugging framework to Python.
@@ -32,4 +32,4 @@ void bindFramework(pybind11::module& m);
  */
 void bindDiagnostics(pybind11::module& m);
 
-} // namespace mqt::debugger
+} // namespace

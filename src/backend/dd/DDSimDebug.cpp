@@ -504,130 +504,6 @@ void compileProjectiveMeasurement(
   }
 }
 
-/**
- * @brief Compile an assertion using statistical slices.
- * @param ddsim The simulation state.
- * @param buffer The buffer to write to.
- * @param settings The settings for compilation.
- * @param The size of the compiled code.
- */
-size_t compileStatisticalSlice(DDSimulationState* ddsim, char* buffer,
-                               CompilationSettings settings) {
-  std::vector<size_t> assertionsToSkip;
-  std::vector<size_t> assertionsToCover;
-  auto sliceIndex = settings.sliceIndex;
-  for (size_t i = 0; i < ddsim->instructionTypes.size(); i++) {
-    if (ddsim->instructionTypes[i] != ASSERTION) {
-      continue;
-    }
-    assertionsToSkip.push_back(i);
-    if (settings.opt >= 1 && tryCancelAssertion(ddsim, i)) {
-      continue;
-    }
-
-    if (settings.opt < 2 ||
-        !areAssertionsIndependent(ddsim, assertionsToCover, i)) {
-      if (sliceIndex == 0) {
-        if (settings.opt < 2) {
-          assertionsToCover.emplace_back(i);
-        }
-        break;
-      }
-      sliceIndex--;
-      assertionsToCover.clear();
-    }
-    if (settings.opt >= 2) {
-      assertionsToCover.emplace_back(i);
-    }
-  }
-  if (sliceIndex > 0 || assertionsToCover.empty()) {
-    return 0;
-  }
-
-  std::stringstream ss;
-
-  // Determine the measurement targets required for the assertion.
-  std::map<size_t, std::map<std::string, std::string>> assertionTargets;
-  std::set<std::string> assertionTargetsSet;
-  for (const auto foundIndex : assertionsToCover) {
-    for (const auto& target :
-         ddsim->assertionInstructions[foundIndex]->getTargetQubits()) {
-      std::string targetName =
-          "test_" + replaceString(replaceString(target, "]", ""), "[", "");
-      while (assertionTargetsSet.find(targetName) !=
-             assertionTargetsSet.end()) {
-        targetName += "_";
-      }
-      assertionTargets[foundIndex][target] = targetName;
-      assertionTargetsSet.insert(targetName);
-    }
-  }
-
-  // Add the preamble.
-  for (const auto foundIndex : assertionsToCover) {
-    auto& assertion = ddsim->assertionInstructions[foundIndex];
-    if (assertion->getType() == AssertionType::StatevectorEquality) {
-      std::unique_ptr<StatevectorEqualityAssertion> svEqualityAssertion(
-          dynamic_cast<StatevectorEqualityAssertion*>(assertion.release()));
-      ss << getStatisticalSliceEqualityPreamble(svEqualityAssertion,
-                                                assertionTargets[foundIndex]);
-      assertion = std::move(svEqualityAssertion);
-    } else if (assertion->getType() == AssertionType::Superposition) {
-      std::unique_ptr<SuperpositionAssertion> superpositionAssertion(
-          dynamic_cast<SuperpositionAssertion*>(assertion.release()));
-      ss << getStatisticalSliceSuperpositionPreamble(
-          superpositionAssertion, assertionTargets[foundIndex]);
-      assertion = std::move(superpositionAssertion);
-    } else if (assertion->getType() == AssertionType::CircuitEquality) {
-      std::unique_ptr<CircuitEqualityAssertion> circuitEqualityAssertion(
-          dynamic_cast<CircuitEqualityAssertion*>(assertion.release()));
-      ss << getProjectiveMeasurementPreamble(circuitEqualityAssertion,
-                                             assertionTargets[foundIndex]);
-      assertion = std::move(circuitEqualityAssertion);
-    }
-  }
-
-  // Add the remaining code.
-  size_t last = 0;
-  for (const auto toSkip : assertionsToSkip) {
-    size_t start = 0;
-    size_t end = 0;
-    ddsim->interface.getInstructionPosition(&ddsim->interface, toSkip, &start,
-                                            &end);
-    const auto before = ddsim->code.substr(last, start - last);
-    ss << before;
-    last = end + 1;
-    if (ddsim->code[last] == '\n') {
-      last++;
-    }
-    if (assertionTargets.find(toSkip) != assertionTargets.end()) {
-      // Add the required classical registers.
-      for (const auto& [_, cbit] : assertionTargets[toSkip]) {
-        ss << "creg " << cbit << "[1];\n";
-      }
-      if (ddsim->assertionInstructions[toSkip]->getType() ==
-          AssertionType::CircuitEquality) {
-        compileProjectiveMeasurement(ddsim, ss, toSkip,
-                                     assertionTargets[toSkip]);
-      } else {
-        for (const auto& [qbit, cbit] : assertionTargets[toSkip]) {
-          ss << "measure " << qbit << " -> " << cbit << "[0];\n";
-        }
-      }
-    }
-  }
-
-  const auto compiledCode = ss.str();
-  if (buffer == nullptr) {
-    return compiledCode.length() + 1;
-  }
-  const Span<char> bufferSpan(buffer, compiledCode.length() + 1);
-  for (size_t i = 0; i < compiledCode.length(); i++) {
-    bufferSpan[i] = compiledCode[i];
-  }
-  bufferSpan[compiledCode.length()] = '\0';
-  return compiledCode.length() + 1;
-}
 } // namespace
 
 namespace mqt::debugger {
@@ -1771,6 +1647,124 @@ std::string getQuantumBitName(DDSimulationState* ddsim, size_t index) {
     }
   }
   return "UNKNOWN";
+}
+
+size_t compileStatisticalSlice(DDSimulationState* ddsim, char* buffer,
+                               CompilationSettings settings) {
+  std::vector<size_t> assertionsToSkip;
+  std::vector<size_t> assertionsToCover;
+  auto sliceIndex = settings.sliceIndex;
+  for (size_t i = 0; i < ddsim->instructionTypes.size(); i++) {
+    if (ddsim->instructionTypes[i] != ASSERTION) {
+      continue;
+    }
+    assertionsToSkip.push_back(i);
+    if (settings.opt >= 1 && tryCancelAssertion(ddsim, i)) {
+      continue;
+    }
+
+    if (settings.opt < 2 ||
+        !areAssertionsIndependent(ddsim, assertionsToCover, i)) {
+      if (sliceIndex == 0) {
+        if (settings.opt < 2) {
+          assertionsToCover.emplace_back(i);
+        }
+        break;
+      }
+      sliceIndex--;
+      assertionsToCover.clear();
+    }
+    if (settings.opt >= 2) {
+      assertionsToCover.emplace_back(i);
+    }
+  }
+  if (sliceIndex > 0 || assertionsToCover.empty()) {
+    return 0;
+  }
+
+  std::stringstream ss;
+
+  // Determine the measurement targets required for the assertion.
+  std::map<size_t, std::map<std::string, std::string>> assertionTargets;
+  std::set<std::string> assertionTargetsSet;
+  for (const auto foundIndex : assertionsToCover) {
+    for (const auto& target :
+         ddsim->assertionInstructions[foundIndex]->getTargetQubits()) {
+      std::string targetName =
+          "test_" + replaceString(replaceString(target, "]", ""), "[", "");
+      while (assertionTargetsSet.find(targetName) !=
+             assertionTargetsSet.end()) {
+        targetName += "_";
+      }
+      assertionTargets[foundIndex][target] = targetName;
+      assertionTargetsSet.insert(targetName);
+    }
+  }
+
+  // Add the preamble.
+  for (const auto foundIndex : assertionsToCover) {
+    auto& assertion = ddsim->assertionInstructions[foundIndex];
+    if (assertion->getType() == AssertionType::StatevectorEquality) {
+      std::unique_ptr<StatevectorEqualityAssertion> svEqualityAssertion(
+          dynamic_cast<StatevectorEqualityAssertion*>(assertion.release()));
+      ss << getStatisticalSliceEqualityPreamble(svEqualityAssertion,
+                                                assertionTargets[foundIndex]);
+      assertion = std::move(svEqualityAssertion);
+    } else if (assertion->getType() == AssertionType::Superposition) {
+      std::unique_ptr<SuperpositionAssertion> superpositionAssertion(
+          dynamic_cast<SuperpositionAssertion*>(assertion.release()));
+      ss << getStatisticalSliceSuperpositionPreamble(
+          superpositionAssertion, assertionTargets[foundIndex]);
+      assertion = std::move(superpositionAssertion);
+    } else if (assertion->getType() == AssertionType::CircuitEquality) {
+      std::unique_ptr<CircuitEqualityAssertion> circuitEqualityAssertion(
+          dynamic_cast<CircuitEqualityAssertion*>(assertion.release()));
+      ss << getProjectiveMeasurementPreamble(circuitEqualityAssertion,
+                                             assertionTargets[foundIndex]);
+      assertion = std::move(circuitEqualityAssertion);
+    }
+  }
+
+  // Add the remaining code.
+  size_t last = 0;
+  for (const auto toSkip : assertionsToSkip) {
+    size_t start = 0;
+    size_t end = 0;
+    ddsim->interface.getInstructionPosition(&ddsim->interface, toSkip, &start,
+                                            &end);
+    const auto before = ddsim->code.substr(last, start - last);
+    ss << before;
+    last = end + 1;
+    if (ddsim->code[last] == '\n') {
+      last++;
+    }
+    if (assertionTargets.find(toSkip) != assertionTargets.end()) {
+      // Add the required classical registers.
+      for (const auto& [_, cbit] : assertionTargets[toSkip]) {
+        ss << "creg " << cbit << "[1];\n";
+      }
+      if (ddsim->assertionInstructions[toSkip]->getType() ==
+          AssertionType::CircuitEquality) {
+        compileProjectiveMeasurement(ddsim, ss, toSkip,
+                                     assertionTargets[toSkip]);
+      } else {
+        for (const auto& [qbit, cbit] : assertionTargets[toSkip]) {
+          ss << "measure " << qbit << " -> " << cbit << "[0];\n";
+        }
+      }
+    }
+  }
+
+  const auto compiledCode = ss.str();
+  if (buffer == nullptr) {
+    return compiledCode.length() + 1;
+  }
+  const Span<char> bufferSpan(buffer, compiledCode.length() + 1);
+  for (size_t i = 0; i < compiledCode.length(); i++) {
+    bufferSpan[i] = compiledCode[i];
+  }
+  bufferSpan[compiledCode.length()] = '\0';
+  return compiledCode.length() + 1;
 }
 
 } // namespace mqt::debugger

@@ -33,8 +33,6 @@
 namespace py = pybind11;
 using namespace pybind11::literals;
 
-namespace mqt::debugger {
-
 namespace {
 /**
  * @brief Checks whether the given result is OK, and throws a runtime_error
@@ -46,7 +44,6 @@ void checkOrThrow(Result result) {
     throw std::runtime_error("An error occurred while executing the operation");
   }
 }
-} // namespace
 
 /**
  * @brief A representation of statevectors in C++ style, using std::vector
@@ -825,4 +822,4 @@ Returns:
                "methods for the debugger.";
 }
 
-} // namespace mqt::debugger
+} // namespace
