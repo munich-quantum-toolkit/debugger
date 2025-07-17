@@ -565,7 +565,8 @@ void resetSimulationState(DDSimulationState* ddsim) {
   if (ddsim->simulationState.p != nullptr) {
     ddsim->dd->decRef(ddsim->simulationState);
   }
-  ddsim->simulationState = dd::makeZeroState(ddsim->qc->getNqubits(), *(ddsim->dd));
+  ddsim->simulationState =
+      dd::makeZeroState(ddsim->qc->getNqubits(), *(ddsim->dd));
   ddsim->dd->incRef(ddsim->simulationState);
   ddsim->paused = false;
 }
