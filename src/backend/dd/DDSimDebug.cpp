@@ -99,7 +99,8 @@ void resetSimulationState(DDSimulationState* ddsim) {
   if (ddsim->simulationState.p != nullptr) {
     ddsim->dd->decRef(ddsim->simulationState);
   }
-  ddsim->simulationState = ddsim->dd->makeZeroState(ddsim->qc->getNqubits());
+  ddsim->simulationState =
+      dd::makeZeroState(ddsim->qc->getNqubits(), *(ddsim->dd));
   ddsim->dd->incRef(ddsim->simulationState);
   ddsim->paused = false;
 }
@@ -553,23 +554,6 @@ Result createDDSimulationState(DDSimulationState* self) {
   // NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast)
 }
 #pragma clang diagnostic pop
-
-/**
- * @brief Handles all actions that need to be performed when resetting the
- * simulation state.
- *
- * This occurs when the reset method is called or when new code is loaded.
- * @param ddsim The `DDSimulationState` to reset.
- */
-void resetSimulationState(DDSimulationState* ddsim) {
-  if (ddsim->simulationState.p != nullptr) {
-    ddsim->dd->decRef(ddsim->simulationState);
-  }
-  ddsim->simulationState =
-      dd::makeZeroState(ddsim->qc->getNqubits(), *(ddsim->dd));
-  ddsim->dd->incRef(ddsim->simulationState);
-  ddsim->paused = false;
-}
 
 Result ddsimInit(SimulationState* self) {
   auto* ddsim = toDDSimulationState(self);
