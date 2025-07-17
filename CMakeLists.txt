@@ -48,9 +48,7 @@ if(BUILD_MQT_DEBUGGER_BINDINGS)
     OPTIONAL_COMPONENTS Development.SABIModule)
 endif()
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-include(ExternalDependencies)
-include(AddMQTDebuggerBinding)
+include(cmake/ExternalDependencies.cmake)
 
 # set prefix for all MQT Debugger targets
 set(MQT_DEBUGGER_TARGET_NAME mqt-debugger)
