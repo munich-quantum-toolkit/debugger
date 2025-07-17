@@ -29,6 +29,7 @@
 #include "dd/DDDefinitions.hpp"
 #include "dd/Operations.hpp"
 #include "dd/Package.hpp"
+#include "dd/StateGeneration.hpp"
 #include "ir/Definitions.hpp"
 #include "ir/Register.hpp"
 #include "ir/operations/ClassicControlledOperation.hpp"
@@ -143,7 +144,8 @@ void resetSimulationState(DDSimulationState* ddsim) {
   if (ddsim->simulationState.p != nullptr) {
     ddsim->dd->decRef(ddsim->simulationState);
   }
-  ddsim->simulationState = ddsim->dd->makeZeroState(ddsim->qc->getNqubits());
+  ddsim->simulationState =
+      dd::makeZeroState(ddsim->qc->getNqubits(), *(ddsim->dd));
   ddsim->dd->incRef(ddsim->simulationState);
   ddsim->paused = false;
 }
