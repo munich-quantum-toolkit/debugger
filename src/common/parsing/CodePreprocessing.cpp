@@ -31,18 +31,7 @@
 
 namespace mqt::debugger {
 
-Instruction::Instruction(size_t inputLineNumber, std::string inputCode,
-                         std::unique_ptr<Assertion>& inputAssertion,
-                         std::vector<std::string> inputTargets, size_t startPos,
-                         size_t endPos, size_t successor, bool isFuncCall,
-                         std::string function, bool inFuncDef, bool isFuncDef,
-                         Block inputBlock)
-    : lineNumber(inputLineNumber), code(std::move(inputCode)),
-      assertion(std::move(inputAssertion)), targets(std::move(inputTargets)),
-      originalCodeStartPosition(startPos), originalCodeEndPosition(endPos),
-      successorIndex(successor), isFunctionCall(isFuncCall),
-      calledFunction(std::move(function)), inFunctionDefinition(inFuncDef),
-      isFunctionDefinition(isFuncDef), block(std::move(inputBlock)) {}
+namespace {
 
 /**
  * @brief Sweep a given code string for blocks and replace them with a unique
@@ -103,56 +92,6 @@ std::string removeComments(const std::string& code) {
   return result;
 }
 
-bool isFunctionDefinition(const std::string& line) {
-  return startsWith(trim(line), "gate ");
-}
-
-bool isReset(const std::string& line) {
-  return startsWith(trim(line), "reset ");
-}
-
-bool isBarrier(const std::string& line) {
-  return startsWith(trim(line), "barrier ") ||
-         startsWith(trim(line), "barrier;");
-}
-
-bool isClassicControlledGate(const std::string& line) {
-  return startsWith(trim(line), "if") &&
-         (line.find('(') != std::string::npos) &&
-         (line.find(')') != std::string::npos);
-}
-
-ClassicControlledGate parseClassicControlledGate(const std::string& code) {
-  std::stringstream condition;
-  const auto codeSanitized = trim(replaceString(code, "if", ""));
-  int openBrackets = 0;
-  size_t i = 0;
-  for (; i < codeSanitized.size(); i++) {
-    const auto c = codeSanitized[i];
-    if (c == '(') {
-      openBrackets++;
-    } else if (c == ')') {
-      openBrackets--;
-    }
-    if (openBrackets == 0) {
-      break;
-    }
-    condition << c;
-  }
-  auto rest = codeSanitized.substr(i + 1, codeSanitized.size() - i - 1);
-  rest = replaceString(replaceString(rest, "}", ""), "{", "");
-  const auto operations = splitString(rest, ';', false);
-  return {condition.str(), operations};
-}
-
-bool isMeasurement(const std::string& line) {
-  return line.find("->") != std::string::npos;
-}
-
-bool isVariableDeclaration(const std::string& line) {
-  return startsWith(trim(line), "creg ") || startsWith(trim(line), "qreg ");
-}
-
 /**
  * @brief Parse a function definition from a given signature.
  * @param signature The signature to parse.
@@ -178,56 +117,6 @@ FunctionDefinition parseFunctionDefinition(const std::string& signature) {
   auto parameters = splitString(removeWhitespace(parameterParts), ',');
 
   return {name, parameters};
-}
-
-std::vector<std::string> parseParameters(const std::string& instruction) {
-  if (isFunctionDefinition(instruction)) {
-    const auto fd = parseFunctionDefinition(instruction);
-    return fd.parameters;
-  }
-
-  if (isMeasurement(instruction)) {
-    // We only add the quantum variable to the measurement's targets.
-    return parseParameters(splitString(instruction, '-')[0]);
-  }
-
-  if (isClassicControlledGate(instruction)) {
-    const auto end = instruction.find(')');
-
-    return parseParameters(
-        instruction.substr(end + 1, instruction.length() - end - 1));
-  }
-
-  auto parts = splitString(
-      replaceString(
-          replaceString(replaceString(instruction, ";", " "), "\n", " "), "\t",
-          " "),
-      ' ');
-  size_t index = 0;
-  size_t openBrackets = 0;
-  for (auto& part : parts) {
-    index++;
-    openBrackets +=
-        static_cast<size_t>(std::count(part.begin(), part.end(), '('));
-    openBrackets -=
-        static_cast<size_t>(std::count(part.begin(), part.end(), ')'));
-    if (!part.empty() && openBrackets == 0) {
-      break;
-    }
-  }
-
-  std::string parameterParts;
-  for (size_t i = index; i < parts.size(); i++) {
-    if (parts[i].empty()) {
-      continue;
-    }
-    parameterParts += parts[i];
-  }
-  auto parameters = splitString(removeWhitespace(parameterParts), ',');
-  if (parameters.size() == 1 && parameters[0].empty()) {
-    return {};
-  }
-  return parameters;
 }
 
 /**
@@ -282,6 +171,121 @@ void unfoldAssertionTargetRegisters(
   if (found) {
     assertion.setTargetQubits(targets);
   }
+}
+
+} // namespace
+
+Instruction::Instruction(size_t inputLineNumber, std::string inputCode,
+                         std::unique_ptr<Assertion>& inputAssertion,
+                         std::vector<std::string> inputTargets, size_t startPos,
+                         size_t endPos, size_t successor, bool isFuncCall,
+                         std::string function, bool inFuncDef, bool isFuncDef,
+                         Block inputBlock)
+    : lineNumber(inputLineNumber), code(std::move(inputCode)),
+      assertion(std::move(inputAssertion)), targets(std::move(inputTargets)),
+      originalCodeStartPosition(startPos), originalCodeEndPosition(endPos),
+      successorIndex(successor), isFunctionCall(isFuncCall),
+      calledFunction(std::move(function)), inFunctionDefinition(inFuncDef),
+      isFunctionDefinition(isFuncDef), block(std::move(inputBlock)) {}
+
+bool isFunctionDefinition(const std::string& line) {
+  return startsWith(trim(line), "gate ");
+}
+
+bool isReset(const std::string& line) {
+  return startsWith(trim(line), "reset ");
+}
+
+bool isBarrier(const std::string& line) {
+  return startsWith(trim(line), "barrier ") ||
+         startsWith(trim(line), "barrier;");
+}
+
+bool isClassicControlledGate(const std::string& line) {
+  return startsWith(trim(line), "if") &&
+         (line.find('(') != std::string::npos) &&
+         (line.find(')') != std::string::npos);
+}
+
+ClassicControlledGate parseClassicControlledGate(const std::string& code) {
+  std::stringstream condition;
+  const auto codeSanitized = trim(replaceString(code, "if", ""));
+  int openBrackets = 0;
+  size_t i = 0;
+  for (; i < codeSanitized.size(); i++) {
+    const auto c = codeSanitized[i];
+    if (c == '(') {
+      openBrackets++;
+    } else if (c == ')') {
+      openBrackets--;
+    }
+    if (openBrackets == 0) {
+      break;
+    }
+    condition << c;
+  }
+  auto rest = codeSanitized.substr(i + 1, codeSanitized.size() - i - 1);
+  rest = replaceString(replaceString(rest, "}", ""), "{", "");
+  const auto operations = splitString(rest, ';', false);
+  return {condition.str(), operations};
+}
+
+bool isMeasurement(const std::string& line) {
+  return line.find("->") != std::string::npos;
+}
+
+bool isVariableDeclaration(const std::string& line) {
+  return startsWith(trim(line), "creg ") || startsWith(trim(line), "qreg ");
+}
+
+std::vector<std::string> parseParameters(const std::string& instruction) {
+  if (isFunctionDefinition(instruction)) {
+    const auto fd = parseFunctionDefinition(instruction);
+    return fd.parameters;
+  }
+
+  if (isMeasurement(instruction)) {
+    // We only add the quantum variable to the measurement's targets.
+    return parseParameters(splitString(instruction, '-')[0]);
+  }
+
+  if (isClassicControlledGate(instruction)) {
+    const auto end = instruction.find(')');
+
+    return parseParameters(
+        instruction.substr(end + 1, instruction.length() - end - 1));
+  }
+
+  auto parts = splitString(
+      replaceString(
+          replaceString(replaceString(instruction, ";", " "), "\n", " "), "\t",
+          " "),
+      ' ');
+  size_t index = 0;
+  size_t openBrackets = 0;
+  for (auto& part : parts) {
+    index++;
+    openBrackets +=
+        static_cast<size_t>(std::count(part.begin(), part.end(), '('));
+    openBrackets -=
+        static_cast<size_t>(std::count(part.begin(), part.end(), ')'));
+    if (!part.empty() && openBrackets == 0) {
+      break;
+    }
+  }
+
+  std::string parameterParts;
+  for (size_t i = index; i < parts.size(); i++) {
+    if (parts[i].empty()) {
+      continue;
+    }
+    parameterParts += parts[i];
+  }
+  auto parameters = splitString(removeWhitespace(parameterParts), ',');
+  if (parameters.size() == 1 && parameters[0].empty()) {
+    return {};
+  }
+  return parameters;
 }
 
 std::vector<Instruction> preprocessCode(const std::string& code,

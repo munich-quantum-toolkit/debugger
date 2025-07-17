@@ -18,12 +18,8 @@
 
 #include "pybind11/pybind11.h"
 
-namespace mqt::debugger {
-
 /**
  * @brief Binds the dd debugging backend to Python.
  * @param m The `pybind11` module.
  */
 void bindBackend(pybind11::module& m);
-
-} // namespace mqt::debugger

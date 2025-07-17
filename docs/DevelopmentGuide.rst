@@ -41,7 +41,7 @@ Building the project this way generates
 
 - the main library :code:`libmqt_debugger.a` (Unix) / :code:`mqt_debugger.lib` (Windows) in the :code:`build/src` directory
 - a test executable :code:`mqt_debugger_test` containing unit tests in the :code:`build/test` directory (this requires passing :code:`-DBUILD_MQT_DEBUGGER_TESTS=ON` to CMake during configuration)
-- the Python bindings library :code:`pydebugger.<...>` in the :code:`build/src/python` directory (this requires passing :code:`-DBUILD_MQT_DEBUGGER_BINDINGS=ON` to CMake during configuration)
+- the Python bindings library :code:`pydebugger.<...>` in the :code:`build/python` directory (this requires passing :code:`-DBUILD_MQT_DEBUGGER_BINDINGS=ON` to CMake during configuration)
 - the CLI App :code:`mqt_debugger_app` in the :code:`build/app` directory (this requires passing :code:`-DBUILD_MQT_DEBUGGER_APP=ON` to CMake during configuration)
 
 Working on the Python module
@@ -55,5 +55,5 @@ The :code:`mqt.debugger` Python module can be conveniently built locally by call
 
 The :code:`--editable` flag ensures that changes in the Python code are instantly available without re-running the command.
 
-`Pybind11 <https://pybind11.readthedocs.io/>`_ is used for providing bindings of the C++ core library to Python (see `bindings.cpp <https://github.com/munich-quantum-toolkit/debugger/tree/main/src/python/bindings.cpp>`_).
+`Pybind11 <https://pybind11.readthedocs.io/>`_ is used for providing bindings of the C++ core library to Python (see `bindings.cpp <https://github.com/munich-quantum-toolkit/debugger/tree/main/bindings/bindings.cpp>`_).
 If parts of the C++ code have been changed, the above command has to be run again to make the changes visible in Python.

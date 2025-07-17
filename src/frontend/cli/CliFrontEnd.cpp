@@ -29,6 +29,8 @@
 
 namespace mqt::debugger {
 
+namespace {
+
 /**
  * @brief ANSI escape sequence for resetting the background color.
  *
@@ -38,6 +40,25 @@ void clearScreen() {
   // Clear the screen using an ANSI escape sequence
   std::cout << "\033[2J\033[1;1H";
 }
+
+/**
+ * @brief Get all possible bit strings for a given number of qubits.
+ * @param numQubits The number of qubits.
+ * @return The list of bit strings.
+ */
+std::vector<std::string> getBitStrings(size_t numQubits) {
+  std::vector<std::string> bitStrings;
+  for (size_t i = 0; i < (1ULL << numQubits); i++) {
+    std::string bitString;
+    for (size_t j = 0; j < numQubits; j++) {
+      bitString.insert(bitString.begin(), (i & (1 << j)) > 0 ? '1' : '0');
+    }
+    bitStrings.push_back(bitString);
+  }
+  return bitStrings;
+}
+
+} // namespace
 
 void CliFrontEnd::initCode(const char* code) { currentCode = code; }
 
@@ -139,23 +160,6 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
       wasError = true;
     }
   }
-}
-
-/**
- * @brief Get all possible bit strings for a given number of qubits.
- * @param numQubits The number of qubits.
- * @return The list of bit strings.
- */
-std::vector<std::string> getBitStrings(size_t numQubits) {
-  std::vector<std::string> bitStrings;
-  for (size_t i = 0; i < (1ULL << numQubits); i++) {
-    std::string bitString;
-    for (size_t j = 0; j < numQubits; j++) {
-      bitString.insert(bitString.begin(), (i & (1 << j)) > 0 ? '1' : '0');
-    }
-    bitStrings.push_back(bitString);
-  }
-  return bitStrings;
 }
 
 void CliFrontEnd::suggestUpdatedAssertions(SimulationState* state) {

@@ -34,6 +34,104 @@
 
 namespace mqt::debugger {
 
+namespace {
+
+/**
+ * @brief Tests whether a qubit is in a superposition in a given statevector.
+ * @param statevector The statevector to check.
+ * @param qubit The index of the qubit to check.
+ * @return True if the qubit is in superposition, false otherwise.
+ */
+bool qubitInSuperposition(const Span<Complex> statevector, size_t qubit) {
+  double prob = 0;
+  for (size_t i = 0; i < statevector.size(); i++) {
+    if ((i & (1ULL << qubit)) != 0) {
+      prob += complexMagnitude(statevector[i]);
+    }
+  }
+  return prob > 0.00000001 && prob < 1 - 0.00000001;
+}
+
+/**
+ * @brief Extract the targets of the assertion from its string representation.
+ * @param targetPart The string representation of the full targets of the
+ * assertion.
+ * @return The targets of the assertion.
+ */
+std::vector<std::string> extractTargetQubits(const std::string& targetPart) {
+  const auto parts = splitString(targetPart, ',');
+  std::vector<std::string> trimmedParts(parts.size());
+  std::transform(parts.begin(), parts.end(), trimmedParts.begin(), trim);
+  return trimmedParts;
+}
+
+/**
+ * @brief Parse a complex number from a string.
+ * @param complexString The string representation of the complex number.
+ * @return The parsed complex number.
+ */
+Complex parseComplex(std::string complexString) {
+  complexString = removeWhitespace(complexString);
+  auto parts = splitString(complexString, '-');
+  bool negativeSplit = true;
+  if (parts[0].empty()) {
+    parts.erase(parts.begin());
+    parts[0] = "-" + parts[0];
+  }
+  if (parts.size() == 1) {
+    negativeSplit = false;
+    parts = splitString(complexString, '+');
+  }
+  double real = 0;
+  double imaginary = 0;
+  bool first = true;
+  for (auto& part : parts) {
+    if (part.find('i') != std::string::npos ||
+        part.find('j') != std::string::npos) {
+      imaginary +=
+          std::stod(replaceString(replaceString(part, "i", ""), "j", "")) *
+          (negativeSplit && !first ? -1 : 1);
+    } else {
+      real += std::stod(part) * (negativeSplit && !first ? -1 : 1);
+    }
+    first = false;
+  }
+  return {real, imaginary};
+}
+
+/**
+ * @brief Parse a statevector from a string.
+ * @param statevectorString The string representation of the statevector.
+ * @return The parsed statevector.
+ */
+Statevector parseStatevector(std::string statevectorString) {
+  statevectorString = removeWhitespace(statevectorString);
+  auto parts = splitString(statevectorString, ',');
+  auto amplitudes = std::make_unique<std::vector<Complex>>();
+  for (auto& part : parts) {
+    amplitudes->push_back(parseComplex(part));
+  }
+
+  size_t numQubits = 0;
+  size_t n = amplitudes->size();
+  while (n > 1) {
+    if ((n & 1) == 1) {
+      throw ParsingError("Invalid statevector size");
+    }
+    n >>= 1;
+    numQubits++;
+  }
+
+  Statevector sv;
+  sv.numStates = amplitudes->size();
+  sv.numQubits = numQubits;
+  sv.amplitudes = amplitudes.release()->data();
+
+  return sv;
+}
+
+} // namespace
+
 Assertion::Assertion(std::vector<std::string> inputTargetQubits,
                      AssertionType assertionType)
     : targetQubits(std::move(inputTargetQubits)), type(assertionType) {}
@@ -165,16 +263,6 @@ bool StatevectorEqualityAssertion::implies(
          other.getSimilarityThreshold();
 }
 
-bool qubitInSuperposition(const Span<Complex> statevector, size_t qubit) {
-  double prob = 0;
-  for (size_t i = 0; i < statevector.size(); i++) {
-    if ((i & (1ULL << qubit)) != 0) {
-      prob += complexMagnitude(statevector[i]);
-    }
-  }
-  return prob > 0.00000001 && prob < 1 - 0.00000001;
-}
-
 bool StatevectorEqualityAssertion::implies(
     const SuperpositionAssertion& other) const {
   const auto& targetSV = getTargetStatevector();
@@ -277,84 +365,6 @@ const std::string& CircuitEqualityAssertion::getCircuitCode() const {
 bool CircuitEqualityAssertion::implies(const Assertion& /*other*/) const {
   return false; // `implies` method not supported for
                 // CircuitEqualityAssertion");
-}
-
-/**
- * @brief Extract the targets of the assertion from its string representation.
- * @param targetPart The string representation of the full targets of the
- * assertion.
- * @return The targets of the assertion.
- */
-std::vector<std::string> extractTargetQubits(const std::string& targetPart) {
-  const auto parts = splitString(targetPart, ',');
-  std::vector<std::string> trimmedParts(parts.size());
-  std::transform(parts.begin(), parts.end(), trimmedParts.begin(), trim);
-  return trimmedParts;
-}
-
-/**
- * @brief Parse a complex number from a string.
- * @param complexString The string representation of the complex number.
- * @return The parsed complex number.
- */
-Complex parseComplex(std::string complexString) {
-  complexString = removeWhitespace(complexString);
-  auto parts = splitString(complexString, '-');
-  bool negativeSplit = true;
-  if (parts[0].empty()) {
-    parts.erase(parts.begin());
-    parts[0] = "-" + parts[0];
-  }
-  if (parts.size() == 1) {
-    negativeSplit = false;
-    parts = splitString(complexString, '+');
-  }
-  double real = 0;
-  double imaginary = 0;
-  bool first = true;
-  for (auto& part : parts) {
-    if (part.find('i') != std::string::npos ||
-        part.find('j') != std::string::npos) {
-      imaginary +=
-          std::stod(replaceString(replaceString(part, "i", ""), "j", "")) *
-          (negativeSplit && !first ? -1 : 1);
-    } else {
-      real += std::stod(part) * (negativeSplit && !first ? -1 : 1);
-    }
-    first = false;
-  }
-  return {real, imaginary};
-}
-
-/**
- * @brief Parse a statevector from a string.
- * @param statevectorString The string representation of the statevector.
- * @return The parsed statevector.
- */
-Statevector parseStatevector(std::string statevectorString) {
-  statevectorString = removeWhitespace(statevectorString);
-  auto parts = splitString(statevectorString, ',');
-  auto amplitudes = std::make_unique<std::vector<Complex>>();
-  for (auto& part : parts) {
-    amplitudes->push_back(parseComplex(part));
-  }
-
-  size_t numQubits = 0;
-  size_t n = amplitudes->size();
-  while (n > 1) {
-    if ((n & 1) == 1) {
-      throw ParsingError("Invalid statevector size");
-    }
-    n >>= 1;
-    numQubits++;
-  }
-
-  Statevector sv;
-  sv.numStates = amplitudes->size();
-  sv.numQubits = numQubits;
-  sv.amplitudes = amplitudes.release()->data();
-
-  return sv;
 }
 
 /**

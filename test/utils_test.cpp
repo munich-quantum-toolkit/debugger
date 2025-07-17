@@ -63,6 +63,7 @@ std::string readFromCircuitsPath(const std::string& testName) {
   return code;
 }
 
+namespace {
 /**
  * @brief Generate a string representation of a double without trailing zeros.
  *
@@ -79,6 +80,7 @@ std::string doubleToStringTest(const double d) {
   }
   return string;
 }
+} // namespace
 
 std::string complexToStringTest(const Complex& c) {
   const double epsilon = 0.0000001;
