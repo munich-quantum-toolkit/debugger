@@ -10,7 +10,7 @@ on:
 jobs:
   python-packaging:
     name: 🐍 Packaging
-    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-python-packaging.yml@v1.12.0
+    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-python-packaging.yml@v1.15.0
 
   deploy:
     if: github.event_name == 'release' && github.event.action == 'published'
