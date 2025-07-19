@@ -42,7 +42,7 @@ def start_compilation(code: Path, output_dir: Path) -> None:
         output_dir (Path): The directory to store the compiled slices.
     """
     state = dbg.create_ddsim_simulation_state()
-    with code.open("r") as f:
+    with code.open("r", encoding="utf-8") as f:
         code_str = f.read()
     state.load_code(code_str)
     i = 0
