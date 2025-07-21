@@ -31,7 +31,3 @@ target_link_libraries(${PROJECT_NAME} PRIVATE Eigen3::Eigen)
 
 # add MQT alias
 add_library(MQT::Debugger ALIAS ${PROJECT_NAME})
-
-if(BUILD_MQT_DEBUGGER_BINDINGS)
-  add_subdirectory(python)
-endif()

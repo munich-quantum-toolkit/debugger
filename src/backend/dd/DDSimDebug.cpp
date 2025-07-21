@@ -57,6 +57,8 @@
 
 namespace mqt::debugger {
 
+namespace {
+
 /**
  * @brief Cast a `SimulationState` pointer to a `DDSimulationState` pointer.
  *
@@ -85,6 +87,426 @@ double generateRandomNumber() {
 
   return dis(gen);
 }
+
+/**
+ * @brief Handles all actions that need to be performed when resetting the
+ * simulation state.
+ *
+ * This occurs when the reset method is called or when new code is loaded.
+ * @param ddsim The `DDSimulationState` to reset.
+ */
+void resetSimulationState(DDSimulationState* ddsim) {
+  if (ddsim->simulationState.p != nullptr) {
+    ddsim->dd->decRef(ddsim->simulationState);
+  }
+  ddsim->simulationState =
+      dd::makeZeroState(ddsim->qc->getNqubits(), *(ddsim->dd));
+  ddsim->dd->incRef(ddsim->simulationState);
+  ddsim->paused = false;
+}
+
+/**
+ * @brief For a given value, extract the bits at the given indices of its binary
+ * representation.
+ * @param indices The indices of the bits to extract.
+ * @param value The value to extract the bits from.
+ * @return The extracted bits.
+ */
+std::vector<bool> extractBits(const std::vector<size_t>& indices,
+                              size_t value) {
+  std::vector<bool> result(indices.size());
+  for (size_t i = 0; i < indices.size(); i++) {
+    result[i] = (((value >> indices[i]) & 1) == 1);
+  }
+  return result;
+}
+
+/**
+ * Checks the given entanglement assertion on the given state.
+ * @param ddsim The simulation state.
+ * @param assertion The entanglement assertion to check.
+ * @return True if the assertion is satisfied, false otherwise.
+ */
+bool checkAssertionEntangled(
+    DDSimulationState* ddsim,
+    std::unique_ptr<EntanglementAssertion>& assertion) {
+  Statevector sv;
+  sv.numQubits = ddsim->interface.getNumQubits(&ddsim->interface);
+  sv.numStates = 1 << sv.numQubits;
+  std::vector<Complex> amplitudes(sv.numStates);
+  sv.amplitudes = amplitudes.data();
+  ddsim->interface.getStateVectorFull(&ddsim->interface, &sv);
+
+  std::vector<size_t> qubits;
+  for (const auto& variable : assertion->getTargetQubits()) {
+    qubits.push_back(variableToQubit(ddsim, variable));
+  }
+
+  std::vector<std::vector<Complex>> densityMatrix(
+      sv.numStates, std::vector<Complex>(sv.numStates, {0, 0}));
+  for (size_t i = 0; i < sv.numStates; i++) {
+    for (size_t j = 0; j < sv.numStates; j++) {
+      densityMatrix[i][j] =
+          complexMultiplication(amplitudes[i], complexConjugate(amplitudes[j]));
+    }
+  }
+
+  for (const auto i : qubits) {
+    for (const auto j : qubits) {
+      if (i == j) {
+        continue;
+      }
+      if (!areQubitsEntangled(densityMatrix, i, j)) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+/**
+ * Checks the given superposition assertion on the given state.
+ * @param ddsim The simulation state.
+ * @param assertion The superposition assertion to check.
+ * @return True if the assertion is satisfied, false otherwise.
+ */
+bool checkAssertionSuperposition(
+    DDSimulationState* ddsim,
+    std::unique_ptr<SuperpositionAssertion>& assertion) {
+  std::vector<size_t> qubits;
+
+  for (const auto& variable : assertion->getTargetQubits()) {
+    qubits.push_back(variableToQubit(ddsim, variable));
+  }
+
+  Complex result;
+  bool firstFound = false;
+  std::vector<bool> bitstring;
+  for (size_t i = 0;
+       i < 1ULL << ddsim->interface.getNumQubits(&ddsim->interface); i++) {
+    ddsim->interface.getAmplitudeIndex(&ddsim->interface, i, &result);
+    if (complexMagnitude(result) > 0.00000001) {
+      if (!firstFound) {
+        firstFound = true;
+        bitstring = extractBits(qubits, i);
+      } else {
+        const std::vector<bool> compareBitstring = extractBits(qubits, i);
+        if (bitstring != compareBitstring) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Checks the given statevector-equality assertion on the given state.
+ * @param ddsim The simulation state.
+ * @param assertion The equality assertion to check.
+ * @return True if the assertion is satisfied, false otherwise.
+ */
+bool checkAssertionEqualityStatevector(
+    DDSimulationState* ddsim,
+    std::unique_ptr<StatevectorEqualityAssertion>& assertion) {
+  std::vector<size_t> qubits;
+  for (const auto& variable : assertion->getTargetQubits()) {
+    qubits.push_back(variableToQubit(ddsim, variable));
+  }
+
+  Statevector sv;
+  sv.numQubits = qubits.size();
+  sv.numStates = 1 << sv.numQubits;
+  std::vector<Complex> amplitudes(sv.numStates);
+  sv.amplitudes = amplitudes.data();
+
+  if (ddsim->interface.getStateVectorSub(&ddsim->interface, sv.numQubits,
+                                         qubits.data(), &sv) == ERROR) {
+    throw std::runtime_error(
+        "Equality assertion on entangled sub-state is not allowed.");
+  }
+
+  const double similarityThreshold = assertion->getSimilarityThreshold();
+
+  const double similarity = dotProduct(sv, assertion->getTargetStatevector());
+
+  return similarity >= similarityThreshold;
+}
+
+/**
+ * Checks the given circuit-equality assertion on the given state.
+ * @param ddsim The simulation state.
+ * @param assertion The equality assertion to check.
+ * @return True if the assertion is satisfied, false otherwise.
+ */
+bool checkAssertionEqualityCircuit(
+    DDSimulationState* ddsim,
+    std::unique_ptr<CircuitEqualityAssertion>& assertion) {
+  std::vector<size_t> qubits;
+  for (const auto& variable : assertion->getTargetQubits()) {
+    qubits.push_back(variableToQubit(ddsim, variable));
+  }
+
+  DDSimulationState secondSimulation;
+  createDDSimulationState(&secondSimulation);
+  secondSimulation.interface.loadCode(&secondSimulation.interface,
+                                      assertion->getCircuitCode().c_str());
+  if (!secondSimulation.assertionInstructions.empty()) {
+    destroyDDSimulationState(&secondSimulation);
+    throw std::runtime_error(
+        "Circuit equality assertions cannot contain nested assertions");
+  }
+  secondSimulation.interface.runSimulation(&secondSimulation.interface);
+
+  Statevector sv2;
+  sv2.numQubits =
+      secondSimulation.interface.getNumQubits(&secondSimulation.interface);
+  sv2.numStates = 1 << sv2.numQubits;
+  std::vector<Complex> amplitudes2(sv2.numStates);
+  sv2.amplitudes = amplitudes2.data();
+  secondSimulation.interface.getStateVectorFull(&secondSimulation.interface,
+                                                &sv2);
+  destroyDDSimulationState(&secondSimulation);
+
+  Statevector sv;
+  sv.numQubits = qubits.size();
+  sv.numStates = 1 << sv.numQubits;
+  std::vector<Complex> amplitudes(sv.numStates);
+  sv.amplitudes = amplitudes.data();
+  if (ddsim->interface.getStateVectorSub(&ddsim->interface, sv.numQubits,
+                                         qubits.data(), &sv) == ERROR) {
+    throw std::runtime_error(
+        "Equality assertion on entangled sub-state is not allowed.");
+  }
+
+  const double similarityThreshold = assertion->getSimilarityThreshold();
+
+  const double similarity = dotProduct(sv, sv2);
+
+  return similarity >= similarityThreshold;
+}
+
+/**
+ * @brief For an instruction that has a child block, extract the valid code from
+ * the block's body.
+ *
+ * Valid code is code that can be passed to the simulation backend. Assertions
+ * are removed.
+ * @param parent The parent instruction.
+ * @param allInstructions All instructions in the program.
+ * @return The extracted valid code.
+ */
+std::string validCodeFromChildren(const Instruction& parent,
+                                  std::vector<Instruction>& allInstructions) {
+  std::string code = parent.code;
+  if (!parent.block.valid) {
+    return code;
+  }
+  code += " { ";
+  for (auto child : parent.childInstructions) {
+    const auto& childInstruction = allInstructions[child];
+    if (childInstruction.assertion != nullptr) {
+      continue;
+    }
+    code += validCodeFromChildren(childInstruction, allInstructions);
+  }
+  code += " } ";
+  return code;
+}
+
+//----------------------------------------------------------------------------
+
+/**
+ * @brief Construct the preamble for a statistical slice equality assertion.
+ * @param assertion The assertion to construct the preamble for.
+ * @param targetNames The names of the target qubits.
+ * @return The constructed preamble.
+ */
+std::string getStatisticalSliceEqualityPreamble(
+    std::unique_ptr<StatevectorEqualityAssertion>& assertion,
+    std::map<std::string, std::string>& targetNames) {
+  std::stringstream ss;
+  const auto sv = Span<Complex>(assertion->getTargetStatevector().amplitudes,
+                                assertion->getTargetStatevector().numStates);
+
+  // First target is rather straightforward.
+  ss << "// ASSERT: (";
+  for (size_t i = 0; i < assertion->getTargetQubits().size(); i++) {
+    ss << targetNames[assertion->getTargetQubits()[i]];
+    if (i != assertion->getTargetQubits().size() - 1) {
+      ss << ",";
+    }
+  }
+  ss << ") {";
+  for (size_t i = 0; i < assertion->getTargetStatevector().numStates; i++) {
+    ss << (sv[i].real * sv[i].real) + (sv[i].imaginary * sv[i].imaginary);
+    if (i != assertion->getTargetStatevector().numStates - 1) {
+      ss << ",";
+    }
+  }
+  ss << "} " << assertion->getSimilarityThreshold() << "\n";
+  return ss.str();
+}
+
+/**
+ * @brief Construct the preamble for a statistical slice superposition
+ * assertion.
+ * @param assertion The assertion to construct the preamble for.
+ * @param targetNames The names of the target qubits.
+ * @return The constructed preamble.
+ */
+std::string getStatisticalSliceSuperpositionPreamble(
+    std::unique_ptr<SuperpositionAssertion>& assertion,
+    std::map<std::string, std::string>& targetNames) {
+  std::stringstream ss;
+  // First target is rather straightforward.
+  ss << "// ASSERT: (";
+  for (size_t i = 0; i < assertion->getTargetQubits().size(); i++) {
+    ss << targetNames[assertion->getTargetQubits()[i]];
+    if (i != assertion->getTargetQubits().size() - 1) {
+      ss << ",";
+    }
+  }
+  ss << ") {superposition}\n";
+  return ss.str();
+}
+
+/**
+ * @brief Construct the preamble for an assertion based
+ * on projective measurements.
+ * @param assertion The assertion to construct the preamble for.
+ * @param targetNames The names of the target qubits.
+ * @return The constructed preamble.
+ */
+std::string getProjectiveMeasurementPreamble(
+    std::unique_ptr<CircuitEqualityAssertion>& assertion,
+    std::map<std::string, std::string>& targetNames) {
+  std::stringstream ss;
+  // First target is rather straightforward.
+  ss << "// ASSERT: (";
+  for (size_t i = 0; i < assertion->getTargetQubits().size(); i++) {
+    ss << targetNames[assertion->getTargetQubits()[i]];
+    if (i != assertion->getTargetQubits().size() - 1) {
+      ss << ",";
+    }
+  }
+  ss << ") {zero}\n";
+  return ss.str();
+}
+
+/**
+ * @brief Attempt to cancel an assertion based on all previously encountered
+ * assertions.
+ * @param ddsim The simulation state.
+ * @param newAssertion The index of the new assertion to check.
+ * @return True if the assertion can be cancelled, false otherwise.
+ */
+bool tryCancelAssertion(DDSimulationState* ddsim, size_t newAssertion) {
+  const auto& assertion = ddsim->assertionInstructions[newAssertion];
+  for (size_t i = newAssertion - 1; i > 0; i--) {
+    if (ddsim->instructionTypes[i] != ASSERTION) {
+      if (!doesCommute(assertion, ddsim->instructionObjects[i])) {
+        return false;
+      }
+      continue;
+    }
+    const auto& potentialParent = ddsim->assertionInstructions[i];
+    if (potentialParent->implies(*assertion)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * @brief Check whether two given assertions are independent from each other.
+ * @param ddsim The simulation state.
+ * @param previousAssertion The previous assertion to compare to.
+ * @return True if the assertion can be cancelled, false otherwise.
+ */
+bool areAssertionsIndependent(DDSimulationState* ddsim,
+                              size_t previousAssertion, size_t newAssertion) {
+  if (ddsim->assertionInstructions[previousAssertion]->getType() ==
+      AssertionType::CircuitEquality) {
+    return true;
+  }
+  const auto& next = ddsim->assertionInstructions[newAssertion];
+
+  const auto nextQubits =
+      std::set(next->getTargetQubits().begin(), next->getTargetQubits().end());
+
+  for (size_t i = previousAssertion + 1; i < newAssertion; i++) {
+    if (ddsim->instructionTypes[i] == InstructionType::ASSERTION) {
+      continue;
+    }
+    const auto targets = ddsim->targetQubits[i];
+    if (std::any_of(targets.begin(), targets.end(), [&](const auto& target) {
+          return nextQubits.find(target) != nextQubits.end();
+        })) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * @brief Check whether multiple assertions are independent from each other.
+ * @param ddsim The simulation state.
+ * @param previousAssertions The previous assertions to compare to.
+ * @return True if the assertion can be cancelled, false otherwise.
+ */
+bool areAssertionsIndependent(DDSimulationState* ddsim,
+                              std::vector<size_t>& previousAssertions,
+                              size_t newAssertion) {
+  return std::all_of(previousAssertions.begin(), previousAssertions.end(),
+                     [&](const auto prev) {
+                       return areAssertionsIndependent(ddsim, prev,
+                                                       newAssertion);
+                     });
+}
+
+/**
+ * @brief Compile an assertion using projective measurements.
+ * @param ddsim The simulation state.
+ * @param stream The stream to write the compiled assertion to.
+ * @param assertionIndex The index of the compiled assertion.
+ * @param targetNames The names of the target qubits.
+ */
+void compileProjectiveMeasurement(
+    DDSimulationState* ddsim, std::stringstream& stream, size_t assertionIndex,
+    const std::map<std::string, std::string>& targetNames) {
+  const auto& assertion = dynamic_cast<CircuitEqualityAssertion&>(
+      *ddsim->assertionInstructions[assertionIndex].get());
+
+  std::stringstream codeStream{assertion.getCircuitCode()};
+  auto newQc = qasm3::Importer::import(codeStream);
+
+  newQc.unifyQuantumRegisters("assert_qubit");
+
+  qc::QubitIndexToRegisterMap qubitIndexToRegisterMap{};
+  const auto reg = newQc.getQuantumRegisters().begin()->second;
+  for (qc::Qubit i = 0; i < assertion.getTargetQubits().size(); i++) {
+    const auto& originalVariable = assertion.getTargetQubits()[i];
+    qubitIndexToRegisterMap.try_emplace(i, reg, originalVariable);
+  }
+
+  for (auto it = newQc.rbegin(); it != newQc.rend(); it++) {
+    auto inverted = it->get()->getInverted();
+    it->get()->dumpOpenQASM2(stream, qubitIndexToRegisterMap, {});
+  }
+
+  for (const auto& [qbit, cbit] : targetNames) {
+    stream << "measure " << qbit << " -> " << cbit << "[0];\n";
+  }
+
+  for (auto& it : newQc) {
+    it->dumpOpenQASM2(stream, qubitIndexToRegisterMap, {});
+  }
+}
+
+} // namespace
 
 #pragma clang diagnostic push
 Result createDDSimulationState(DDSimulationState* self) {
@@ -132,23 +554,6 @@ Result createDDSimulationState(DDSimulationState* self) {
   // NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast)
 }
 #pragma clang diagnostic pop
-
-/**
- * @brief Handles all actions that need to be performed when resetting the
- * simulation state.
- *
- * This occurs when the reset method is called or when new code is loaded.
- * @param ddsim The `DDSimulationState` to reset.
- */
-void resetSimulationState(DDSimulationState* ddsim) {
-  if (ddsim->simulationState.p != nullptr) {
-    ddsim->dd->decRef(ddsim->simulationState);
-  }
-  ddsim->simulationState =
-      dd::makeZeroState(ddsim->qc->getNqubits(), *(ddsim->dd));
-  ddsim->dd->incRef(ddsim->simulationState);
-  ddsim->paused = false;
-}
 
 Result ddsimInit(SimulationState* self) {
   auto* ddsim = toDDSimulationState(self);
@@ -377,7 +782,7 @@ Result ddsimStepForward(SimulationState* self) {
       auto qubit = qubitsToMeasure[i];
       auto classicalBit = classicalBits[i];
 
-      auto [pZero, pOne] = ddsim->dd->determineMeasurementProbabilities(
+      auto [pZero, pOne] = dd::Package::determineMeasurementProbabilities(
           ddsim->simulationState, static_cast<dd::Qubit>(qubit));
       auto rnd = generateRandomNumber();
       auto result = rnd < pZero;
@@ -412,7 +817,7 @@ Result ddsimStepForward(SimulationState* self) {
     ddsim->restoreCallReturnStack.clear();
 
     for (const auto qubit : qubitsToMeasure) {
-      auto [pZero, pOne] = ddsim->dd->determineMeasurementProbabilities(
+      auto [pZero, pOne] = dd::Package::determineMeasurementProbabilities(
           ddsim->simulationState, static_cast<dd::Qubit>(qubit));
       auto rnd = generateRandomNumber();
       auto result = rnd < pZero;
@@ -452,7 +857,7 @@ Result ddsimStepForward(SimulationState* self) {
     if (registerValue == exp) {
       currDD = dd::getDD(**ddsim->iterator, *ddsim->dd);
     } else {
-      currDD = ddsim->dd->makeIdent();
+      currDD = dd::Package::makeIdent();
     }
   } else {
     // For all other operations, we just take the next gate to apply.
@@ -528,7 +933,7 @@ Result ddsimStepBackward(SimulationState* self) {
     if (registerValue == exp) {
       currDD = dd::getInverseDD(**ddsim->iterator, *ddsim->dd);
     } else {
-      currDD = ddsim->dd->makeIdent();
+      currDD = dd::Package::makeIdent();
     }
   } else {
     currDD = dd::getInverseDD(
@@ -782,9 +1187,9 @@ Result ddsimGetStateVectorSub(SimulationState* self, size_t subStateSize,
   std::vector<Complex> amplitudes(fullState.numStates);
   const Span<Complex> outAmplitudes(output->amplitudes, output->numStates);
 
-  std::vector<size_t> targetQubits;
+  std::vector<size_t> targetQubits(subStateSize);
   for (size_t i = 0; i < subStateSize; i++) {
-    targetQubits.push_back(qubitsSpan[i]);
+    targetQubits[i] = qubitsSpan[i];
   }
 
   fullState.amplitudes = amplitudes.data();
@@ -1015,22 +1420,6 @@ std::pair<size_t, size_t> variableToQubitAt(DDSimulationState* ddsim,
           functionDef};
 }
 
-/**
- * @brief For a given value, extract the bits at the given indices of its binary
- * representation.
- * @param indices The indices of the bits to extract.
- * @param value The value to extract the bits from.
- * @return The extracted bits.
- */
-std::vector<bool> extractBits(const std::vector<size_t>& indices,
-                              size_t value) {
-  std::vector<bool> result(indices.size());
-  for (size_t i = 0; i < indices.size(); i++) {
-    result[i] = (((value >> indices[i]) & 1) == 1);
-  }
-  return result;
-}
-
 bool isSubStateVectorLegal(const Statevector& full,
                            std::vector<size_t>& targetQubits) {
   const auto numQubits = full.numQubits;
@@ -1042,172 +1431,6 @@ bool isSubStateVectorLegal(const Statevector& full,
     }
   }
   return partialTraceIsPure(full, ignored);
-}
-
-/**
- * Checks the given entanglement assertion on the given state.
- * @param ddsim The simulation state.
- * @param assertion The entanglement assertion to check.
- * @return True if the assertion is satisfied, false otherwise.
- */
-bool checkAssertionEntangled(
-    DDSimulationState* ddsim,
-    std::unique_ptr<EntanglementAssertion>& assertion) {
-  Statevector sv;
-  sv.numQubits = ddsim->interface.getNumQubits(&ddsim->interface);
-  sv.numStates = 1 << sv.numQubits;
-  std::vector<Complex> amplitudes(sv.numStates);
-  sv.amplitudes = amplitudes.data();
-  ddsim->interface.getStateVectorFull(&ddsim->interface, &sv);
-
-  std::vector<size_t> qubits;
-  for (const auto& variable : assertion->getTargetQubits()) {
-    qubits.push_back(variableToQubit(ddsim, variable));
-  }
-
-  std::vector<std::vector<Complex>> densityMatrix(
-      sv.numStates, std::vector<Complex>(sv.numStates, {0, 0}));
-  for (size_t i = 0; i < sv.numStates; i++) {
-    for (size_t j = 0; j < sv.numStates; j++) {
-      densityMatrix[i][j] =
-          complexMultiplication(amplitudes[i], complexConjugate(amplitudes[j]));
-    }
-  }
-
-  for (const auto i : qubits) {
-    for (const auto j : qubits) {
-      if (i == j) {
-        continue;
-      }
-      if (!areQubitsEntangled(densityMatrix, i, j)) {
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
-/**
- * Checks the given superposition assertion on the given state.
- * @param ddsim The simulation state.
- * @param assertion The superposition assertion to check.
- * @return True if the assertion is satisfied, false otherwise.
- */
-bool checkAssertionSuperposition(
-    DDSimulationState* ddsim,
-    std::unique_ptr<SuperpositionAssertion>& assertion) {
-  std::vector<size_t> qubits;
-
-  for (const auto& variable : assertion->getTargetQubits()) {
-    qubits.push_back(variableToQubit(ddsim, variable));
-  }
-
-  Complex result;
-  bool firstFound = false;
-  std::vector<bool> bitstring;
-  for (size_t i = 0;
-       i < 1ULL << ddsim->interface.getNumQubits(&ddsim->interface); i++) {
-    ddsim->interface.getAmplitudeIndex(&ddsim->interface, i, &result);
-    if (complexMagnitude(result) > 0.00000001) {
-      if (!firstFound) {
-        firstFound = true;
-        bitstring = extractBits(qubits, i);
-      } else {
-        const std::vector<bool> compareBitstring = extractBits(qubits, i);
-        if (bitstring != compareBitstring) {
-          return true;
-        }
-      }
-    }
-  }
-
-  return false;
-}
-
-/**
- * Checks the given statevector-equality assertion on the given state.
- * @param ddsim The simulation state.
- * @param assertion The equality assertion to check.
- * @return True if the assertion is satisfied, false otherwise.
- */
-bool checkAssertionEqualityStatevector(
-    DDSimulationState* ddsim,
-    std::unique_ptr<StatevectorEqualityAssertion>& assertion) {
-  std::vector<size_t> qubits;
-  for (const auto& variable : assertion->getTargetQubits()) {
-    qubits.push_back(variableToQubit(ddsim, variable));
-  }
-
-  Statevector sv;
-  sv.numQubits = qubits.size();
-  sv.numStates = 1 << sv.numQubits;
-  std::vector<Complex> amplitudes(sv.numStates);
-  sv.amplitudes = amplitudes.data();
-
-  if (ddsim->interface.getStateVectorSub(&ddsim->interface, sv.numQubits,
-                                         qubits.data(), &sv) == ERROR) {
-    throw std::runtime_error(
-        "Equality assertion on entangled sub-state is not allowed.");
-  }
-
-  const double similarityThreshold = assertion->getSimilarityThreshold();
-
-  const double similarity = dotProduct(sv, assertion->getTargetStatevector());
-
-  return similarity >= similarityThreshold;
-}
-
-/**
- * Checks the given circuit-equality assertion on the given state.
- * @param ddsim The simulation state.
- * @param assertion The equality assertion to check.
- * @return True if the assertion is satisfied, false otherwise.
- */
-bool checkAssertionEqualityCircuit(
-    DDSimulationState* ddsim,
-    std::unique_ptr<CircuitEqualityAssertion>& assertion) {
-  std::vector<size_t> qubits;
-  for (const auto& variable : assertion->getTargetQubits()) {
-    qubits.push_back(variableToQubit(ddsim, variable));
-  }
-
-  DDSimulationState secondSimulation;
-  createDDSimulationState(&secondSimulation);
-  secondSimulation.interface.loadCode(&secondSimulation.interface,
-                                      assertion->getCircuitCode().c_str());
-  if (!secondSimulation.assertionInstructions.empty()) {
-    destroyDDSimulationState(&secondSimulation);
-    throw std::runtime_error(
-        "Circuit equality assertions cannot contain nested assertions");
-  }
-  secondSimulation.interface.runSimulation(&secondSimulation.interface);
-
-  Statevector sv2;
-  sv2.numQubits =
-      secondSimulation.interface.getNumQubits(&secondSimulation.interface);
-  sv2.numStates = 1 << sv2.numQubits;
-  std::vector<Complex> amplitudes2(sv2.numStates);
-  sv2.amplitudes = amplitudes2.data();
-  secondSimulation.interface.getStateVectorFull(&secondSimulation.interface,
-                                                &sv2);
-  destroyDDSimulationState(&secondSimulation);
-
-  Statevector sv;
-  sv.numQubits = qubits.size();
-  sv.numStates = 1 << sv.numQubits;
-  std::vector<Complex> amplitudes(sv.numStates);
-  sv.amplitudes = amplitudes.data();
-  if (ddsim->interface.getStateVectorSub(&ddsim->interface, sv.numQubits,
-                                         qubits.data(), &sv) == ERROR) {
-    throw std::runtime_error(
-        "Equality assertion on entangled sub-state is not allowed.");
-  }
-
-  const double similarityThreshold = assertion->getSimilarityThreshold();
-
-  const double similarity = dotProduct(sv, sv2);
-
-  return similarity >= similarityThreshold;
 }
 
 bool checkAssertion(DDSimulationState* ddsim,
@@ -1242,34 +1465,6 @@ bool checkAssertion(DDSimulationState* ddsim,
     return result;
   }
   throw std::runtime_error("Unknown assertion type");
-}
-
-/**
- * @brief For an instruction that has a child block, extract the valid code from
- * the block's body.
- *
- * Valid code is code that can be passed to the simulation backend. Assertions
- * are removed.
- * @param parent The parent instruction.
- * @param allInstructions All instructions in the program.
- * @return The extracted valid code.
- */
-std::string validCodeFromChildren(const Instruction& parent,
-                                  std::vector<Instruction>& allInstructions) {
-  std::string code = parent.code;
-  if (!parent.block.valid) {
-    return code;
-  }
-  code += " { ";
-  for (auto child : parent.childInstructions) {
-    const auto& childInstruction = allInstructions[child];
-    if (childInstruction.assertion != nullptr) {
-      continue;
-    }
-    code += validCodeFromChildren(childInstruction, allInstructions);
-  }
-  code += " } ";
-  return code;
 }
 
 std::string preprocessAssertionCode(const char* code,
@@ -1436,171 +1631,6 @@ std::string getQuantumBitName(DDSimulationState* ddsim, size_t index) {
     }
   }
   return "UNKNOWN";
-}
-
-//-----------------------------------------------------------------------------
-
-/**
- * @brief Construct the preamble for a statistical slice equality assertion.
- * @param assertion The assertion to construct the preamble for.
- * @param targetNames The names of the target qubits.
- * @return The constructed preamble.
- */
-std::string getStatisticalSliceEqualityPreamble(
-    std::unique_ptr<StatevectorEqualityAssertion>& assertion,
-    std::map<std::string, std::string>& targetNames) {
-  std::stringstream ss;
-  const auto sv = Span<Complex>(assertion->getTargetStatevector().amplitudes,
-                                assertion->getTargetStatevector().numStates);
-
-  // First target is rather straightforward.
-  ss << "// ASSERT: (";
-  for (size_t i = 0; i < assertion->getTargetQubits().size(); i++) {
-    ss << targetNames[assertion->getTargetQubits()[i]];
-    if (i != assertion->getTargetQubits().size() - 1) {
-      ss << ",";
-    }
-  }
-  ss << ") {";
-  for (size_t i = 0; i < assertion->getTargetStatevector().numStates; i++) {
-    ss << (sv[i].real * sv[i].real) + (sv[i].imaginary * sv[i].imaginary);
-    if (i != assertion->getTargetStatevector().numStates - 1) {
-      ss << ",";
-    }
-  }
-  ss << "} " << assertion->getSimilarityThreshold() << "\n";
-  return ss.str();
-}
-
-/**
- * @brief Construct the preamble for a statistical slice superposition
- * assertion.
- * @param assertion The assertion to construct the preamble for.
- * @param targetNames The names of the target qubits.
- * @return The constructed preamble.
- */
-std::string getStatisticalSliceSuperpositionPreamble(
-    std::unique_ptr<SuperpositionAssertion>& assertion,
-    std::map<std::string, std::string>& targetNames) {
-  std::stringstream ss;
-  // First target is rather straightforward.
-  ss << "// ASSERT: (";
-  for (size_t i = 0; i < assertion->getTargetQubits().size(); i++) {
-    ss << targetNames[assertion->getTargetQubits()[i]];
-    if (i != assertion->getTargetQubits().size() - 1) {
-      ss << ",";
-    }
-  }
-  ss << ") {superposition}\n";
-  return ss.str();
-}
-
-std::string getProjectiveMeasurementPreamble(
-    std::unique_ptr<CircuitEqualityAssertion>& assertion,
-    std::map<std::string, std::string>& targetNames) {
-  std::stringstream ss;
-  // First target is rather straightforward.
-  ss << "// ASSERT: (";
-  for (size_t i = 0; i < assertion->getTargetQubits().size(); i++) {
-    ss << targetNames[assertion->getTargetQubits()[i]];
-    if (i != assertion->getTargetQubits().size() - 1) {
-      ss << ",";
-    }
-  }
-  ss << ") {zero}\n";
-  return ss.str();
-}
-
-/**
- * @brief Attempt to cancel an assertion based on all previously encountered
- * assertions.
- * @param ddsim The simulation state.
- * @param newAssertion The index of the new assertion to check.
- * @return True if the assertion can be cancelled, false otherwise.
- */
-bool tryCancelAssertion(DDSimulationState* ddsim, size_t newAssertion) {
-  const auto& assertion = ddsim->assertionInstructions[newAssertion];
-  for (size_t i = newAssertion - 1; i > 0; i--) {
-    if (ddsim->instructionTypes[i] != ASSERTION) {
-      if (!doesCommute(assertion, ddsim->instructionObjects[i])) {
-        return false;
-      }
-      continue;
-    }
-    const auto& potentialParent = ddsim->assertionInstructions[i];
-    if (potentialParent->implies(*assertion)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-bool areAssertionsIndependent(DDSimulationState* ddsim,
-                              size_t previousAssertion, size_t newAssertion) {
-  if (ddsim->assertionInstructions[previousAssertion]->getType() ==
-      AssertionType::CircuitEquality) {
-    return true;
-  }
-  const auto& next = ddsim->assertionInstructions[newAssertion];
-
-  const auto nextQubits =
-      std::set(next->getTargetQubits().begin(), next->getTargetQubits().end());
-
-  for (size_t i = previousAssertion + 1; i < newAssertion; i++) {
-    if (ddsim->instructionTypes[i] == InstructionType::ASSERTION) {
-      continue;
-    }
-    const auto targets = ddsim->targetQubits[i];
-    if (std::any_of(targets.begin(), targets.end(), [&](const auto& target) {
-          return nextQubits.find(target) != nextQubits.end();
-        })) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-bool areAssertionsIndependent(DDSimulationState* ddsim,
-                              std::vector<size_t>& previousAssertions,
-                              size_t newAssertion) {
-  return std::all_of(previousAssertions.begin(), previousAssertions.end(),
-                     [&](const auto prev) {
-                       return areAssertionsIndependent(ddsim, prev,
-                                                       newAssertion);
-                     });
-}
-
-void compileProjectiveMeasurement(
-    DDSimulationState* ddsim, std::stringstream& stream, size_t assertionIndex,
-    const std::map<std::string, std::string>& targetNames) {
-  const auto& assertion = dynamic_cast<CircuitEqualityAssertion&>(
-      *ddsim->assertionInstructions[assertionIndex].get());
-
-  std::stringstream codeStream{assertion.getCircuitCode()};
-  auto newQc = qasm3::Importer::import(codeStream);
-
-  newQc.unifyQuantumRegisters("assert_qubit");
-
-  qc::QubitIndexToRegisterMap qubitIndexToRegisterMap{};
-  const auto reg = newQc.getQuantumRegisters().begin()->second;
-  for (qc::Qubit i = 0; i < assertion.getTargetQubits().size(); i++) {
-    const auto& originalVariable = assertion.getTargetQubits()[i];
-    qubitIndexToRegisterMap.try_emplace(i, reg, originalVariable);
-  }
-
-  for (auto it = newQc.rbegin(); it != newQc.rend(); it++) {
-    auto inverted = it->get()->getInverted();
-    it->get()->dumpOpenQASM2(stream, qubitIndexToRegisterMap, {});
-  }
-
-  for (const auto& [qbit, cbit] : targetNames) {
-    stream << "measure " << qbit << " -> " << cbit << "[0];\n";
-  }
-
-  for (auto& it : newQc) {
-    it->dumpOpenQASM2(stream, qubitIndexToRegisterMap, {});
-  }
 }
 
 size_t compileStatisticalSlice(DDSimulationState* ddsim, char* buffer,

@@ -14,11 +14,14 @@
  * diagnostics interfaces.
  */
 
+#include "python/InterfaceBindings.hpp"
+
 #include "backend/debug.h"
 #include "backend/diagnostics.h"
 #include "common.h"
+#include "pybind11/cast.h"
 #include "pybind11/pybind11.h"
-#include "pybind11/stl.h"
+#include "pybind11/stl.h" // NOLINT(misc-include-cleaner)
 
 #include <algorithm>
 #include <cstddef>
@@ -32,7 +35,7 @@
 namespace py = pybind11;
 using namespace pybind11::literals;
 
-namespace mqt::debugger {
+namespace {
 
 /**
  * @brief Checks whether the given result is OK, and throws a runtime_error
@@ -44,6 +47,8 @@ void checkOrThrow(Result result) {
     throw std::runtime_error("An error occurred while executing the operation");
   }
 }
+
+} // namespace
 
 /**
  * @brief A representation of statevectors in C++ style, using std::vector
@@ -780,17 +785,23 @@ Returns:
       .def(
           "suggest_new_assertions",
           [](Diagnostics* self) {
-            size_t stringSize = 2 << 17;
+            const size_t stringSize = 2 << 17;
             const size_t count =
                 self->suggestNewAssertions(self, nullptr, nullptr, 0);
             std::vector<size_t> positions(count);
             std::vector<char*> buffers(count);
             for (auto& b : buffers) {
+              // NOLINTBEGIN(cppcoreguidelines-owning-memory,
+              // cppcoreguidelines-pro-type-reinterpret-cast,
+              // cppcoreguidelines-pro-bounds-pointer-arithmetic)
               char* buffer = reinterpret_cast<char*>(
                   malloc(sizeof(char) * stringSize)); // NOLINT
               for (size_t i = 0; i < stringSize; i++) {
                 buffer[i] = '\0';
               }
+              // NOLINTEND(cppcoreguidelines-owning-memory,
+              // cppcoreguidelines-pro-type-reinterpret-cast,
+              // cppcoreguidelines-pro-bounds-pointer-arithmetic)
               b = buffer;
             }
 
@@ -821,5 +832,3 @@ Returns:
       .doc() = "Provides diagnostics capabilities such as different analysis "
                "methods for the debugger.";
 }
-
-} // namespace mqt::debugger

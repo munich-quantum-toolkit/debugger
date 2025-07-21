@@ -30,6 +30,8 @@
 
 namespace mqt::debugger {
 
+namespace {
+
 /**
  * @brief Compute the trace of the square of a given matrix.
  *
@@ -149,6 +151,25 @@ double getSharedInformation(const std::vector<std::vector<Complex>>& matrix) {
   return getEntropy(p0) + getEntropy(p1) - getEntropy(matrix);
 }
 
+/**
+ * @brief Generate a string representation of a double without trailing zeros.
+ *
+ * @param d The double to convert to a string.
+ * @return The string representation of the double.
+ */
+std::string doubleToString(const double d) {
+  auto string = std::to_string(d);
+  while (string.back() == '0') {
+    string.pop_back();
+  }
+  if (string.back() == '.') {
+    string.pop_back();
+  }
+  return string;
+}
+
+} // namespace
+
 Complex complexAddition(const Complex& c1, const Complex& c2) {
   const double real = c1.real + c2.real;
   const double imaginary = c1.imaginary + c2.imaginary;
@@ -156,8 +177,8 @@ Complex complexAddition(const Complex& c1, const Complex& c2) {
 }
 
 Complex complexMultiplication(const Complex& c1, const Complex& c2) {
-  const double real = c1.real * c2.real - c1.imaginary * c2.imaginary;
-  const double imaginary = c1.real * c2.imaginary + c1.imaginary * c2.real;
+  const double real = (c1.real * c2.real) - (c1.imaginary * c2.imaginary);
+  const double imaginary = (c1.real * c2.imaginary) + (c1.imaginary * c2.real);
   return {real, imaginary};
 }
 
@@ -240,7 +261,7 @@ toEigenMatrix(const std::vector<std::vector<Complex>>& matrix) {
 }
 
 double complexMagnitude(Complex& c) {
-  return std::sqrt(c.real * c.real + c.imaginary * c.imaginary);
+  return std::sqrt((c.real * c.real) + (c.imaginary * c.imaginary));
 }
 
 std::vector<Complex>
@@ -278,30 +299,13 @@ getSubStateVectorAmplitudes(const Statevector& sv,
     throw std::runtime_error("No valid index found");
   }
 
-  std::vector<Complex> amplitudes;
+  std::vector<Complex> amplitudes(traced.size());
 
   for (size_t i = 0; i < traced.size(); i++) {
-    amplitudes.push_back({vectors(static_cast<int>(i), index).real(),
-                          vectors(static_cast<int>(i), index).imag()});
+    amplitudes[i] = {vectors(static_cast<int>(i), index).real(),
+                     vectors(static_cast<int>(i), index).imag()};
   }
   return amplitudes;
-}
-
-/**
- * @brief Generate a string representation of a double without trailing zeros.
- *
- * @param d The double to convert to a string.
- * @return The string representation of the double.
- */
-std::string doubleToString(const double d) {
-  auto string = std::to_string(d);
-  while (string.back() == '0') {
-    string.pop_back();
-  }
-  if (string.back() == '.') {
-    string.pop_back();
-  }
-  return string;
 }
 
 std::string complexToString(const Complex& c) {

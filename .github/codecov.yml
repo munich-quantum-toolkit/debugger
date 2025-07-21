@@ -1,9 +1,9 @@
 ignore:
   - "extern/**/*"
-  - "**/python"
+  - "bindings/**/*"
   - "test/**/*"
-  - "src/mqt/debugger/dap/**/*"
-  - "src/mqt/debugger/dap/*"
+  - "python/mqt/debugger/dap/**/*"
+  - "python/mqt/debugger/dap/*"
   - "app/*"
   - "src/frontend/**/*"
   - "**/__main__.py"
@@ -33,7 +33,7 @@ flag_management:
         - "src"
     - name: python
       paths:
-        - "src/mqt/**/*.py"
+        - "python/mqt/**/*.py"
       statuses:
         - type: project
           threshold: 0.5%
