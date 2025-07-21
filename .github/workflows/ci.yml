@@ -16,13 +16,13 @@ concurrency:
 jobs:
   change-detection:
     name: 🔍 Change
-    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-change-detection.yml@v1.12.0
+    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-change-detection.yml@v1.15.0
 
   cpp-tests:
     name: 🇨‌ Test
     needs: change-detection
     if: fromJSON(needs.change-detection.outputs.run-cpp-tests)
-    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-cpp-ci.yml@v1.12.0
+    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-cpp-ci.yml@v1.15.0
     permissions:
       id-token: write # Explicitly allows the `id-token: write` permission for this job
       contents: read
@@ -34,7 +34,7 @@ jobs:
     name: 🇨‌ Lint
     needs: change-detection
     if: fromJSON(needs.change-detection.outputs.run-cpp-linter)
-    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-cpp-linter.yml@v1.12.0
+    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-cpp-linter.yml@v1.15.0
     with:
       build-project: true
       clang-version: 20
@@ -50,13 +50,13 @@ jobs:
       id-token: write # Explicitly allows the `id-token: write` permission for this job
       contents: read
     if: fromJSON(needs.change-detection.outputs.run-python-tests)
-    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-python-ci.yml@v1.12.0
+    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-python-ci.yml@v1.15.0
 
   code-ql:
     name: 📝 CodeQL
     needs: change-detection
     if: fromJSON(needs.change-detection.outputs.run-code-ql)
-    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-code-ql.yml@v1.12.0
+    uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-code-ql.yml@v1.15.0
 
   required-checks-pass: # This job does nothing and is only used for branch protection
     name: 🚦 Check
