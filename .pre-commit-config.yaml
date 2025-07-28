@@ -30,7 +30,7 @@ repos:
       - id: fix-ligatures
       - id: fix-smartquotes
     repo: https://github.com/sirosen/texthooks
-    rev: 0.6.8
+    rev: 0.7.1
   - hooks:
       - id: rst-backticks
       - id: rst-directive-colons
@@ -52,7 +52,7 @@ repos:
           - pyi
           - jupyter
     repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.3
+    rev: v0.12.5
   - hooks:
       - additional_dependencies:
           - black==24.*
