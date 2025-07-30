@@ -22,7 +22,18 @@ class VariableType(enum.Enum):
     VarFloat = 2
     """A floating-point variable."""
 
+class ErrorCauseType(enum.Enum):
+    """Represents the type of a potential error cause."""
+
+    Unknown = 0
+    """An unknown error cause."""
+    MissingInteraction = 1
+    """Indicates that an entanglement error may be caused by a missing interaction."""
+    ControlAlwaysZero = 2
+    """Indicates that an error may be related to a controlled gate with a control that is always zero."""
+
 # Classes
+
 class VariableValue:
     """Represents the value of a classical variable.
 
@@ -400,16 +411,6 @@ class SimulationState:
         Returns:
             str: The compiled code.
         """
-
-class ErrorCauseType(enum.Enum):
-    """Represents the type of a potential error cause."""
-
-    Unknown = 0
-    """An unknown error cause."""
-    MissingInteraction = 1
-    """Indicates that an entanglement error may be caused by a missing interaction."""
-    ControlAlwaysZero = 2
-    """Indicates that an error may be related to a controlled gate with a control that is always zero."""
 
 class ErrorCause:
     """Represents a potential cause of an assertion error."""
