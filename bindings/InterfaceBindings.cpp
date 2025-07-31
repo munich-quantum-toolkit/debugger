@@ -776,11 +776,11 @@ Returns:
             self->suggestAssertionMovements(self, originalPositions.data(),
                                             suggestedPositions.data(), count);
             std::vector<std::pair<size_t, size_t>> result(count);
-            std::transform(originalPositions.begin(), originalPositions.end(),
-                           suggestedPositions.begin(), result.begin(),
-                           [](const size_t& a, const size_t& b) {
-                             return std::make_pair(a, b);
-                           });
+            std::ranges::transform(originalPositions, suggestedPositions,
+                                   result.begin(),
+                                   [](const size_t& a, const size_t& b) {
+                                     return std::make_pair(a, b);
+                                   });
             return result;
           },
           R"(Suggest movements of assertions to better positions.
@@ -823,11 +823,10 @@ Returns:
             }
             std::vector<std::pair<size_t, std::string>> result(count);
 
-            std::transform(positions.begin(), positions.end(),
-                           assertions.begin(), result.begin(),
-                           [](const size_t& a, const std::string& b) {
-                             return std::make_pair(a, b);
-                           });
+            std::ranges::transform(positions, assertions, result.begin(),
+                                   [](const size_t& a, const std::string& b) {
+                                     return std::make_pair(a, b);
+                                   });
             return result;
           },
           R"(Suggest new assertions to be added to the program.
