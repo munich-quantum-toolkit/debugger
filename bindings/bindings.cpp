@@ -20,7 +20,7 @@
 
 #include <pybind11/detail/common.h>
 
-PYBIND11_MODULE(pydebugger, m) {
+PYBIND11_MODULE(MQT_DEBUGGER_MODULE_NAME, m, py::mod_gil_not_used()) {
   bindDiagnostics(m);
   bindFramework(m);
   bindBackend(m);

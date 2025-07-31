@@ -31,7 +31,7 @@ If you have any questions, feel free to contact us via [quantum.cda@xcit.tum.de]
 
 ## Getting Started
 
-MQT Debugger is available via [PyPI](https://pypi.org/project/mqt.debugger/) for Linux, macOS, and Windows and supports Python 3.9 to 3.13.
+MQT Debugger is available via [PyPI](https://pypi.org/project/mqt.debugger/) for Linux, macOS, and Windows and supports Python 3.9 to 3.14.
 
 ```console
 (venv) $ pip install mqt.debugger
