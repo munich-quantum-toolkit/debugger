@@ -112,7 +112,7 @@ void visitCall(DDSimulationState* ddsim, size_t current, size_t qubitIndex,
                   ddsim->targetQubits[checkInstruction].end(), stringToSearch);
     if (ddsim->instructionTypes[checkInstruction] != RETURN &&
         found != ddsim->targetQubits[checkInstruction].end()) {
-      if (visited.find(checkInstruction) == visited.end()) {
+      if (!visited.contains(checkInstruction)) {
         toVisit.insert(checkInstruction);
       }
       if (ddsim->instructionTypes[checkInstruction] == CALL) {
@@ -150,19 +150,17 @@ std::set<size_t> getUnknownCallers(DDSimulationState* ddsim,
 
   while (true) {
     instruction--;
-    if (ddsim->functionDefinitions.find(instruction) !=
-        ddsim->functionDefinitions.end()) {
+    if (ddsim->functionDefinitions.contains(instruction)) {
       unknownCallers.insert(instruction);
       for (const auto caller : ddsim->functionCallers[instruction]) {
-        if (visited.find(caller) == visited.end()) {
+        if (!visited.contains(caller)) {
           toVisit.insert(caller);
         }
       }
     }
 
     if (instruction == 0 || ddsim->instructionTypes[instruction] == RETURN ||
-        ddsim->functionDefinitions.find(instruction) !=
-            ddsim->functionDefinitions.end()) {
+        !ddsim->functionDefinitions.contains(instruction)) {
       if (toVisit.empty()) {
         break;
       }
@@ -201,7 +199,7 @@ getInteractionTreeAtRuntime(DDDiagnostics* ddd, size_t qubit) {
       if (ddsim->instructionTypes[i] != SIMULATE) {
         continue;
       }
-      if (ddd->actualQubits.find(i) == ddd->actualQubits.end()) {
+      if (!ddd->actualQubits.contains(i)) {
         continue;
       }
 
@@ -209,13 +207,12 @@ getInteractionTreeAtRuntime(DDDiagnostics* ddd, size_t qubit) {
       for (const auto& actualQubitVector : actualQubits) {
         if (!std::none_of(actualQubitVector.begin(), actualQubitVector.end(),
                           [&interactions](size_t elem) {
-                            return interactions.find(elem) !=
-                                   interactions.end();
+                            return interactions.contains(elem);
                           })) {
           for (size_t target1 = 0; target1 < actualQubitVector.size();
                target1++) {
             const auto& target = actualQubitVector[target1];
-            if (interactions.find(target) == interactions.end()) {
+            if (!interactions.contains(target)) {
               found = true;
             }
             for (size_t target2 = 1; target2 < actualQubitVector.size();
@@ -224,7 +221,7 @@ getInteractionTreeAtRuntime(DDDiagnostics* ddd, size_t qubit) {
               tree.insert({target, secondTarget, i});
               tree.insert({secondTarget, target, i});
 
-              if (interactions.find(secondTarget) == interactions.end()) {
+              if (!interactions.contains(secondTarget)) {
                 found = true;
               }
               interactions.insert(secondTarget);
@@ -333,21 +330,21 @@ findUniquePath(const std::set<std::tuple<size_t, size_t, size_t>>& graph,
         continue;
       }
 
-      if (predecessors.find(current) != predecessors.end() &&
+      if (predecessors.contains(current) &&
           predecessors[current].first == other &&
           predecessors[current].second == instruction) {
         // This is the edge we came from, so we don't want to go back.
         continue;
       }
 
-      if (predecessors.find(other) != predecessors.end()) {
+      if (predecessors.contains(other)) {
         if (predecessors[other].second != instruction) {
           multiplePredecessors.insert(other);
         }
       } else {
         predecessors.insert({other, {current, instruction}});
       }
-      if (visited.find(other) != visited.end()) {
+      if (visited.contains(other)) {
         continue;
       }
       if (std::find(toVisit.begin(), toVisit.end(), other) == toVisit.end()) {
@@ -356,13 +353,13 @@ findUniquePath(const std::set<std::tuple<size_t, size_t, size_t>>& graph,
     }
   }
 
-  if (predecessors.find(end) == predecessors.end()) {
+  if (!predecessors.contains(end)) {
     return {};
   }
   std::vector<std::tuple<size_t, size_t, size_t>> path;
   size_t current = end;
   while (current != start) {
-    if (multiplePredecessors.find(current) != multiplePredecessors.end()) {
+    if (multiplePredecessors.contains(current)) {
       return {};
     }
     path.emplace_back(predecessors[current].first, current,
@@ -383,8 +380,7 @@ void suggestBasedOnFailedEntanglementAssertion(
     const EntanglementAssertion* assertion) {
   // For larger assertions, first split it into smaller ones.
   if (assertion->getTargetQubits().size() != 2) {
-    if (self->assertionsEntToInsert.find(instructionIndex) ==
-        self->assertionsEntToInsert.end()) {
+    if (!self->assertionsEntToInsert.contains(instructionIndex)) {
       self->assertionsEntToInsert.insert(
           {instructionIndex,
            std::set<std::pair<std::set<std::string>, size_t>>()});
@@ -436,8 +432,7 @@ void suggestBasedOnFailedEntanglementAssertion(
     }
   }
 
-  if (self->assertionsEntToInsert.find(instructionIndex) ==
-      self->assertionsEntToInsert.end()) {
+  if (!self->assertionsEntToInsert.contains(instructionIndex)) {
     self->assertionsEntToInsert.insert(
         {instructionIndex,
          std::set<std::pair<std::set<std::string>, size_t>>()});
@@ -535,8 +530,7 @@ void suggestSplitEqualityAssertion(
       }
     }
 
-    if (self->assertionsEqToInsert.find(instructionIndex) ==
-        self->assertionsEqToInsert.end()) {
+    if (!self->assertionsEqToInsert.contains(instructionIndex)) {
       self->assertionsEqToInsert.insert(
           {instructionIndex, std::vector<InsertEqualityAssertion>{}});
     }
@@ -619,7 +613,7 @@ Result dddiagnosticsGetDataDependencies(Diagnostics* self, size_t instruction,
       if (ddsim->instructionTypes[depInstruction] == NOP) {
         continue; // We don't want variable declarations as dependencies.
       }
-      if (visited.find(depInstruction) == visited.end()) {
+      if (!visited.contains(depInstruction)) {
         toVisit.insert(depInstruction);
       }
       if (ddsim->instructionTypes[depInstruction] == CALL) {
@@ -627,9 +621,9 @@ Result dddiagnosticsGetDataDependencies(Diagnostics* self, size_t instruction,
       }
     }
 
-    if (unknownCallers.find(current - 1) != unknownCallers.end()) {
+    if (unknownCallers.contains(current - 1)) {
       for (auto caller : ddsim->functionCallers[current - 1]) {
-        if (visited.find(caller) == visited.end()) {
+        if (!visited.contains(caller)) {
           toVisit.insert(caller);
         }
       }
@@ -667,10 +661,10 @@ Result dddiagnosticsGetInteractions(Diagnostics* self, size_t beforeInstruction,
       }
       if (!std::none_of(targetQubits.begin(), targetQubits.end(),
                         [&interactions](size_t elem) {
-                          return interactions.find(elem) != interactions.end();
+                          return interactions.contains(elem);
                         })) {
         for (const auto& target : targetQubits) {
-          if (interactions.find(target) == interactions.end()) {
+          if (!interactions.contains(target)) {
             found = true;
           }
           interactions.insert(target);
@@ -739,8 +733,7 @@ size_t tryFindMissingInteraction(DDDiagnostics* diagnostics,
 
   for (size_t i = 0; i < targets.size(); i++) {
     for (size_t j = i + 1; j < targets.size(); j++) {
-      if (allInteractions[targetQubits[i]].find(targetQubits[j]) ==
-          allInteractions[targetQubits[i]].end()) {
+      if (!allInteractions[targetQubits[i]].contains(targetQubits[j])) {
         outputs[index].type = ErrorCauseType::MissingInteraction;
         outputs[index].instruction = instruction;
         index++;
@@ -772,11 +765,10 @@ size_t tryFindZeroControls(DDDiagnostics* diagnostics, size_t instruction,
     if (dependencies[i] == 0) {
       continue;
     }
-    if (diagnostics->zeroControls.find(i) == diagnostics->zeroControls.end()) {
+    if (!diagnostics->zeroControls.contains(i)) {
       continue;
     }
-    if (diagnostics->nonZeroControls.find(i) !=
-        diagnostics->nonZeroControls.end()) {
+    if (diagnostics->nonZeroControls.contains(i)) {
       continue;
     }
     const auto& zeroControls = diagnostics->zeroControls[i];
@@ -800,8 +792,7 @@ Result dddiagnosticsGetZeroControlInstructions(Diagnostics* self,
                                    dddiagnosticsGetInstructionCount(self));
   for (size_t i = 0; i < dddiagnosticsGetInstructionCount(self); i++) {
     instructionSpan[i] =
-        (ddd->nonZeroControls.find(i) == ddd->nonZeroControls.end()) &&
-        (ddd->zeroControls.find(i) != ddd->zeroControls.end());
+        (!ddd->nonZeroControls.contains(i) && ddd->zeroControls.contains(i));
   }
 
   return OK;
@@ -821,8 +812,7 @@ void dddiagnosticsOnStepForward(DDDiagnostics* diagnostics,
                    [&ddsim](const std::string& target) {
                      return variableToQubit(ddsim, target);
                    });
-    if (diagnostics->actualQubits.find(instruction) ==
-        diagnostics->actualQubits.end()) {
+    if (!diagnostics->actualQubits.contains(instruction)) {
       diagnostics->actualQubits[instruction] = std::set<std::vector<size_t>>();
     }
     diagnostics->actualQubits[instruction].insert(targetQubits);
@@ -848,14 +838,12 @@ void dddiagnosticsOnStepForward(DDDiagnostics* diagnostics,
     const auto pos = control.type == qc::Control::Type::Pos;
     const auto qubit = control.qubit;
     if (isAlwaysZero(sv, qubit, !pos)) {
-      if (diagnostics->zeroControls.find(instruction) ==
-          diagnostics->zeroControls.end()) {
+      if (!diagnostics->zeroControls.contains(instruction)) {
         diagnostics->zeroControls[instruction] = std::set<size_t>();
       }
       diagnostics->zeroControls[instruction].insert(qubit);
     } else {
-      if (diagnostics->nonZeroControls.find(instruction) ==
-          diagnostics->nonZeroControls.end()) {
+      if (!diagnostics->nonZeroControls.contains(instruction)) {
         diagnostics->nonZeroControls[instruction] = std::set<size_t>();
       }
       diagnostics->nonZeroControls[instruction].insert(qubit);

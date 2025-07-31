@@ -180,7 +180,7 @@ void CliFrontEnd::suggestUpdatedAssertions(SimulationState* state) {
     size_t start = 0;
     size_t end = 0;
     state->getInstructionPosition(state, newPositions[i], &start, &end);
-    if (coveredPositions.find(newPositions[i]) == coveredPositions.end()) {
+    if (!coveredPositions.contains(newPositions[i])) {
       coveredPositions.insert(newPositions[i]);
       newCode.erase(start, end - start + 1);
     }

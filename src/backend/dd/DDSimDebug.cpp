@@ -735,8 +735,7 @@ Result ddsimStepForward(SimulationState* self) {
     ddsim->callReturnStack.pop_back();
   }
 
-  if (ddsim->breakpoints.find(ddsim->currentInstruction) !=
-      ddsim->breakpoints.end()) {
+  if (ddsim->breakpoints.contains(ddsim->currentInstruction)) {
     ddsim->lastMetBreakpoint = ddsim->currentInstruction;
   }
 
@@ -790,7 +789,7 @@ Result ddsimStepForward(SimulationState* self) {
                                               static_cast<dd::Qubit>(qubit),
                                               result ? pZero : pOne, result);
       auto name = getClassicalBitName(ddsim, classicalBit);
-      if (ddsim->variables.find(name) != ddsim->variables.end()) {
+      if (ddsim->variables.contains(name)) {
         VariableValue value;
         value.boolValue = !result;
         ddsim->variables[name].value = value;
@@ -899,8 +898,7 @@ Result ddsimStepBackward(SimulationState* self) {
 
   // When going backwards, we still run the instruction that hits the breakpoint
   // because we want to stop *before* it.
-  if (ddsim->breakpoints.find(ddsim->currentInstruction) !=
-      ddsim->breakpoints.end()) {
+  if (ddsim->breakpoints.contains(ddsim->currentInstruction)) {
     ddsim->lastMetBreakpoint = ddsim->currentInstruction;
   }
 
@@ -1119,7 +1117,7 @@ Result ddsimGetAmplitudeBitstring(SimulationState* self, const char* bitstring,
 Result ddsimGetClassicalVariable(SimulationState* self, const char* name,
                                  Variable* output) {
   auto* ddsim = toDDSimulationState(self);
-  if (ddsim->variables.find(name) != ddsim->variables.end()) {
+  if (ddsim->variables.contains(name)) {
     *output = ddsim->variables[name];
     return OK;
   }
@@ -1222,8 +1220,7 @@ Result ddsimSetBreakpoint(SimulationState* self, size_t desiredPosition,
     const size_t start = ddsim->instructionStarts[i];
     const size_t end = ddsim->instructionEnds[i];
     if (desiredPosition >= start && desiredPosition <= end) {
-      if (ddsim->functionDefinitions.find(i) !=
-          ddsim->functionDefinitions.end()) {
+      if (ddsim->functionDefinitions.contains(i)) {
         // Breakpoint may be located in a sub-gate of the gate definition.
         for (auto j = i + 1; j < ddsim->instructionTypes.size(); j++) {
           const size_t startSub = ddsim->instructionStarts[j];
@@ -1307,8 +1304,7 @@ std::vector<std::string> getTargetVariables(DDSimulationState* ddsim,
   size_t parentFunction = -1ULL;
   size_t i = instruction;
   while (true) {
-    if (ddsim->functionDefinitions.find(i) !=
-        ddsim->functionDefinitions.end()) {
+    if (ddsim->functionDefinitions.contains(i)) {
       parentFunction = i;
       break;
     }
@@ -1361,8 +1357,7 @@ size_t variableToQubit(DDSimulationState* ddsim, const std::string& variable) {
 
   for (size_t i = ddsim->callReturnStack.size() - 1; i != -1ULL; i--) {
     const auto call = ddsim->callReturnStack[i];
-    if (ddsim->callSubstitutions[call].find(var) ==
-        ddsim->callSubstitutions[call].end()) {
+    if (!ddsim->callSubstitutions[call].contains(var)) {
       continue;
     }
     var = ddsim->callSubstitutions[call][var];
@@ -1500,8 +1495,7 @@ std::string preprocessAssertionCode(const char* code,
     if (instruction.isFunctionCall) {
       const size_t successorInFunction = instruction.successorIndex;
       const size_t functionIndex = successorInFunction - 1;
-      if (ddsim->functionCallers.find(functionIndex) ==
-          ddsim->functionCallers.end()) {
+      if (!ddsim->functionCallers.contains(functionIndex)) {
         ddsim->functionCallers.insert({functionIndex, {}});
       }
       ddsim->functionCallers[functionIndex].insert(instruction.lineNumber);
@@ -1676,8 +1670,7 @@ size_t compileStatisticalSlice(DDSimulationState* ddsim, char* buffer,
          ddsim->assertionInstructions[foundIndex]->getTargetQubits()) {
       std::string targetName =
           "test_" + replaceString(replaceString(target, "]", ""), "[", "");
-      while (assertionTargetsSet.find(targetName) !=
-             assertionTargetsSet.end()) {
+      while (assertionTargetsSet.contains(targetName)) {
         targetName += "_";
       }
       assertionTargets[foundIndex][target] = targetName;
@@ -1722,7 +1715,7 @@ size_t compileStatisticalSlice(DDSimulationState* ddsim, char* buffer,
     if (ddsim->code[last] == '\n') {
       last++;
     }
-    if (assertionTargets.find(toSkip) != assertionTargets.end()) {
+    if (assertionTargets.contains(toSkip)) {
       // Add the required classical registers.
       for (const auto& [_, cbit] : assertionTargets[toSkip]) {
         ss << "creg " << cbit << "[1];\n";

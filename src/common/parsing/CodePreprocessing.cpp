@@ -158,7 +158,7 @@ void unfoldAssertionTargetRegisters(
       targets.push_back(target);
       continue;
     }
-    if (definedRegisters.find(target) != definedRegisters.end()) {
+    if (definedRegisters.contains(target)) {
       for (size_t i = 0; i < definedRegisters.at(target); i++) {
         targets.push_back(target + "[" + std::to_string(i) + "]");
       }
@@ -432,7 +432,7 @@ preprocessCode(const std::string& code, size_t startIndex,
         const auto registerIndex =
             std::stoul(splitString(splitString(target, '[')[1], ']')[0]);
 
-        if (definedRegisters.find(registerName) == definedRegisters.end() ||
+        if (!definedRegisters.contains(registerName) ||
             definedRegisters[registerName] <= registerIndex) {
           throw ParsingError("Invalid target qubit " + target +
                              " in assertion.");
@@ -480,8 +480,7 @@ preprocessCode(const std::string& code, size_t startIndex,
     }
     if (instr.isFunctionCall) {
       instr.successorIndex = functionFirstLine[instr.calledFunction];
-      if (functionDefinitions.find(instr.calledFunction) ==
-          functionDefinitions.end()) {
+      if (!functionDefinitions.contains(instr.calledFunction)) {
         continue;
       }
       instr.callSubstitution.clear();
