@@ -492,8 +492,8 @@ void compileProjectiveMeasurement(
   }
 
   for (auto& it : std::ranges::reverse_view(newQc)) {
-    auto inverted = it.get()->getInverted();
-    it.get()->dumpOpenQASM2(stream, qubitIndexToRegisterMap, {});
+    auto inverted = it->getInverted();
+    it->dumpOpenQASM2(stream, qubitIndexToRegisterMap, {});
   }
 
   for (const auto& [qbit, cbit] : targetNames) {
