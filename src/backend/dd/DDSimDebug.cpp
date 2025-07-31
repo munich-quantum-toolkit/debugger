@@ -48,6 +48,7 @@
 #include <memory>
 #include <numeric>
 #include <random>
+#include <ranges>
 #include <set>
 #include <sstream>
 #include <stdexcept>
@@ -490,9 +491,9 @@ void compileProjectiveMeasurement(
     qubitIndexToRegisterMap.try_emplace(i, reg, originalVariable);
   }
 
-  for (auto it = newQc.rbegin(); it != newQc.rend(); it++) {
-    auto inverted = it->get()->getInverted();
-    it->get()->dumpOpenQASM2(stream, qubitIndexToRegisterMap, {});
+  for (auto& it : std::ranges::reverse_view(newQc)) {
+    auto inverted = it.get()->getInverted();
+    it.get()->dumpOpenQASM2(stream, qubitIndexToRegisterMap, {});
   }
 
   for (const auto& [qbit, cbit] : targetNames) {
