@@ -77,7 +77,7 @@ std::string replaceString(std::string str, const std::string& from,
 }
 
 std::string removeWhitespace(std::string str) {
-  str.erase(std::remove_if(str.begin(), str.end(), ::isspace), str.end());
+  std::erase_if(str, ::isspace);
   return str;
 }
 

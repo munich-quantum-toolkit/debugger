@@ -465,8 +465,7 @@ preprocessCode(const std::string& code, size_t startIndex,
         const auto found = std::ranges::find_if(
             vars, [&var](const auto& v) { return variablesEqual(v, var); });
         if (found != vars.end()) {
-          const auto newEnd = std::remove(vars.begin(), vars.end(), var);
-          vars.erase(newEnd, vars.end());
+          std::erase(vars, var);
           instr.dataDependencies.emplace_back(idx, foundIndex);
         }
         foundIndex++;
