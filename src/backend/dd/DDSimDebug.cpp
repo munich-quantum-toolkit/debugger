@@ -442,7 +442,7 @@ bool areAssertionsIndependent(DDSimulationState* ddsim,
     }
     const auto targets = ddsim->targetQubits[i];
     if (std::ranges::any_of(targets, [&](const auto& target) {
-          return nextQubits.find(target) != nextQubits.end();
+          return nextQubits.contains(target);
         })) {
       return false;
     }
