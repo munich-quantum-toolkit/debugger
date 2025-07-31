@@ -132,7 +132,7 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
       state->stepOverBackward(state);
     } else if (command == "reset") {
       state->resetSimulation(state);
-    } else if (command.length() >= 5 && command.substr(0, 4) == "get ") {
+    } else if (command.starts_with("get ")) {
       wasGet = true;
     } else if (command == "inspect") {
       inspecting = state->getCurrentInstruction(state);
@@ -141,7 +141,7 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
       const auto count = state->getDiagnostics(state)->potentialErrorCauses(
           state->getDiagnostics(state), problems.data(), problems.size());
       std::cout << count << " potential problems found\n";
-    } else if (command.substr(0, 10) == "breakpoint") {
+    } else if (command.starts_with("breakpoint")) {
       const auto param = command.substr(11, command.length() - 11);
       const auto breakpoint = std::stoul(param);
       size_t instr = 0;
