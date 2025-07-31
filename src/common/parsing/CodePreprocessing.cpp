@@ -153,7 +153,7 @@ void unfoldAssertionTargetRegisters(
   bool found = false;
   std::vector<std::string> targets;
   for (const auto& target : assertion.getTargetQubits()) {
-    if (std::find(shadowedRegisters.begin(), shadowedRegisters.end(), target) !=
+    if (std::ranges::find(shadowedRegisters, target) !=
         shadowedRegisters.end()) {
       targets.push_back(target);
       continue;
@@ -413,8 +413,8 @@ preprocessCode(const std::string& code, size_t startIndex,
 
     bool isFunctionCall = false;
     std::string calledFunction;
-    if (!tokens.empty() && std::find(functionNames.begin(), functionNames.end(),
-                                     tokens[0]) != functionNames.end()) {
+    if (!tokens.empty() &&
+        std::ranges::find(functionNames, tokens[0]) != functionNames.end()) {
       isFunctionCall = true;
       calledFunction = tokens[0];
     }
@@ -424,8 +424,8 @@ preprocessCode(const std::string& code, size_t startIndex,
       unfoldAssertionTargetRegisters(*a, definedRegisters, shadowedRegisters);
       a->validate();
       for (const auto& target : a->getTargetQubits()) {
-        if (std::find(shadowedRegisters.begin(), shadowedRegisters.end(),
-                      target) != shadowedRegisters.end()) {
+        if (std::ranges::find(shadowedRegisters, target) !=
+            shadowedRegisters.end()) {
           continue;
         }
         const auto registerName = variableBaseName(target);
@@ -462,10 +462,8 @@ preprocessCode(const std::string& code, size_t startIndex,
             idx > instr.lineNumber - instructions.size())) {
       size_t foundIndex = 0;
       for (const auto& var : variableUsages[idx]) {
-        const auto found =
-            std::find_if(vars.begin(), vars.end(), [&var](const auto& v) {
-              return variablesEqual(v, var);
-            });
+        const auto found = std::ranges::find_if(
+            vars, [&var](const auto& v) { return variablesEqual(v, var); });
         if (found != vars.end()) {
           const auto newEnd = std::remove(vars.begin(), vars.end(), var);
           vars.erase(newEnd, vars.end());

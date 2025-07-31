@@ -61,7 +61,7 @@ bool qubitInSuperposition(const Span<Complex> statevector, size_t qubit) {
 std::vector<std::string> extractTargetQubits(const std::string& targetPart) {
   const auto parts = splitString(targetPart, ',');
   std::vector<std::string> trimmedParts(parts.size());
-  std::transform(parts.begin(), parts.end(), trimmedParts.begin(), trim);
+  std::ranges::transform(parts, trimmedParts.begin(), trim);
   return trimmedParts;
 }
 
@@ -156,8 +156,7 @@ bool EntanglementAssertion::implies(const Assertion& other) const {
         std::set(getTargetQubits().begin(), getTargetQubits().end());
     const auto subQubits = std::set(other.getTargetQubits().begin(),
                                     other.getTargetQubits().end());
-    return std::includes(containerQubits.begin(), containerQubits.end(),
-                         subQubits.begin(), subQubits.end());
+    return std::ranges::includes(containerQubits, subQubits);
   }
   if (other.getType() == AssertionType::Superposition) {
     return std::any_of(
@@ -183,8 +182,7 @@ bool SuperpositionAssertion::implies(const Assertion& other) const {
       std::set(getTargetQubits().begin(), getTargetQubits().end());
   const auto subQubits =
       std::set(other.getTargetQubits().begin(), other.getTargetQubits().end());
-  return std::includes(subQubits.begin(), subQubits.end(),
-                       containerQubits.begin(), containerQubits.end());
+  return std::ranges::includes(subQubits, containerQubits);
 }
 
 EqualityAssertion::EqualityAssertion(double inputSimilarityThreshold,
@@ -235,8 +233,7 @@ bool StatevectorEqualityAssertion::implies(
       std::set(getTargetQubits().begin(), getTargetQubits().end());
   const auto subQubits =
       std::set(other.getTargetQubits().begin(), other.getTargetQubits().end());
-  if (!std::includes(containerQubits.begin(), containerQubits.end(),
-                     subQubits.begin(), subQubits.end())) {
+  if (!std::ranges::includes(containerQubits, subQubits)) {
     return false;
   }
   Statevector targetSV;
@@ -294,8 +291,7 @@ bool StatevectorEqualityAssertion::implies(
       std::set(getTargetQubits().begin(), getTargetQubits().end());
   const auto subQubits =
       std::set(other.getTargetQubits().begin(), other.getTargetQubits().end());
-  if (!std::includes(containerQubits.begin(), containerQubits.end(),
-                     subQubits.begin(), subQubits.end())) {
+  if (!std::ranges::includes(containerQubits, subQubits)) {
     // Only equality assertions that contain all qubits of the entanglement
     // assertion can imply it.
     return false;

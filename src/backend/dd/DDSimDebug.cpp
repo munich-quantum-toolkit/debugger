@@ -441,7 +441,7 @@ bool areAssertionsIndependent(DDSimulationState* ddsim,
       continue;
     }
     const auto targets = ddsim->targetQubits[i];
-    if (std::any_of(targets.begin(), targets.end(), [&](const auto& target) {
+    if (std::ranges::any_of(targets, [&](const auto& target) {
           return nextQubits.find(target) != nextQubits.end();
         })) {
       return false;
@@ -460,11 +460,9 @@ bool areAssertionsIndependent(DDSimulationState* ddsim,
 bool areAssertionsIndependent(DDSimulationState* ddsim,
                               std::vector<size_t>& previousAssertions,
                               size_t newAssertion) {
-  return std::all_of(previousAssertions.begin(), previousAssertions.end(),
-                     [&](const auto prev) {
-                       return areAssertionsIndependent(ddsim, prev,
-                                                       newAssertion);
-                     });
+  return std::ranges::all_of(previousAssertions, [&](const auto prev) {
+    return areAssertionsIndependent(ddsim, prev, newAssertion);
+  });
 }
 
 /**
@@ -1106,7 +1104,7 @@ Result ddsimGetAmplitudeBitstring(SimulationState* self, const char* bitstring,
                                   Complex* output) {
   auto* ddsim = toDDSimulationState(self);
   auto path = std::string(bitstring);
-  std::reverse(path.begin(), path.end());
+  std::ranges::reverse(path);
   auto result =
       ddsim->simulationState.getValueByPath(ddsim->qc->getNqubits(), path);
   output->real = result.real();
@@ -1321,16 +1319,14 @@ std::vector<std::string> getTargetVariables(DDSimulationState* ddsim,
                               ? ddsim->targetQubits[parentFunction]
                               : std::vector<std::string>{};
   for (const auto& target : ddsim->targetQubits[instruction]) {
-    if (std::find(parameters.begin(), parameters.end(), target) !=
-        parameters.end()) {
+    if (std::ranges::find(parameters, target) != parameters.end()) {
       result.push_back(target);
       continue;
     }
-    const auto foundRegister =
-        std::find_if(ddsim->qubitRegisters.begin(), ddsim->qubitRegisters.end(),
-                     [target](const QubitRegisterDefinition& reg) {
-                       return reg.name == target;
-                     });
+    const auto foundRegister = std::ranges::find_if(
+        ddsim->qubitRegisters, [target](const QubitRegisterDefinition& reg) {
+          return reg.name == target;
+        });
     if (foundRegister != ddsim->qubitRegisters.end()) {
       for (size_t j = 0; j < foundRegister->size; j++) {
         result.push_back(target + "[" + std::to_string(j) + "]");
@@ -1385,9 +1381,8 @@ std::pair<size_t, size_t> variableToQubitAt(DDSimulationState* ddsim,
   size_t sweep = instruction;
   size_t functionDef = -1ULL;
   while (sweep < ddsim->instructionTypes.size()) {
-    if (std::find(ddsim->functionDefinitions.begin(),
-                  ddsim->functionDefinitions.end(),
-                  sweep) != ddsim->functionDefinitions.end()) {
+    if (std::ranges::find(ddsim->functionDefinitions, sweep) !=
+        ddsim->functionDefinitions.end()) {
       functionDef = sweep;
       break;
     }
@@ -1406,7 +1401,7 @@ std::pair<size_t, size_t> variableToQubitAt(DDSimulationState* ddsim,
   // gate.
   const auto& targets = ddsim->targetQubits[functionDef];
 
-  const auto found = std::find(targets.begin(), targets.end(), variable);
+  const auto found = std::ranges::find(targets, variable);
   if (found == targets.end()) {
     throw std::runtime_error("Unknown variable name " + variable);
   }
@@ -1420,8 +1415,7 @@ bool isSubStateVectorLegal(const Statevector& full,
   const auto numQubits = full.numQubits;
   std::vector<size_t> ignored;
   for (size_t i = 0; i < numQubits; i++) {
-    if (std::find(targetQubits.begin(), targetQubits.end(), i) ==
-        targetQubits.end()) {
+    if (std::ranges::find(targetQubits, i) == targetQubits.end()) {
       ignored.push_back(i);
     }
   }
@@ -1604,8 +1598,8 @@ std::string preprocessAssertionCode(const char* code,
       correctLines.begin(), correctLines.end(), std::string(),
       [](const std::string& a, const std::string& b) { return a + b; });
 
-  std::move(instructions.begin(), instructions.end(),
-            std::back_inserter(ddsim->instructionObjects));
+  std::ranges::move(instructions,
+                    std::back_inserter(ddsim->instructionObjects));
   return result;
 }
 

@@ -205,10 +205,10 @@ getInteractionTreeAtRuntime(DDDiagnostics* ddd, size_t qubit) {
 
       auto& actualQubits = ddd->actualQubits[i];
       for (const auto& actualQubitVector : actualQubits) {
-        if (!std::none_of(actualQubitVector.begin(), actualQubitVector.end(),
-                          [&interactions](size_t elem) {
-                            return interactions.contains(elem);
-                          })) {
+        if (!std::ranges::none_of(actualQubitVector,
+                                  [&interactions](size_t elem) {
+                                    return interactions.contains(elem);
+                                  })) {
           for (size_t target1 = 0; target1 < actualQubitVector.size();
                target1++) {
             const auto& target = actualQubitVector[target1];
@@ -347,7 +347,7 @@ findUniquePath(const std::set<std::tuple<size_t, size_t, size_t>>& graph,
       if (visited.contains(other)) {
         continue;
       }
-      if (std::find(toVisit.begin(), toVisit.end(), other) == toVisit.end()) {
+      if (std::ranges::find(toVisit, other) == toVisit.end()) {
         toVisit.push_back(other);
       }
     }
@@ -421,9 +421,8 @@ void suggestBasedOnFailedEntanglementAssertion(
       first = false;
     } else {
       std::set<std::tuple<size_t, size_t, size_t>> newInteractions;
-      std::set_intersection(
-          generalInteractions.begin(), generalInteractions.end(),
-          addingInteractions.begin(), addingInteractions.end(),
+      std::ranges::set_intersection(
+          generalInteractions, addingInteractions,
           std::inserter(newInteractions, newInteractions.begin()));
       generalInteractions = newInteractions;
       if (generalInteractions.empty()) {
@@ -479,8 +478,7 @@ void suggestSplitEqualityAssertion(
 
   std::vector<size_t> remainingQubits;
   for (size_t i = 0; i < sv.numQubits; i++) {
-    if (std::find(separableQubits.begin(), separableQubits.end(), i) ==
-        separableQubits.end()) {
+    if (std::ranges::find(separableQubits, i) == separableQubits.end()) {
       remainingQubits.push_back(i);
     }
   }
@@ -494,9 +492,8 @@ void suggestSplitEqualityAssertion(
   extractedAmplitudes.push_back(
       getSubStateVectorAmplitudes(sv, remainingQubits));
   std::vector<std::string> remainingQubitNames;
-  std::transform(
-      remainingQubits.begin(), remainingQubits.end(),
-      std::back_inserter(remainingQubitNames),
+  std::ranges::transform(
+      remainingQubits, std::back_inserter(remainingQubitNames),
       [&assertion](size_t qb) { return assertion->getTargetQubits()[qb]; });
   targetQubits.push_back(remainingQubitNames);
 
@@ -511,14 +508,13 @@ void suggestSplitEqualityAssertion(
 
     // Round amplitudes if necessary.
     const auto roundingFactor = 1e8;
-    std::transform(amplitudeSet.begin(), amplitudeSet.end(),
-                   std::back_inserter(toInsert.amplitudes),
-                   [&roundingFactor](const Complex& c) {
-                     return Complex{std::round(c.real * roundingFactor) /
-                                        roundingFactor,
-                                    std::round(c.imaginary * roundingFactor) /
-                                        roundingFactor};
-                   });
+    std::ranges::transform(
+        amplitudeSet, std::back_inserter(toInsert.amplitudes),
+        [&roundingFactor](const Complex& c) {
+          return Complex{std::round(c.real * roundingFactor) / roundingFactor,
+                         std::round(c.imaginary * roundingFactor) /
+                             roundingFactor};
+        });
     // If an amplitude was rounded, we adapt the similarity if it is too high
     // otherwise.
     for (size_t j = 0; j < amplitudeSet.size(); j++) {
@@ -535,8 +531,7 @@ void suggestSplitEqualityAssertion(
           {instructionIndex, std::vector<InsertEqualityAssertion>{}});
     }
     auto& container = self->assertionsEqToInsert[instructionIndex];
-    if (std::find(container.begin(), container.end(), toInsert) ==
-        container.end()) {
+    if (std::ranges::find(container, toInsert) == container.end()) {
       self->assertionsEqToInsert[instructionIndex].push_back(toInsert);
     }
   }
@@ -644,9 +639,8 @@ Result dddiagnosticsGetInteractions(Diagnostics* self, size_t beforeInstruction,
   while (found) {
     found = false;
     for (auto i = beforeInstruction - 1; i < beforeInstruction; i--) {
-      if (std::find(ddsim->functionDefinitions.begin(),
-                    ddsim->functionDefinitions.end(),
-                    i) != ddsim->functionDefinitions.end()) {
+      if (std::ranges::find(ddsim->functionDefinitions, i) !=
+          ddsim->functionDefinitions.end()) {
         break;
       }
       if (ddsim->instructionTypes[i] != SIMULATE &&
@@ -659,10 +653,9 @@ Result dddiagnosticsGetInteractions(Diagnostics* self, size_t beforeInstruction,
       for (const auto& target : targets) {
         targetQubits.insert(variableToQubitAt(ddsim, target, i).first);
       }
-      if (!std::none_of(targetQubits.begin(), targetQubits.end(),
-                        [&interactions](size_t elem) {
-                          return interactions.contains(elem);
-                        })) {
+      if (!std::ranges::none_of(targetQubits, [&interactions](size_t elem) {
+            return interactions.contains(elem);
+          })) {
         for (const auto& target : targetQubits) {
           if (!interactions.contains(target)) {
             found = true;
@@ -718,10 +711,10 @@ size_t tryFindMissingInteraction(DDDiagnostics* diagnostics,
   std::vector<size_t> targetQubits(targets.size());
   size_t index = 0;
 
-  std::transform(targets.begin(), targets.end(), targetQubits.begin(),
-                 [&state](const std::string& target) {
-                   return variableToQubit(state, target);
-                 });
+  std::ranges::transform(targets, targetQubits.begin(),
+                         [&state](const std::string& target) {
+                           return variableToQubit(state, target);
+                         });
 
   std::map<size_t, std::set<size_t>> allInteractions;
 
@@ -808,10 +801,10 @@ void dddiagnosticsOnStepForward(DDDiagnostics* diagnostics,
       ddsim->instructionTypes[instruction] == CALL ||
       ddsim->instructionTypes[instruction] == ASSERTION) {
     std::vector<size_t> targetQubits(targets.size());
-    std::transform(targets.begin(), targets.end(), targetQubits.begin(),
-                   [&ddsim](const std::string& target) {
-                     return variableToQubit(ddsim, target);
-                   });
+    std::ranges::transform(targets, targetQubits.begin(),
+                           [&ddsim](const std::string& target) {
+                             return variableToQubit(ddsim, target);
+                           });
     if (!diagnostics->actualQubits.contains(instruction)) {
       diagnostics->actualQubits[instruction] = std::set<std::vector<size_t>>();
     }
@@ -926,14 +919,14 @@ size_t dddiagnosticsSuggestNewAssertions(Diagnostics* self,
       std::stringstream finalStringStream;
       finalStringStream << string << " { ";
       const auto& end = assertion.amplitudes.end();
-      std::for_each(assertion.amplitudes.begin(), assertion.amplitudes.end(),
-                    [&finalStringStream, &end](const Complex& c) {
-                      if (&c == &*std::prev(end)) {
-                        finalStringStream << complexToString(c);
-                      } else {
-                        finalStringStream << complexToString(c) << ", ";
-                      }
-                    });
+      std::ranges::for_each(assertion.amplitudes,
+                            [&finalStringStream, &end](const Complex& c) {
+                              if (&c == &*std::prev(end)) {
+                                finalStringStream << complexToString(c);
+                              } else {
+                                finalStringStream << complexToString(c) << ", ";
+                              }
+                            });
       finalStringStream << " }\n";
       const auto finalString = finalStringStream.str();
 

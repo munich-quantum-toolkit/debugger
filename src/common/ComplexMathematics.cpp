@@ -72,7 +72,7 @@ std::pair<size_t, size_t> splitBitString(size_t number, size_t n,
   size_t second = 0;
 
   for (size_t index = 0; index < n; index++) {
-    if (std::find(bits.begin(), bits.end(), index) != bits.end()) {
+    if (std::ranges::find(bits, index) != bits.end()) {
       first |= (number & 1) << lenFirst;
       lenFirst++;
     } else {
@@ -269,7 +269,7 @@ getSubStateVectorAmplitudes(const Statevector& sv,
                             const std::vector<size_t>& qubits) {
   std::vector<size_t> otherQubits;
   for (size_t i = 0; i < sv.numQubits; i++) {
-    if (std::find(qubits.begin(), qubits.end(), i) == qubits.end()) {
+    if (std::ranges::find(qubits, i) == qubits.end()) {
       otherQubits.push_back(i);
     }
   }

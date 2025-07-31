@@ -168,9 +168,8 @@ void CliFrontEnd::suggestUpdatedAssertions(SimulationState* state) {
   const size_t count = 10;
   std::vector<std::array<char, 256>> newAssertions(count);
   std::vector<char*> newAssertionsPointers(count);
-  std::transform(newAssertions.begin(), newAssertions.end(),
-                 newAssertionsPointers.begin(),
-                 [](std::array<char, 256>& arr) { return arr.data(); });
+  std::ranges::transform(newAssertions, newAssertionsPointers.begin(),
+                         [](std::array<char, 256>& arr) { return arr.data(); });
   std::vector<size_t> newPositions(count);
 
   size_t found = diagnostics->suggestNewAssertions(
