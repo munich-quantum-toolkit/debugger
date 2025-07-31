@@ -19,14 +19,15 @@
 #include "backend/debug.h"
 #include "backend/diagnostics.h"
 #include "common.h"
-#include "pybind11/cast.h"
-#include "pybind11/pybind11.h"
-#include "pybind11/stl.h" // NOLINT(misc-include-cleaner)
 
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <pybind11/cast.h>
 #include <pybind11/detail/common.h>
+#include <pybind11/native_enum.h>
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h> // NOLINT(misc-include-cleaner)
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -64,12 +65,13 @@ struct StatevectorCPP {
 
 void bindFramework(py::module& m) {
   // Bind the VariableType enum
-  py::enum_<VariableType>(m, "VariableType",
-                          "The type of a classical variable.")
+  py::native_enum<VariableType>(m, "VariableType", "enum.Enum",
+                                "The type of a classical variable.")
       .value("VarBool", VarBool, "A boolean variable.")
       .value("VarInt", VarInt, "An integer variable.")
       .value("VarFloat", VarFloat, "A floating-point variable.")
-      .export_values();
+      .export_values()
+      .finalize();
 
   // Bind the VariableValue union
   py::class_<VariableValue>(m, "VariableValue")
@@ -595,8 +597,8 @@ Returns:
 
 void bindDiagnostics(py::module& m) {
   // Bind the ErrorCauseType enum
-  py::enum_<ErrorCauseType>(m, "ErrorCauseType",
-                            "The type of a potential error cause.")
+  py::native_enum<ErrorCauseType>(m, "ErrorCauseType", "enum.Enum",
+                                  "The type of a potential error cause.")
       .value("Unknown", Unknown, "An unknown error cause.")
       .value("MissingInteraction", MissingInteraction,
              "Indicates that an entanglement error may be caused by a missing "
@@ -604,7 +606,8 @@ void bindDiagnostics(py::module& m) {
       .value("ControlAlwaysZero", ControlAlwaysZero,
              "Indicates that an error may be related to a controlled gate with "
              "a control that is always zero.")
-      .export_values();
+      .export_values()
+      .finalize();
 
   // Bind the ErrorCause struct
   py::class_<ErrorCause>(m, "ErrorCause")
