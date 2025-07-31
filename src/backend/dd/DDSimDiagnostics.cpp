@@ -160,7 +160,7 @@ std::set<size_t> getUnknownCallers(DDSimulationState* ddsim,
     }
 
     if (instruction == 0 || ddsim->instructionTypes[instruction] == RETURN ||
-        !ddsim->functionDefinitions.contains(instruction)) {
+        ddsim->functionDefinitions.contains(instruction)) {
       if (toVisit.empty()) {
         break;
       }
