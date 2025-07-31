@@ -189,20 +189,20 @@ Instruction::Instruction(size_t inputLineNumber, std::string inputCode,
       isFunctionDefinition(isFuncDef), block(std::move(inputBlock)) {}
 
 bool isFunctionDefinition(const std::string& line) {
-  return startsWith(trim(line), "gate ");
+  return trim(line).starts_with("gate ");
 }
 
 bool isReset(const std::string& line) {
-  return startsWith(trim(line), "reset ");
+  return trim(line).starts_with("reset ");
 }
 
 bool isBarrier(const std::string& line) {
-  return startsWith(trim(line), "barrier ") ||
-         startsWith(trim(line), "barrier;");
+  return trim(line).starts_with("barrier ") ||
+         trim(line).starts_with("barrier;");
 }
 
 bool isClassicControlledGate(const std::string& line) {
-  return startsWith(trim(line), "if") &&
+  return trim(line).starts_with("if") &&
          (line.find('(') != std::string::npos) &&
          (line.find(')') != std::string::npos);
 }
@@ -235,7 +235,7 @@ bool isMeasurement(const std::string& line) {
 }
 
 bool isVariableDeclaration(const std::string& line) {
-  return startsWith(trim(line), "creg ") || startsWith(trim(line), "qreg ");
+  return trim(line).starts_with("creg ") || trim(line).starts_with("qreg ");
 }
 
 std::vector<std::string> parseParameters(const std::string& instruction) {

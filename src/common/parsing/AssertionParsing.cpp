@@ -375,24 +375,24 @@ bool CircuitEqualityAssertion::implies(const Assertion& /*other*/) const {
  */
 bool isAssertion(std::string expression) {
   expression = trim(expression);
-  return startsWith(expression, "assert-ent") ||
-         startsWith(expression, "assert-sup") ||
-         startsWith(expression, "assert-eq");
+  return expression.starts_with("assert-ent") ||
+         expression.starts_with("assert-sup") ||
+         expression.starts_with("assert-eq");
 }
 
 std::unique_ptr<Assertion> parseAssertion(std::string assertionString,
                                           const std::string& blockContent) {
   assertionString = trim(replaceString(assertionString, ";", ""));
 
-  if (startsWith(assertionString, "assert-ent")) {
+  if (assertionString.starts_with("assert-ent")) {
     auto targets = extractTargetQubits(assertionString.substr(11));
     return std::make_unique<EntanglementAssertion>(targets);
   }
-  if (startsWith(assertionString, "assert-sup")) {
+  if (assertionString.starts_with("assert-sup")) {
     auto targets = extractTargetQubits(assertionString.substr(11));
     return std::make_unique<SuperpositionAssertion>(targets);
   }
-  if (startsWith(assertionString, "assert-eq")) {
+  if (assertionString.starts_with("assert-eq")) {
     auto sub = assertionString.substr(10);
     auto targets = extractTargetQubits(sub);
     double similarityThreshold = 0;

@@ -31,10 +31,6 @@ std::string trim(const std::string& str) {
   return (start < end) ? std::string(start, end) : std::string();
 }
 
-bool startsWith(const std::string& str, const std::string& prefix) {
-  return str.compare(0, prefix.size(), prefix) == 0;
-}
-
 std::vector<std::string> splitString(const std::string& text, char delimiter,
                                      bool includeEmpty) {
   const std::vector<char> delimiters{delimiter};

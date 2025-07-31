@@ -28,14 +28,6 @@ namespace mqt::debugger {
 std::string trim(const std::string& str);
 
 /**
- * @brief Checks if a string starts with a given prefix.
- * @param str The string to check.
- * @param prefix The prefix to check for.
- * @return True if the string starts with the prefix, false otherwise.
- */
-bool startsWith(const std::string& str, const std::string& prefix);
-
-/**
  * @brief Splits a string into a vector of strings based on a delimiter.
  * @param text The text to split.
  * @param delimiter The delimiter to split on.
