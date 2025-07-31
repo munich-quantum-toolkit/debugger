@@ -302,8 +302,8 @@ getSubStateVectorAmplitudes(const Statevector& sv,
   std::vector<Complex> amplitudes(traced.size());
 
   for (size_t i = 0; i < traced.size(); i++) {
-    amplitudes[i] = {vectors(static_cast<int>(i), index).real(),
-                     vectors(static_cast<int>(i), index).imag()};
+    amplitudes[i] = {.real = vectors(static_cast<int>(i), index).real(),
+                     .imaginary = vectors(static_cast<int>(i), index).imag()};
   }
   return amplitudes;
 }

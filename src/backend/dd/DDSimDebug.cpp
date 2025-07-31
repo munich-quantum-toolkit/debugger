@@ -1546,7 +1546,8 @@ std::string preprocessAssertionCode(const char* code,
                                ? 0
                                : ddsim->qubitRegisters.back().index +
                                      ddsim->qubitRegisters.back().size;
-      const QubitRegisterDefinition reg{name, index, size};
+      const QubitRegisterDefinition reg{
+          .name = name, .index = index, .size = size};
       ddsim->qubitRegisters.push_back(reg);
 
       if (!instruction.inFunctionDefinition) {
@@ -1566,8 +1567,8 @@ std::string preprocessAssertionCode(const char* code,
                                ? 0
                                : ddsim->classicalRegisters.back().index +
                                      ddsim->classicalRegisters.back().size;
-      const ClassicalRegisterDefinition reg{removeWhitespace(name), index,
-                                            size};
+      const ClassicalRegisterDefinition reg{
+          .name = removeWhitespace(name), .index = index, .size = size};
       ddsim->classicalRegisters.push_back(reg);
       for (auto i = 0ULL; i < size; i++) {
         const auto variableName =

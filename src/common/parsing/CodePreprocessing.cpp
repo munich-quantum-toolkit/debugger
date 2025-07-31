@@ -116,7 +116,7 @@ FunctionDefinition parseFunctionDefinition(const std::string& signature) {
   }
   auto parameters = splitString(removeWhitespace(parameterParts), ',');
 
-  return {name, parameters};
+  return {.name = name, .parameters = parameters};
 }
 
 /**
@@ -227,7 +227,7 @@ ClassicControlledGate parseClassicControlledGate(const std::string& code) {
   auto rest = codeSanitized.substr(i + 1, codeSanitized.size() - i - 1);
   rest = replaceString(replaceString(rest, "}", ""), "{", "");
   const auto operations = splitString(rest, ';', false);
-  return {condition.str(), operations};
+  return {.condition = condition.str(), .operations = operations};
 }
 
 bool isMeasurement(const std::string& line) {
@@ -334,7 +334,7 @@ preprocessCode(const std::string& code, size_t startIndex,
 
     const size_t trueStart = pos + blocksOffset;
 
-    Block block{false, ""};
+    Block block{.valid = false, .code = ""};
     if (blockPos != std::string::npos) {
       const auto endPos = line.find('$', blockPos + 1) + 1;
       const auto blockName = line.substr(blockPos, endPos - blockPos + 1);
@@ -393,7 +393,7 @@ preprocessCode(const std::string& code, size_t startIndex,
 
       const auto closingBrace = code.find(
           '}', instructions[instructions.size() - 1].originalCodeEndPosition);
-      const Block noBlock{false, ""};
+      const Block noBlock{.valid = false, .code = ""};
       instructions.emplace_back(i, "RETURN", a, targets, closingBrace,
                                 closingBrace, 0, false, "", true, false,
                                 noBlock);

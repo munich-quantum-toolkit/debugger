@@ -503,17 +503,21 @@ void suggestSplitEqualityAssertion(
 
     const auto& amplitudeSet = extractedAmplitudes[i];
     const auto& targetQubitSet = targetQubits[i];
-    auto toInsert = InsertEqualityAssertion{
-        instructionIndex, {}, similarity, targetQubitSet};
+    auto toInsert =
+        InsertEqualityAssertion{.instructionIndex = instructionIndex,
+                                .amplitudes = {},
+                                .similarity = similarity,
+                                .targets = targetQubitSet};
 
     // Round amplitudes if necessary.
     const auto roundingFactor = 1e8;
     std::ranges::transform(
         amplitudeSet, std::back_inserter(toInsert.amplitudes),
         [&roundingFactor](const Complex& c) {
-          return Complex{std::round(c.real * roundingFactor) / roundingFactor,
-                         std::round(c.imaginary * roundingFactor) /
-                             roundingFactor};
+          return Complex{
+              .real = std::round(c.real * roundingFactor) / roundingFactor,
+              .imaginary =
+                  std::round(c.imaginary * roundingFactor) / roundingFactor};
         });
     // If an amplitude was rounded, we adapt the similarity if it is too high
     // otherwise.

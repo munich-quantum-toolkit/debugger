@@ -250,7 +250,9 @@ bool StatevectorEqualityAssertion::implies(
         });
     newAmplitudes =
         getSubStateVectorAmplitudes(getTargetStatevector(), indexList);
-    targetSV = {indexList.size(), newAmplitudes.size(), newAmplitudes.data()};
+    targetSV = {.numQubits = indexList.size(),
+                .numStates = newAmplitudes.size(),
+                .amplitudes = newAmplitudes.data()};
   } else {
     targetSV = getTargetStatevector();
   }
