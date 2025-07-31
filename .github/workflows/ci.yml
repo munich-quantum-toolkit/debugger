@@ -21,7 +21,7 @@ jobs:
   cpp-tests-ubuntu:
     name: 🇨‌ Test 🐧
     needs: change-detection
-    if: fromJSON(needs.change-detection.outputs.run-cpp-tests) && !contains(github.event.pull_request.labels.*.name, 'extensive-cpp-ci')
+    if: fromJSON(needs.change-detection.outputs.run-cpp-tests)
     strategy:
       fail-fast: false
       matrix:
@@ -41,7 +41,7 @@ jobs:
   cpp-tests-macos:
     name: 🇨‌ Test 🍎
     needs: change-detection
-    if: fromJSON(needs.change-detection.outputs.run-cpp-tests) && !contains(github.event.pull_request.labels.*.name, 'extensive-cpp-ci')
+    if: fromJSON(needs.change-detection.outputs.run-cpp-tests)
     strategy:
       fail-fast: false
       matrix:
@@ -61,7 +61,7 @@ jobs:
   cpp-tests-windows:
     name: 🇨‌ Test 🏁
     needs: change-detection
-    if: fromJSON(needs.change-detection.outputs.run-cpp-tests) && !contains(github.event.pull_request.labels.*.name, 'extensive-cpp-ci')
+    if: fromJSON(needs.change-detection.outputs.run-cpp-tests)
     strategy:
       fail-fast: false
       matrix:
@@ -90,6 +90,7 @@ jobs:
       files-changed-only: true
       install-pkgs: "pybind11==3.0.0"
       setup-python: true
+      cpp-linter-extra-args: "-std=c++20"
 
   python-tests:
     name: 🐍 Test

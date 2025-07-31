@@ -87,7 +87,7 @@ In order to get the best performance out of MQT Debugger and enable platform-spe
 
         (venv) $ pip install mqt.debugger --no-binary mqt.debugger
 
-This requires a `C++ compiler <https://en.wikipedia.org/wiki/List_of_compilers#C++_compilers>`_ compiler supporting *C++17* and a minimum `CMake <https://cmake.org/>`_ version of *3.19*.
+This requires a `C++ compiler <https://en.wikipedia.org/wiki/List_of_compilers#C++_compilers>`_ compiler supporting *C++20* and a minimum `CMake <https://cmake.org/>`_ version of *3.19*.
 
 The library is continuously tested under Linux, MacOS, and Windows using the `latest available system versions for GitHub Actions <https://github.com/actions/virtual-environments>`_.
 In order to access the latest build logs, visit the `GitHub Actions page <https://github.com/munich-quantum-toolkit/debugger/actions/workflows/ci.yml>`_.

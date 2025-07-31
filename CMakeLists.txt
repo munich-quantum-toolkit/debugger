@@ -18,7 +18,7 @@ option(BUILD_MQT_DEBUGGER_BINDINGS "Build the MQT Debugger Python bindings" OFF)
 option(BUILD_MQT_DEBUGGER_TESTS "Also build tests for the MQT Debugger project" ON)
 option(BUILD_MQT_DEBUGGER_APP "Also build the CLI app for the MQT Debugger project" ON)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 include(CheckIPOSupported)
 
