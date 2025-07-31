@@ -19,8 +19,12 @@
 #include "python/dd/DDSimDebugBindings.hpp"
 
 #include <pybind11/detail/common.h>
+#include <pybind11/pybind11.h>
 
-PYBIND11_MODULE(pydebugger, m) {
+namespace py = pybind11;
+using namespace pybind11::literals;
+
+PYBIND11_MODULE(MQT_DEBUGGER_MODULE_NAME, m, py::mod_gil_not_used()) {
   bindDiagnostics(m);
   bindFramework(m);
   bindBackend(m);
