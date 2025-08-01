@@ -112,7 +112,7 @@ void visitCall(DDSimulationState* ddsim, size_t current, size_t qubitIndex,
                   ddsim->targetQubits[checkInstruction].end(), stringToSearch);
     if (ddsim->instructionTypes[checkInstruction] != RETURN &&
         found != ddsim->targetQubits[checkInstruction].end()) {
-      if (visited.find(checkInstruction) == visited.end()) {
+      if (!visited.contains(checkInstruction)) {
         toVisit.insert(checkInstruction);
       }
       if (ddsim->instructionTypes[checkInstruction] == CALL) {
@@ -150,19 +150,17 @@ std::set<size_t> getUnknownCallers(DDSimulationState* ddsim,
 
   while (true) {
     instruction--;
-    if (ddsim->functionDefinitions.find(instruction) !=
-        ddsim->functionDefinitions.end()) {
+    if (ddsim->functionDefinitions.contains(instruction)) {
       unknownCallers.insert(instruction);
       for (const auto caller : ddsim->functionCallers[instruction]) {
-        if (visited.find(caller) == visited.end()) {
+        if (!visited.contains(caller)) {
           toVisit.insert(caller);
         }
       }
     }
 
     if (instruction == 0 || ddsim->instructionTypes[instruction] == RETURN ||
-        ddsim->functionDefinitions.find(instruction) !=
-            ddsim->functionDefinitions.end()) {
+        ddsim->functionDefinitions.contains(instruction)) {
       if (toVisit.empty()) {
         break;
       }
@@ -201,21 +199,20 @@ getInteractionTreeAtRuntime(DDDiagnostics* ddd, size_t qubit) {
       if (ddsim->instructionTypes[i] != SIMULATE) {
         continue;
       }
-      if (ddd->actualQubits.find(i) == ddd->actualQubits.end()) {
+      if (!ddd->actualQubits.contains(i)) {
         continue;
       }
 
       auto& actualQubits = ddd->actualQubits[i];
       for (const auto& actualQubitVector : actualQubits) {
-        if (!std::none_of(actualQubitVector.begin(), actualQubitVector.end(),
-                          [&interactions](size_t elem) {
-                            return interactions.find(elem) !=
-                                   interactions.end();
-                          })) {
+        if (!std::ranges::none_of(actualQubitVector,
+                                  [&interactions](size_t elem) {
+                                    return interactions.contains(elem);
+                                  })) {
           for (size_t target1 = 0; target1 < actualQubitVector.size();
                target1++) {
             const auto& target = actualQubitVector[target1];
-            if (interactions.find(target) == interactions.end()) {
+            if (!interactions.contains(target)) {
               found = true;
             }
             for (size_t target2 = 1; target2 < actualQubitVector.size();
@@ -224,7 +221,7 @@ getInteractionTreeAtRuntime(DDDiagnostics* ddd, size_t qubit) {
               tree.insert({target, secondTarget, i});
               tree.insert({secondTarget, target, i});
 
-              if (interactions.find(secondTarget) == interactions.end()) {
+              if (!interactions.contains(secondTarget)) {
                 found = true;
               }
               interactions.insert(secondTarget);
@@ -333,36 +330,36 @@ findUniquePath(const std::set<std::tuple<size_t, size_t, size_t>>& graph,
         continue;
       }
 
-      if (predecessors.find(current) != predecessors.end() &&
+      if (predecessors.contains(current) &&
           predecessors[current].first == other &&
           predecessors[current].second == instruction) {
         // This is the edge we came from, so we don't want to go back.
         continue;
       }
 
-      if (predecessors.find(other) != predecessors.end()) {
+      if (predecessors.contains(other)) {
         if (predecessors[other].second != instruction) {
           multiplePredecessors.insert(other);
         }
       } else {
         predecessors.insert({other, {current, instruction}});
       }
-      if (visited.find(other) != visited.end()) {
+      if (visited.contains(other)) {
         continue;
       }
-      if (std::find(toVisit.begin(), toVisit.end(), other) == toVisit.end()) {
+      if (std::ranges::find(toVisit, other) == toVisit.end()) {
         toVisit.push_back(other);
       }
     }
   }
 
-  if (predecessors.find(end) == predecessors.end()) {
+  if (!predecessors.contains(end)) {
     return {};
   }
   std::vector<std::tuple<size_t, size_t, size_t>> path;
   size_t current = end;
   while (current != start) {
-    if (multiplePredecessors.find(current) != multiplePredecessors.end()) {
+    if (multiplePredecessors.contains(current)) {
       return {};
     }
     path.emplace_back(predecessors[current].first, current,
@@ -383,8 +380,7 @@ void suggestBasedOnFailedEntanglementAssertion(
     const EntanglementAssertion* assertion) {
   // For larger assertions, first split it into smaller ones.
   if (assertion->getTargetQubits().size() != 2) {
-    if (self->assertionsEntToInsert.find(instructionIndex) ==
-        self->assertionsEntToInsert.end()) {
+    if (!self->assertionsEntToInsert.contains(instructionIndex)) {
       self->assertionsEntToInsert.insert(
           {instructionIndex,
            std::set<std::pair<std::set<std::string>, size_t>>()});
@@ -425,9 +421,8 @@ void suggestBasedOnFailedEntanglementAssertion(
       first = false;
     } else {
       std::set<std::tuple<size_t, size_t, size_t>> newInteractions;
-      std::set_intersection(
-          generalInteractions.begin(), generalInteractions.end(),
-          addingInteractions.begin(), addingInteractions.end(),
+      std::ranges::set_intersection(
+          generalInteractions, addingInteractions,
           std::inserter(newInteractions, newInteractions.begin()));
       generalInteractions = newInteractions;
       if (generalInteractions.empty()) {
@@ -436,8 +431,7 @@ void suggestBasedOnFailedEntanglementAssertion(
     }
   }
 
-  if (self->assertionsEntToInsert.find(instructionIndex) ==
-      self->assertionsEntToInsert.end()) {
+  if (!self->assertionsEntToInsert.contains(instructionIndex)) {
     self->assertionsEntToInsert.insert(
         {instructionIndex,
          std::set<std::pair<std::set<std::string>, size_t>>()});
@@ -484,8 +478,7 @@ void suggestSplitEqualityAssertion(
 
   std::vector<size_t> remainingQubits;
   for (size_t i = 0; i < sv.numQubits; i++) {
-    if (std::find(separableQubits.begin(), separableQubits.end(), i) ==
-        separableQubits.end()) {
+    if (std::ranges::find(separableQubits, i) == separableQubits.end()) {
       remainingQubits.push_back(i);
     }
   }
@@ -499,9 +492,8 @@ void suggestSplitEqualityAssertion(
   extractedAmplitudes.push_back(
       getSubStateVectorAmplitudes(sv, remainingQubits));
   std::vector<std::string> remainingQubitNames;
-  std::transform(
-      remainingQubits.begin(), remainingQubits.end(),
-      std::back_inserter(remainingQubitNames),
+  std::ranges::transform(
+      remainingQubits, std::back_inserter(remainingQubitNames),
       [&assertion](size_t qb) { return assertion->getTargetQubits()[qb]; });
   targetQubits.push_back(remainingQubitNames);
 
@@ -511,19 +503,22 @@ void suggestSplitEqualityAssertion(
 
     const auto& amplitudeSet = extractedAmplitudes[i];
     const auto& targetQubitSet = targetQubits[i];
-    auto toInsert = InsertEqualityAssertion{
-        instructionIndex, {}, similarity, targetQubitSet};
+    auto toInsert =
+        InsertEqualityAssertion{.instructionIndex = instructionIndex,
+                                .amplitudes = {},
+                                .similarity = similarity,
+                                .targets = targetQubitSet};
 
     // Round amplitudes if necessary.
     const auto roundingFactor = 1e8;
-    std::transform(amplitudeSet.begin(), amplitudeSet.end(),
-                   std::back_inserter(toInsert.amplitudes),
-                   [&roundingFactor](const Complex& c) {
-                     return Complex{std::round(c.real * roundingFactor) /
-                                        roundingFactor,
-                                    std::round(c.imaginary * roundingFactor) /
-                                        roundingFactor};
-                   });
+    std::ranges::transform(
+        amplitudeSet, std::back_inserter(toInsert.amplitudes),
+        [&roundingFactor](const Complex& c) {
+          return Complex{
+              .real = std::round(c.real * roundingFactor) / roundingFactor,
+              .imaginary =
+                  std::round(c.imaginary * roundingFactor) / roundingFactor};
+        });
     // If an amplitude was rounded, we adapt the similarity if it is too high
     // otherwise.
     for (size_t j = 0; j < amplitudeSet.size(); j++) {
@@ -535,14 +530,12 @@ void suggestSplitEqualityAssertion(
       }
     }
 
-    if (self->assertionsEqToInsert.find(instructionIndex) ==
-        self->assertionsEqToInsert.end()) {
+    if (!self->assertionsEqToInsert.contains(instructionIndex)) {
       self->assertionsEqToInsert.insert(
           {instructionIndex, std::vector<InsertEqualityAssertion>{}});
     }
     auto& container = self->assertionsEqToInsert[instructionIndex];
-    if (std::find(container.begin(), container.end(), toInsert) ==
-        container.end()) {
+    if (std::ranges::find(container, toInsert) == container.end()) {
       self->assertionsEqToInsert[instructionIndex].push_back(toInsert);
     }
   }
@@ -619,7 +612,7 @@ Result dddiagnosticsGetDataDependencies(Diagnostics* self, size_t instruction,
       if (ddsim->instructionTypes[depInstruction] == NOP) {
         continue; // We don't want variable declarations as dependencies.
       }
-      if (visited.find(depInstruction) == visited.end()) {
+      if (!visited.contains(depInstruction)) {
         toVisit.insert(depInstruction);
       }
       if (ddsim->instructionTypes[depInstruction] == CALL) {
@@ -627,9 +620,9 @@ Result dddiagnosticsGetDataDependencies(Diagnostics* self, size_t instruction,
       }
     }
 
-    if (unknownCallers.find(current - 1) != unknownCallers.end()) {
+    if (unknownCallers.contains(current - 1)) {
       for (auto caller : ddsim->functionCallers[current - 1]) {
-        if (visited.find(caller) == visited.end()) {
+        if (!visited.contains(caller)) {
           toVisit.insert(caller);
         }
       }
@@ -650,9 +643,8 @@ Result dddiagnosticsGetInteractions(Diagnostics* self, size_t beforeInstruction,
   while (found) {
     found = false;
     for (auto i = beforeInstruction - 1; i < beforeInstruction; i--) {
-      if (std::find(ddsim->functionDefinitions.begin(),
-                    ddsim->functionDefinitions.end(),
-                    i) != ddsim->functionDefinitions.end()) {
+      if (std::ranges::find(ddsim->functionDefinitions, i) !=
+          ddsim->functionDefinitions.end()) {
         break;
       }
       if (ddsim->instructionTypes[i] != SIMULATE &&
@@ -665,12 +657,11 @@ Result dddiagnosticsGetInteractions(Diagnostics* self, size_t beforeInstruction,
       for (const auto& target : targets) {
         targetQubits.insert(variableToQubitAt(ddsim, target, i).first);
       }
-      if (!std::none_of(targetQubits.begin(), targetQubits.end(),
-                        [&interactions](size_t elem) {
-                          return interactions.find(elem) != interactions.end();
-                        })) {
+      if (!std::ranges::none_of(targetQubits, [&interactions](size_t elem) {
+            return interactions.contains(elem);
+          })) {
         for (const auto& target : targetQubits) {
-          if (interactions.find(target) == interactions.end()) {
+          if (!interactions.contains(target)) {
             found = true;
           }
           interactions.insert(target);
@@ -724,10 +715,10 @@ size_t tryFindMissingInteraction(DDDiagnostics* diagnostics,
   std::vector<size_t> targetQubits(targets.size());
   size_t index = 0;
 
-  std::transform(targets.begin(), targets.end(), targetQubits.begin(),
-                 [&state](const std::string& target) {
-                   return variableToQubit(state, target);
-                 });
+  std::ranges::transform(targets, targetQubits.begin(),
+                         [&state](const std::string& target) {
+                           return variableToQubit(state, target);
+                         });
 
   std::map<size_t, std::set<size_t>> allInteractions;
 
@@ -739,8 +730,7 @@ size_t tryFindMissingInteraction(DDDiagnostics* diagnostics,
 
   for (size_t i = 0; i < targets.size(); i++) {
     for (size_t j = i + 1; j < targets.size(); j++) {
-      if (allInteractions[targetQubits[i]].find(targetQubits[j]) ==
-          allInteractions[targetQubits[i]].end()) {
+      if (!allInteractions[targetQubits[i]].contains(targetQubits[j])) {
         outputs[index].type = ErrorCauseType::MissingInteraction;
         outputs[index].instruction = instruction;
         index++;
@@ -772,11 +762,10 @@ size_t tryFindZeroControls(DDDiagnostics* diagnostics, size_t instruction,
     if (dependencies[i] == 0) {
       continue;
     }
-    if (diagnostics->zeroControls.find(i) == diagnostics->zeroControls.end()) {
+    if (!diagnostics->zeroControls.contains(i)) {
       continue;
     }
-    if (diagnostics->nonZeroControls.find(i) !=
-        diagnostics->nonZeroControls.end()) {
+    if (diagnostics->nonZeroControls.contains(i)) {
       continue;
     }
     const auto& zeroControls = diagnostics->zeroControls[i];
@@ -800,8 +789,7 @@ Result dddiagnosticsGetZeroControlInstructions(Diagnostics* self,
                                    dddiagnosticsGetInstructionCount(self));
   for (size_t i = 0; i < dddiagnosticsGetInstructionCount(self); i++) {
     instructionSpan[i] =
-        (ddd->nonZeroControls.find(i) == ddd->nonZeroControls.end()) &&
-        (ddd->zeroControls.find(i) != ddd->zeroControls.end());
+        (!ddd->nonZeroControls.contains(i) && ddd->zeroControls.contains(i));
   }
 
   return OK;
@@ -817,12 +805,11 @@ void dddiagnosticsOnStepForward(DDDiagnostics* diagnostics,
       ddsim->instructionTypes[instruction] == CALL ||
       ddsim->instructionTypes[instruction] == ASSERTION) {
     std::vector<size_t> targetQubits(targets.size());
-    std::transform(targets.begin(), targets.end(), targetQubits.begin(),
-                   [&ddsim](const std::string& target) {
-                     return variableToQubit(ddsim, target);
-                   });
-    if (diagnostics->actualQubits.find(instruction) ==
-        diagnostics->actualQubits.end()) {
+    std::ranges::transform(targets, targetQubits.begin(),
+                           [&ddsim](const std::string& target) {
+                             return variableToQubit(ddsim, target);
+                           });
+    if (!diagnostics->actualQubits.contains(instruction)) {
       diagnostics->actualQubits[instruction] = std::set<std::vector<size_t>>();
     }
     diagnostics->actualQubits[instruction].insert(targetQubits);
@@ -848,14 +835,12 @@ void dddiagnosticsOnStepForward(DDDiagnostics* diagnostics,
     const auto pos = control.type == qc::Control::Type::Pos;
     const auto qubit = control.qubit;
     if (isAlwaysZero(sv, qubit, !pos)) {
-      if (diagnostics->zeroControls.find(instruction) ==
-          diagnostics->zeroControls.end()) {
+      if (!diagnostics->zeroControls.contains(instruction)) {
         diagnostics->zeroControls[instruction] = std::set<size_t>();
       }
       diagnostics->zeroControls[instruction].insert(qubit);
     } else {
-      if (diagnostics->nonZeroControls.find(instruction) ==
-          diagnostics->nonZeroControls.end()) {
+      if (!diagnostics->nonZeroControls.contains(instruction)) {
         diagnostics->nonZeroControls[instruction] = std::set<size_t>();
       }
       diagnostics->nonZeroControls[instruction].insert(qubit);
@@ -938,14 +923,14 @@ size_t dddiagnosticsSuggestNewAssertions(Diagnostics* self,
       std::stringstream finalStringStream;
       finalStringStream << string << " { ";
       const auto& end = assertion.amplitudes.end();
-      std::for_each(assertion.amplitudes.begin(), assertion.amplitudes.end(),
-                    [&finalStringStream, &end](const Complex& c) {
-                      if (&c == &*std::prev(end)) {
-                        finalStringStream << complexToString(c);
-                      } else {
-                        finalStringStream << complexToString(c) << ", ";
-                      }
-                    });
+      std::ranges::for_each(assertion.amplitudes,
+                            [&finalStringStream, &end](const Complex& c) {
+                              if (&c == &*std::prev(end)) {
+                                finalStringStream << complexToString(c);
+                              } else {
+                                finalStringStream << complexToString(c) << ", ";
+                              }
+                            });
       finalStringStream << " }\n";
       const auto finalString = finalStringStream.str();
 

@@ -48,6 +48,7 @@
 #include <memory>
 #include <numeric>
 #include <random>
+#include <ranges>
 #include <set>
 #include <sstream>
 #include <stdexcept>
@@ -441,8 +442,8 @@ bool areAssertionsIndependent(DDSimulationState* ddsim,
       continue;
     }
     const auto targets = ddsim->targetQubits[i];
-    if (std::any_of(targets.begin(), targets.end(), [&](const auto& target) {
-          return nextQubits.find(target) != nextQubits.end();
+    if (std::ranges::any_of(targets, [&](const auto& target) {
+          return nextQubits.contains(target);
         })) {
       return false;
     }
@@ -460,11 +461,9 @@ bool areAssertionsIndependent(DDSimulationState* ddsim,
 bool areAssertionsIndependent(DDSimulationState* ddsim,
                               std::vector<size_t>& previousAssertions,
                               size_t newAssertion) {
-  return std::all_of(previousAssertions.begin(), previousAssertions.end(),
-                     [&](const auto prev) {
-                       return areAssertionsIndependent(ddsim, prev,
-                                                       newAssertion);
-                     });
+  return std::ranges::all_of(previousAssertions, [&](const auto prev) {
+    return areAssertionsIndependent(ddsim, prev, newAssertion);
+  });
 }
 
 /**
@@ -492,9 +491,9 @@ void compileProjectiveMeasurement(
     qubitIndexToRegisterMap.try_emplace(i, reg, originalVariable);
   }
 
-  for (auto it = newQc.rbegin(); it != newQc.rend(); it++) {
-    auto inverted = it->get()->getInverted();
-    it->get()->dumpOpenQASM2(stream, qubitIndexToRegisterMap, {});
+  for (auto& it : std::ranges::reverse_view(newQc)) {
+    auto inverted = it->getInverted();
+    it->dumpOpenQASM2(stream, qubitIndexToRegisterMap, {});
   }
 
   for (const auto& [qbit, cbit] : targetNames) {
@@ -735,8 +734,7 @@ Result ddsimStepForward(SimulationState* self) {
     ddsim->callReturnStack.pop_back();
   }
 
-  if (ddsim->breakpoints.find(ddsim->currentInstruction) !=
-      ddsim->breakpoints.end()) {
+  if (ddsim->breakpoints.contains(ddsim->currentInstruction)) {
     ddsim->lastMetBreakpoint = ddsim->currentInstruction;
   }
 
@@ -790,7 +788,7 @@ Result ddsimStepForward(SimulationState* self) {
                                               static_cast<dd::Qubit>(qubit),
                                               result ? pZero : pOne, result);
       auto name = getClassicalBitName(ddsim, classicalBit);
-      if (ddsim->variables.find(name) != ddsim->variables.end()) {
+      if (ddsim->variables.contains(name)) {
         VariableValue value;
         value.boolValue = !result;
         ddsim->variables[name].value = value;
@@ -899,8 +897,7 @@ Result ddsimStepBackward(SimulationState* self) {
 
   // When going backwards, we still run the instruction that hits the breakpoint
   // because we want to stop *before* it.
-  if (ddsim->breakpoints.find(ddsim->currentInstruction) !=
-      ddsim->breakpoints.end()) {
+  if (ddsim->breakpoints.contains(ddsim->currentInstruction)) {
     ddsim->lastMetBreakpoint = ddsim->currentInstruction;
   }
 
@@ -1108,7 +1105,7 @@ Result ddsimGetAmplitudeBitstring(SimulationState* self, const char* bitstring,
                                   Complex* output) {
   auto* ddsim = toDDSimulationState(self);
   auto path = std::string(bitstring);
-  std::reverse(path.begin(), path.end());
+  std::ranges::reverse(path);
   auto result =
       ddsim->simulationState.getValueByPath(ddsim->qc->getNqubits(), path);
   output->real = result.real();
@@ -1119,7 +1116,7 @@ Result ddsimGetAmplitudeBitstring(SimulationState* self, const char* bitstring,
 Result ddsimGetClassicalVariable(SimulationState* self, const char* name,
                                  Variable* output) {
   auto* ddsim = toDDSimulationState(self);
-  if (ddsim->variables.find(name) != ddsim->variables.end()) {
+  if (ddsim->variables.contains(name)) {
     *output = ddsim->variables[name];
     return OK;
   }
@@ -1222,8 +1219,7 @@ Result ddsimSetBreakpoint(SimulationState* self, size_t desiredPosition,
     const size_t start = ddsim->instructionStarts[i];
     const size_t end = ddsim->instructionEnds[i];
     if (desiredPosition >= start && desiredPosition <= end) {
-      if (ddsim->functionDefinitions.find(i) !=
-          ddsim->functionDefinitions.end()) {
+      if (ddsim->functionDefinitions.contains(i)) {
         // Breakpoint may be located in a sub-gate of the gate definition.
         for (auto j = i + 1; j < ddsim->instructionTypes.size(); j++) {
           const size_t startSub = ddsim->instructionStarts[j];
@@ -1307,8 +1303,7 @@ std::vector<std::string> getTargetVariables(DDSimulationState* ddsim,
   size_t parentFunction = -1ULL;
   size_t i = instruction;
   while (true) {
-    if (ddsim->functionDefinitions.find(i) !=
-        ddsim->functionDefinitions.end()) {
+    if (ddsim->functionDefinitions.contains(i)) {
       parentFunction = i;
       break;
     }
@@ -1325,16 +1320,14 @@ std::vector<std::string> getTargetVariables(DDSimulationState* ddsim,
                               ? ddsim->targetQubits[parentFunction]
                               : std::vector<std::string>{};
   for (const auto& target : ddsim->targetQubits[instruction]) {
-    if (std::find(parameters.begin(), parameters.end(), target) !=
-        parameters.end()) {
+    if (std::ranges::find(parameters, target) != parameters.end()) {
       result.push_back(target);
       continue;
     }
-    const auto foundRegister =
-        std::find_if(ddsim->qubitRegisters.begin(), ddsim->qubitRegisters.end(),
-                     [target](const QubitRegisterDefinition& reg) {
-                       return reg.name == target;
-                     });
+    const auto foundRegister = std::ranges::find_if(
+        ddsim->qubitRegisters, [target](const QubitRegisterDefinition& reg) {
+          return reg.name == target;
+        });
     if (foundRegister != ddsim->qubitRegisters.end()) {
       for (size_t j = 0; j < foundRegister->size; j++) {
         result.push_back(target + "[" + std::to_string(j) + "]");
@@ -1361,8 +1354,7 @@ size_t variableToQubit(DDSimulationState* ddsim, const std::string& variable) {
 
   for (size_t i = ddsim->callReturnStack.size() - 1; i != -1ULL; i--) {
     const auto call = ddsim->callReturnStack[i];
-    if (ddsim->callSubstitutions[call].find(var) ==
-        ddsim->callSubstitutions[call].end()) {
+    if (!ddsim->callSubstitutions[call].contains(var)) {
       continue;
     }
     var = ddsim->callSubstitutions[call][var];
@@ -1390,9 +1382,8 @@ std::pair<size_t, size_t> variableToQubitAt(DDSimulationState* ddsim,
   size_t sweep = instruction;
   size_t functionDef = -1ULL;
   while (sweep < ddsim->instructionTypes.size()) {
-    if (std::find(ddsim->functionDefinitions.begin(),
-                  ddsim->functionDefinitions.end(),
-                  sweep) != ddsim->functionDefinitions.end()) {
+    if (std::ranges::find(ddsim->functionDefinitions, sweep) !=
+        ddsim->functionDefinitions.end()) {
       functionDef = sweep;
       break;
     }
@@ -1411,7 +1402,7 @@ std::pair<size_t, size_t> variableToQubitAt(DDSimulationState* ddsim,
   // gate.
   const auto& targets = ddsim->targetQubits[functionDef];
 
-  const auto found = std::find(targets.begin(), targets.end(), variable);
+  const auto found = std::ranges::find(targets, variable);
   if (found == targets.end()) {
     throw std::runtime_error("Unknown variable name " + variable);
   }
@@ -1425,8 +1416,7 @@ bool isSubStateVectorLegal(const Statevector& full,
   const auto numQubits = full.numQubits;
   std::vector<size_t> ignored;
   for (size_t i = 0; i < numQubits; i++) {
-    if (std::find(targetQubits.begin(), targetQubits.end(), i) ==
-        targetQubits.end()) {
+    if (std::ranges::find(targetQubits, i) == targetQubits.end()) {
       ignored.push_back(i);
     }
   }
@@ -1500,8 +1490,7 @@ std::string preprocessAssertionCode(const char* code,
     if (instruction.isFunctionCall) {
       const size_t successorInFunction = instruction.successorIndex;
       const size_t functionIndex = successorInFunction - 1;
-      if (ddsim->functionCallers.find(functionIndex) ==
-          ddsim->functionCallers.end()) {
+      if (!ddsim->functionCallers.contains(functionIndex)) {
         ddsim->functionCallers.insert({functionIndex, {}});
       }
       ddsim->functionCallers[functionIndex].insert(instruction.lineNumber);
@@ -1558,7 +1547,8 @@ std::string preprocessAssertionCode(const char* code,
                                ? 0
                                : ddsim->qubitRegisters.back().index +
                                      ddsim->qubitRegisters.back().size;
-      const QubitRegisterDefinition reg{name, index, size};
+      const QubitRegisterDefinition reg{
+          .name = name, .index = index, .size = size};
       ddsim->qubitRegisters.push_back(reg);
 
       if (!instruction.inFunctionDefinition) {
@@ -1578,8 +1568,8 @@ std::string preprocessAssertionCode(const char* code,
                                ? 0
                                : ddsim->classicalRegisters.back().index +
                                      ddsim->classicalRegisters.back().size;
-      const ClassicalRegisterDefinition reg{removeWhitespace(name), index,
-                                            size};
+      const ClassicalRegisterDefinition reg{
+          .name = removeWhitespace(name), .index = index, .size = size};
       ddsim->classicalRegisters.push_back(reg);
       for (auto i = 0ULL; i < size; i++) {
         const auto variableName =
@@ -1610,8 +1600,8 @@ std::string preprocessAssertionCode(const char* code,
       correctLines.begin(), correctLines.end(), std::string(),
       [](const std::string& a, const std::string& b) { return a + b; });
 
-  std::move(instructions.begin(), instructions.end(),
-            std::back_inserter(ddsim->instructionObjects));
+  std::ranges::move(instructions,
+                    std::back_inserter(ddsim->instructionObjects));
   return result;
 }
 
@@ -1676,8 +1666,7 @@ size_t compileStatisticalSlice(DDSimulationState* ddsim, char* buffer,
          ddsim->assertionInstructions[foundIndex]->getTargetQubits()) {
       std::string targetName =
           "test_" + replaceString(replaceString(target, "]", ""), "[", "");
-      while (assertionTargetsSet.find(targetName) !=
-             assertionTargetsSet.end()) {
+      while (assertionTargetsSet.contains(targetName)) {
         targetName += "_";
       }
       assertionTargets[foundIndex][target] = targetName;
@@ -1722,7 +1711,7 @@ size_t compileStatisticalSlice(DDSimulationState* ddsim, char* buffer,
     if (ddsim->code[last] == '\n') {
       last++;
     }
-    if (assertionTargets.find(toSkip) != assertionTargets.end()) {
+    if (assertionTargets.contains(toSkip)) {
       // Add the required classical registers.
       for (const auto& [_, cbit] : assertionTargets[toSkip]) {
         ss << "creg " << cbit << "[1];\n";

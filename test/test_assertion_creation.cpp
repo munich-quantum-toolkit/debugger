@@ -53,9 +53,9 @@ public:
     std::vector<size_t> newPositions(expected.size() + 1);
     std::vector<std::array<char, 256>> newAssertions(expected.size() + 1);
     std::vector<char*> newAssertionsPointers(expected.size() + 1);
-    std::transform(newAssertions.begin(), newAssertions.end(),
-                   newAssertionsPointers.begin(),
-                   [](std::array<char, 256>& arr) { return arr.data(); });
+    std::ranges::transform(
+        newAssertions, newAssertionsPointers.begin(),
+        [](std::array<char, 256>& arr) { return arr.data(); });
     ASSERT_EQ(diagnostics->suggestNewAssertions(
                   diagnostics, newPositions.data(),
                   newAssertionsPointers.data(), newPositions.size()),

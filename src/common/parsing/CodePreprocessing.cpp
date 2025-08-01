@@ -116,7 +116,7 @@ FunctionDefinition parseFunctionDefinition(const std::string& signature) {
   }
   auto parameters = splitString(removeWhitespace(parameterParts), ',');
 
-  return {name, parameters};
+  return {.name = name, .parameters = parameters};
 }
 
 /**
@@ -153,12 +153,12 @@ void unfoldAssertionTargetRegisters(
   bool found = false;
   std::vector<std::string> targets;
   for (const auto& target : assertion.getTargetQubits()) {
-    if (std::find(shadowedRegisters.begin(), shadowedRegisters.end(), target) !=
+    if (std::ranges::find(shadowedRegisters, target) !=
         shadowedRegisters.end()) {
       targets.push_back(target);
       continue;
     }
-    if (definedRegisters.find(target) != definedRegisters.end()) {
+    if (definedRegisters.contains(target)) {
       for (size_t i = 0; i < definedRegisters.at(target); i++) {
         targets.push_back(target + "[" + std::to_string(i) + "]");
       }
@@ -189,20 +189,20 @@ Instruction::Instruction(size_t inputLineNumber, std::string inputCode,
       isFunctionDefinition(isFuncDef), block(std::move(inputBlock)) {}
 
 bool isFunctionDefinition(const std::string& line) {
-  return startsWith(trim(line), "gate ");
+  return trim(line).starts_with("gate ");
 }
 
 bool isReset(const std::string& line) {
-  return startsWith(trim(line), "reset ");
+  return trim(line).starts_with("reset ");
 }
 
 bool isBarrier(const std::string& line) {
-  return startsWith(trim(line), "barrier ") ||
-         startsWith(trim(line), "barrier;");
+  return trim(line).starts_with("barrier ") ||
+         trim(line).starts_with("barrier;");
 }
 
 bool isClassicControlledGate(const std::string& line) {
-  return startsWith(trim(line), "if") &&
+  return trim(line).starts_with("if") &&
          (line.find('(') != std::string::npos) &&
          (line.find(')') != std::string::npos);
 }
@@ -227,7 +227,7 @@ ClassicControlledGate parseClassicControlledGate(const std::string& code) {
   auto rest = codeSanitized.substr(i + 1, codeSanitized.size() - i - 1);
   rest = replaceString(replaceString(rest, "}", ""), "{", "");
   const auto operations = splitString(rest, ';', false);
-  return {condition.str(), operations};
+  return {.condition = condition.str(), .operations = operations};
 }
 
 bool isMeasurement(const std::string& line) {
@@ -235,7 +235,7 @@ bool isMeasurement(const std::string& line) {
 }
 
 bool isVariableDeclaration(const std::string& line) {
-  return startsWith(trim(line), "creg ") || startsWith(trim(line), "qreg ");
+  return trim(line).starts_with("creg ") || trim(line).starts_with("qreg ");
 }
 
 std::vector<std::string> parseParameters(const std::string& instruction) {
@@ -334,7 +334,7 @@ preprocessCode(const std::string& code, size_t startIndex,
 
     const size_t trueStart = pos + blocksOffset;
 
-    Block block{false, ""};
+    Block block{.valid = false, .code = ""};
     if (blockPos != std::string::npos) {
       const auto endPos = line.find('$', blockPos + 1) + 1;
       const auto blockName = line.substr(blockPos, endPos - blockPos + 1);
@@ -393,7 +393,7 @@ preprocessCode(const std::string& code, size_t startIndex,
 
       const auto closingBrace = code.find(
           '}', instructions[instructions.size() - 1].originalCodeEndPosition);
-      const Block noBlock{false, ""};
+      const Block noBlock{.valid = false, .code = ""};
       instructions.emplace_back(i, "RETURN", a, targets, closingBrace,
                                 closingBrace, 0, false, "", true, false,
                                 noBlock);
@@ -413,8 +413,8 @@ preprocessCode(const std::string& code, size_t startIndex,
 
     bool isFunctionCall = false;
     std::string calledFunction;
-    if (!tokens.empty() && std::find(functionNames.begin(), functionNames.end(),
-                                     tokens[0]) != functionNames.end()) {
+    if (!tokens.empty() &&
+        std::ranges::find(functionNames, tokens[0]) != functionNames.end()) {
       isFunctionCall = true;
       calledFunction = tokens[0];
     }
@@ -424,15 +424,15 @@ preprocessCode(const std::string& code, size_t startIndex,
       unfoldAssertionTargetRegisters(*a, definedRegisters, shadowedRegisters);
       a->validate();
       for (const auto& target : a->getTargetQubits()) {
-        if (std::find(shadowedRegisters.begin(), shadowedRegisters.end(),
-                      target) != shadowedRegisters.end()) {
+        if (std::ranges::find(shadowedRegisters, target) !=
+            shadowedRegisters.end()) {
           continue;
         }
         const auto registerName = variableBaseName(target);
         const auto registerIndex =
             std::stoul(splitString(splitString(target, '[')[1], ']')[0]);
 
-        if (definedRegisters.find(registerName) == definedRegisters.end() ||
+        if (!definedRegisters.contains(registerName) ||
             definedRegisters[registerName] <= registerIndex) {
           throw ParsingError("Invalid target qubit " + target +
                              " in assertion.");
@@ -462,13 +462,10 @@ preprocessCode(const std::string& code, size_t startIndex,
             idx > instr.lineNumber - instructions.size())) {
       size_t foundIndex = 0;
       for (const auto& var : variableUsages[idx]) {
-        const auto found =
-            std::find_if(vars.begin(), vars.end(), [&var](const auto& v) {
-              return variablesEqual(v, var);
-            });
+        const auto found = std::ranges::find_if(
+            vars, [&var](const auto& v) { return variablesEqual(v, var); });
         if (found != vars.end()) {
-          const auto newEnd = std::remove(vars.begin(), vars.end(), var);
-          vars.erase(newEnd, vars.end());
+          std::erase(vars, var);
           instr.dataDependencies.emplace_back(idx, foundIndex);
         }
         foundIndex++;
@@ -480,8 +477,7 @@ preprocessCode(const std::string& code, size_t startIndex,
     }
     if (instr.isFunctionCall) {
       instr.successorIndex = functionFirstLine[instr.calledFunction];
-      if (functionDefinitions.find(instr.calledFunction) ==
-          functionDefinitions.end()) {
+      if (!functionDefinitions.contains(instr.calledFunction)) {
         continue;
       }
       instr.callSubstitution.clear();

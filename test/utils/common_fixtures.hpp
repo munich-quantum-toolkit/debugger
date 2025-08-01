@@ -269,17 +269,15 @@ protected:
     expectedLines.insert(expectedLines.begin(), "EXPECTED:");
     actualLines.insert(actualLines.begin(), "ACTUAL:");
     const auto maxLenExpected =
-        std::max_element(expectedLines.begin(), expectedLines.end(),
-                         [](const std::string& a, const std::string& b) {
-                           return a.size() < b.size();
-                         })
-            ->size();
+        std::ranges::max_element(expectedLines, [](const std::string& a,
+                                                   const std::string& b) {
+          return a.size() < b.size();
+        })->size();
     const auto maxLenActual =
-        std::max_element(actualLines.begin(), actualLines.end(),
-                         [](const std::string& a, const std::string& b) {
-                           return a.size() < b.size();
-                         })
-            ->size();
+        std::ranges::max_element(actualLines, [](const std::string& a,
+                                                 const std::string& b) {
+          return a.size() < b.size();
+        })->size();
     const auto lineCount = std::max(expectedLines.size(), actualLines.size());
     std::cout << "\n";
     for (size_t i = 0; i < lineCount; i++) {

@@ -18,19 +18,17 @@
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
+#include <ranges>
 #include <string>
 #include <vector>
 
 namespace mqt::debugger {
 
 std::string trim(const std::string& str) {
-  auto start = std::find_if_not(str.begin(), str.end(), ::isspace);
-  auto end = std::find_if_not(str.rbegin(), str.rend(), ::isspace).base();
+  auto start = std::ranges::find_if_not(str, ::isspace);
+  auto end = std::ranges::find_if_not(std::ranges::reverse_view(str), ::isspace)
+                 .base();
   return (start < end) ? std::string(start, end) : std::string();
-}
-
-bool startsWith(const std::string& str, const std::string& prefix) {
-  return str.compare(0, prefix.size(), prefix) == 0;
 }
 
 std::vector<std::string> splitString(const std::string& text, char delimiter,
@@ -75,7 +73,7 @@ std::string replaceString(std::string str, const std::string& from,
 }
 
 std::string removeWhitespace(std::string str) {
-  str.erase(std::remove_if(str.begin(), str.end(), ::isspace), str.end());
+  std::erase_if(str, ::isspace);
   return str;
 }
 

@@ -11,7 +11,7 @@ In order to start developing, clone the MQT Debugger repository using
 
         $ git clone https://github.com/munich-quantum-toolkit/debugger
 
-A C++ compiler supporting C++17 and a minimum CMake version of 3.19 are required to build the project.
+A C++ compiler supporting C++20 and a minimum CMake version of 3.19 are required to build the project.
 
 Working on the core C++ library
 ###############################

@@ -198,24 +198,23 @@ bool doesCommute(const std::unique_ptr<Assertion>& assertion,
     //       issue https://github.com/munich-quantum-toolkit/debugger/issues/29
     //       to first be resolved in that situation.
     const auto c = parseClassicControlledGate(code).operations;
-    return std::all_of(c.begin(), c.end(), [&assertion](const auto& operation) {
+    return std::ranges::all_of(c, [&assertion](const auto& operation) {
       return doesCommute(assertion, operation);
     });
   }
 
   const auto& assertionTargets = assertion->getTargetQubits();
   const auto& instructionTargets = instruction.targets;
-  if (std::none_of(assertionTargets.begin(), assertionTargets.end(),
-                   [&instructionTargets](const auto& target) {
-                     return std::any_of(
-                         instructionTargets.begin(), instructionTargets.end(),
-                         [&target](const std::string& instrTarget) {
-                           return (instrTarget.find('[') != std::string::npos &&
-                                   instrTarget == target) ||
-                                  (instrTarget.find('[') == std::string::npos &&
-                                   variableBaseName(target) == instrTarget);
-                         });
-                   })) {
+  if (std::ranges::none_of(
+          assertionTargets, [&instructionTargets](const auto& target) {
+            return std::ranges::any_of(
+                instructionTargets, [&target](const std::string& instrTarget) {
+                  return (instrTarget.find('[') != std::string::npos &&
+                          instrTarget == target) ||
+                         (instrTarget.find('[') == std::string::npos &&
+                          variableBaseName(target) == instrTarget);
+                });
+          })) {
     return true; // If the assertion does not target any of the qubits in the
                  // instruction, the order does not matter.
   }

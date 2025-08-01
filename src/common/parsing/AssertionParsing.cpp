@@ -61,7 +61,7 @@ bool qubitInSuperposition(const Span<Complex> statevector, size_t qubit) {
 std::vector<std::string> extractTargetQubits(const std::string& targetPart) {
   const auto parts = splitString(targetPart, ',');
   std::vector<std::string> trimmedParts(parts.size());
-  std::transform(parts.begin(), parts.end(), trimmedParts.begin(), trim);
+  std::ranges::transform(parts, trimmedParts.begin(), trim);
   return trimmedParts;
 }
 
@@ -156,8 +156,7 @@ bool EntanglementAssertion::implies(const Assertion& other) const {
         std::set(getTargetQubits().begin(), getTargetQubits().end());
     const auto subQubits = std::set(other.getTargetQubits().begin(),
                                     other.getTargetQubits().end());
-    return std::includes(containerQubits.begin(), containerQubits.end(),
-                         subQubits.begin(), subQubits.end());
+    return std::ranges::includes(containerQubits, subQubits);
   }
   if (other.getType() == AssertionType::Superposition) {
     return std::any_of(
@@ -183,8 +182,7 @@ bool SuperpositionAssertion::implies(const Assertion& other) const {
       std::set(getTargetQubits().begin(), getTargetQubits().end());
   const auto subQubits =
       std::set(other.getTargetQubits().begin(), other.getTargetQubits().end());
-  return std::includes(subQubits.begin(), subQubits.end(),
-                       containerQubits.begin(), containerQubits.end());
+  return std::ranges::includes(subQubits, containerQubits);
 }
 
 EqualityAssertion::EqualityAssertion(double inputSimilarityThreshold,
@@ -235,8 +233,7 @@ bool StatevectorEqualityAssertion::implies(
       std::set(getTargetQubits().begin(), getTargetQubits().end());
   const auto subQubits =
       std::set(other.getTargetQubits().begin(), other.getTargetQubits().end());
-  if (!std::includes(containerQubits.begin(), containerQubits.end(),
-                     subQubits.begin(), subQubits.end())) {
+  if (!std::ranges::includes(containerQubits, subQubits)) {
     return false;
   }
   Statevector targetSV;
@@ -253,7 +250,9 @@ bool StatevectorEqualityAssertion::implies(
         });
     newAmplitudes =
         getSubStateVectorAmplitudes(getTargetStatevector(), indexList);
-    targetSV = {indexList.size(), newAmplitudes.size(), newAmplitudes.data()};
+    targetSV = {.numQubits = indexList.size(),
+                .numStates = newAmplitudes.size(),
+                .amplitudes = newAmplitudes.data()};
   } else {
     targetSV = getTargetStatevector();
   }
@@ -294,8 +293,7 @@ bool StatevectorEqualityAssertion::implies(
       std::set(getTargetQubits().begin(), getTargetQubits().end());
   const auto subQubits =
       std::set(other.getTargetQubits().begin(), other.getTargetQubits().end());
-  if (!std::includes(containerQubits.begin(), containerQubits.end(),
-                     subQubits.begin(), subQubits.end())) {
+  if (!std::ranges::includes(containerQubits, subQubits)) {
     // Only equality assertions that contain all qubits of the entanglement
     // assertion can imply it.
     return false;
@@ -377,24 +375,24 @@ bool CircuitEqualityAssertion::implies(const Assertion& /*other*/) const {
  */
 bool isAssertion(std::string expression) {
   expression = trim(expression);
-  return startsWith(expression, "assert-ent") ||
-         startsWith(expression, "assert-sup") ||
-         startsWith(expression, "assert-eq");
+  return expression.starts_with("assert-ent") ||
+         expression.starts_with("assert-sup") ||
+         expression.starts_with("assert-eq");
 }
 
 std::unique_ptr<Assertion> parseAssertion(std::string assertionString,
                                           const std::string& blockContent) {
   assertionString = trim(replaceString(assertionString, ";", ""));
 
-  if (startsWith(assertionString, "assert-ent")) {
+  if (assertionString.starts_with("assert-ent")) {
     auto targets = extractTargetQubits(assertionString.substr(11));
     return std::make_unique<EntanglementAssertion>(targets);
   }
-  if (startsWith(assertionString, "assert-sup")) {
+  if (assertionString.starts_with("assert-sup")) {
     auto targets = extractTargetQubits(assertionString.substr(11));
     return std::make_unique<SuperpositionAssertion>(targets);
   }
-  if (startsWith(assertionString, "assert-eq")) {
+  if (assertionString.starts_with("assert-eq")) {
     auto sub = assertionString.substr(10);
     auto targets = extractTargetQubits(sub);
     double similarityThreshold = 0;

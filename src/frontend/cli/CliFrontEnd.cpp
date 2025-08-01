@@ -132,7 +132,7 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
       state->stepOverBackward(state);
     } else if (command == "reset") {
       state->resetSimulation(state);
-    } else if (command.length() >= 5 && command.substr(0, 4) == "get ") {
+    } else if (command.starts_with("get ")) {
       wasGet = true;
     } else if (command == "inspect") {
       inspecting = state->getCurrentInstruction(state);
@@ -141,7 +141,7 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
       const auto count = state->getDiagnostics(state)->potentialErrorCauses(
           state->getDiagnostics(state), problems.data(), problems.size());
       std::cout << count << " potential problems found\n";
-    } else if (command.substr(0, 10) == "breakpoint") {
+    } else if (command.starts_with("breakpoint")) {
       const auto param = command.substr(11, command.length() - 11);
       const auto breakpoint = std::stoul(param);
       size_t instr = 0;
@@ -168,9 +168,8 @@ void CliFrontEnd::suggestUpdatedAssertions(SimulationState* state) {
   const size_t count = 10;
   std::vector<std::array<char, 256>> newAssertions(count);
   std::vector<char*> newAssertionsPointers(count);
-  std::transform(newAssertions.begin(), newAssertions.end(),
-                 newAssertionsPointers.begin(),
-                 [](std::array<char, 256>& arr) { return arr.data(); });
+  std::ranges::transform(newAssertions, newAssertionsPointers.begin(),
+                         [](std::array<char, 256>& arr) { return arr.data(); });
   std::vector<size_t> newPositions(count);
 
   size_t found = diagnostics->suggestNewAssertions(
@@ -180,7 +179,7 @@ void CliFrontEnd::suggestUpdatedAssertions(SimulationState* state) {
     size_t start = 0;
     size_t end = 0;
     state->getInstructionPosition(state, newPositions[i], &start, &end);
-    if (coveredPositions.find(newPositions[i]) == coveredPositions.end()) {
+    if (!coveredPositions.contains(newPositions[i])) {
       coveredPositions.insert(newPositions[i]);
       newCode.erase(start, end - start + 1);
     }
