@@ -8,8 +8,8 @@ It also allows developers to include assertions in their code, testing the corre
 
 MQT Debugger is accessible as a stand-alone application, as a C++ and Python library to include in custom programs, and as a DAP server that can be accessed by popular IDEs such as Visual Studio Code and CLion.
 
-We recommend you to start with the {doc}`installation instructions <Installation>`.
-Then proceed to the {doc}`quickstart guide <Quickstart>` and read the {doc}`reference documentation <library/Library>`.
+We recommend you to start with the {doc}`installation instructions <installation>`.
+Then proceed to the {doc}`quickstart guide <quickstart>` and read the {doc}`reference documentation <library/Library>`.
 If you are interested in the theory behind MQT Debugger, have a look at the publications in the {doc}`publication list <references>`.
 
 We appreciate any feedback and contributions to the project.
@@ -27,13 +27,13 @@ self
 :hidden:
 :maxdepth: 1
 
-Installation
-Quickstart
-Debugging
-Assertions
-Diagnosis
-AssertionRefinement
-RuntimeVerification
+installation
+quickstart
+debugging
+assertions
+diagnosis
+assertion_refinement
+runtime_verification
 references
 ```
 
@@ -43,9 +43,9 @@ references
 :hidden:
 :maxdepth: 1
 
-Contributing
-DevelopmentGuide
-Support
+contributing
+development_guide
+support
 ```
 
 ```{toctree}
