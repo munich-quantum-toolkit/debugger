@@ -12,7 +12,9 @@ We recommend you to start with the {doc}`installation instructions <Installation
 Then proceed to the {doc}`quickstart guide <Quickstart>` and read the {doc}`reference documentation <library/Library>`.
 If you are interested in the theory behind MQT Debugger, have a look at the publications in the {doc}`publication list <references>`.
 
-We appreciate any feedback and contributions to the project. If you want to contribute, you can find more information in the {doc}`contribution guide <Contributing>`. If you are having trouble with the installation or the usage of MQT Debugger, please let us know at our {doc}`support page <Support>`.
+We appreciate any feedback and contributions to the project.
+If you want to contribute, you can find more information in the {doc}`contribution guide <contributing>`.
+If you are having trouble with the installation or the usage of MQT Debugger, please let us know on our {doc}`support page <support>`.
 
 ```{toctree}
 :hidden:
