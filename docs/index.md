@@ -24,6 +24,7 @@ self
 
 ```{toctree}
 :caption: User Guide
+:glob:
 :hidden:
 :maxdepth: 1
 
@@ -44,7 +45,6 @@ references
 :maxdepth: 1
 
 contributing
-development_guide
 support
 ```
 
