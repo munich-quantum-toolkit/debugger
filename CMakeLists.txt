@@ -43,7 +43,7 @@ if(BUILD_MQT_DEBUGGER_BINDINGS)
 
   # top-level call to find Python
   find_package(
-    Python 3.9 REQUIRED
+    Python 3.10 REQUIRED
     COMPONENTS Interpreter Development.Module
     OPTIONAL_COMPONENTS Development.SABIModule)
 endif()

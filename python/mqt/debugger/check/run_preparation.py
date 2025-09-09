@@ -130,7 +130,7 @@ def estimate_required_shots_for_assertion(
         correct = 0
         for i in range(num_trials):
             new_samples = sample_distribution(expected_with_noise, num_samples - previous_samples)
-            all_samples[i] = [a + b for a, b in zip(all_samples[i], new_samples)]
+            all_samples[i] = [a + b for a, b in zip(all_samples[i], new_samples, strict=False)]
             if result_checker.check_assertion(
                 assertion_string, all_samples[i], num_samples, expected_success_probability, p_value
             ):
