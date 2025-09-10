@@ -130,7 +130,7 @@ def filter_out_zeros(observed: Sequence[float], expected: Sequence[float]) -> tu
     """
     observed_filtered = []
     expected_filtered = []
-    for o, e in zip(observed, expected):
+    for o, e in zip(observed, expected, strict=False):
         if e != 0:
             observed_filtered.append(o)
             expected_filtered.append(e)
@@ -193,7 +193,7 @@ def preprocess_between_characteristic(
     """
     references = []
     kept = []
-    for o, e_1, e_2 in zip(observed, expected_no_noise, expected_noise):
+    for o, e_1, e_2 in zip(observed, expected_no_noise, expected_noise, strict=False):
         if (e_2 < e_1 and o > e_2 and o < e_1) or (e_2 > e_1 and (o < e_2 and o > e_1)):
             references.append(o)
             kept.append(False)
@@ -233,7 +233,7 @@ def check_power_divergence(
     observed, expected = merge_bins(observed, expected)
 
     val = 0.0
-    for o, e in zip(observed, expected):
+    for o, e in zip(observed, expected, strict=False):
         val += o * (((o / e) ** power) - 1)
     val *= 2 / (power * (power + 1))
 
