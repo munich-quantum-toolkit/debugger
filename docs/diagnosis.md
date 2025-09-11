@@ -58,7 +58,7 @@ Control-Value Analysis is a method that dynamically analyzes the program during 
 In particular, it looks for controlled gates for which the control is always purely in the state {math}`|0\rangle`. In these cases,
 the controlled gate will never affect the full state, which could be a sign for an error.
 
-This analysis also similarly checks for inverse-controlled gates (i.e., controlled gates that tirgger when the control value is {math}`|1\rangle`) that always
+This analysis also similarly checks for inverse-controlled gates (i.e., controlled gates that trigger when the control value is {math}`|1\rangle`) that always
 have the state {math}`|0\rangle` as control.
 
 It is automatically called when using {cpp:member}`Diagnostics::potentialErrorCauses <DiagnosticsStruct::potentialErrorCauses>`/{py:meth}`Diagnostics.potential_error_causes <mqt.debugger.Diagnostics.potential_error_causes>`.

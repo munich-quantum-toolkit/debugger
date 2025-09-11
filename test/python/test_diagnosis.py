@@ -12,13 +12,16 @@ from __future__ import annotations
 
 import locale
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from mqt.debugger import (
     ErrorCauseType,
-    SimulationState,
     create_ddsim_simulation_state,
     destroy_ddsim_simulation_state,
 )
+
+if TYPE_CHECKING:
+    from mqt.debugger import SimulationState
 
 
 def load_instance(name: str) -> SimulationState:

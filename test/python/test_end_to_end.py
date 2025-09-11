@@ -14,11 +14,15 @@ import locale
 from dataclasses import dataclass
 from math import log2
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
-from mqt.debugger import Complex, SimulationState, Statevector, create_ddsim_simulation_state
+from mqt.debugger import Complex, Statevector, create_ddsim_simulation_state
 from mqt.debugger.pydebugger import destroy_ddsim_simulation_state
+
+if TYPE_CHECKING:
+    from mqt.debugger import SimulationState
 
 
 @dataclass
