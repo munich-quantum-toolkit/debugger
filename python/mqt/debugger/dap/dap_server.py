@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 import socket
 import sys
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import mqt.debugger
 
@@ -26,7 +26,6 @@ from .messages import (
     LaunchDAPMessage,
     NextDAPMessage,
     PauseDAPMessage,
-    Request,
     RestartDAPMessage,
     RestartFrameDAPMessage,
     ReverseContinueDAPMessage,
@@ -41,6 +40,9 @@ from .messages import (
     ThreadsDAPMessage,
     VariablesDAPMessage,
 )
+
+if TYPE_CHECKING:
+    from .messages import Request
 
 supported_messages: list[type[Request]] = [
     InitializeDAPMessage,

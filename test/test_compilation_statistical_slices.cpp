@@ -228,7 +228,7 @@ TEST_F(StatisticalSlicesCompilationTest,
  * removed.
  */
 TEST_F(StatisticalSlicesCompilationTest,
-       StatisticalConsecutiveMultiSliceEqualityUnpreciseOpt) {
+       StatisticalConsecutiveMultiSliceEqualityImpreciseOpt) {
   loadCode("qreg q[1];\n"
            "x q[0];\n"
            "assert-eq 0.9, q[0] { 0, 0.9 }\n"

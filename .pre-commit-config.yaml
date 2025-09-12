@@ -14,115 +14,155 @@ ci:
   skip: [mypy]
 
 repos:
-  - hooks:
+  # Standard hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
       - id: check-added-large-files
       - id: check-case-conflict
       - id: check-docstring-first
       - id: check-merge-conflict
+      - id: check-symlinks
       - id: check-toml
       - id: check-yaml
       - id: debug-statements
       - id: end-of-file-fixer
       - id: mixed-line-ending
+      - id: requirements-txt-fixer
       - id: trailing-whitespace
-    repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
-  - hooks:
-      - args:
+
+  # Clean jupyter notebooks
+  - repo: https://github.com/srstevenson/nb-clean
+    rev: 4.0.1
+    hooks:
+      - id: nb-clean
+        args:
           - --remove-empty-cells
           - --preserve-cell-metadata
           - raw_mimetype
           - --
-        id: nb-clean
-    repo: https://github.com/srstevenson/nb-clean
-    rev: 4.0.1
-  - hooks:
+
+  # Handling unwanted unicode characters
+  - repo: https://github.com/sirosen/texthooks
+    rev: 0.7.1
+    hooks:
       - id: fix-ligatures
       - id: fix-smartquotes
-    repo: https://github.com/sirosen/texthooks
-    rev: 0.7.1
-  - hooks:
+
+  # Check for common mistakes
+  - repo: https://github.com/pre-commit/pygrep-hooks
+    rev: v1.10.0
+    hooks:
       - id: rst-backticks
       - id: rst-directive-colons
       - id: rst-inline-touching-normal
-    repo: https://github.com/pre-commit/pygrep-hooks
-    rev: v1.10.0
-  - hooks:
-      - args:
-          - --fix
-          - --show-fixes
-        id: ruff
-        types_or:
-          - python
-          - pyi
-          - jupyter
+
+  # Python linting using ruff
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.13.0
+    hooks:
+      - id: ruff-check
+        args: ["--fix", "--show-fixes"]
       - id: ruff-format
-        types_or:
-          - python
-          - pyi
-          - jupyter
-    repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.12
-  - hooks:
-      - additional_dependencies:
-          - black==24.*
-        id: blacken-docs
-    repo: https://github.com/adamchainz/blacken-docs
-    rev: 1.19.1
-  - hooks:
-      - id: license-tools
-    repo: https://github.com/emzeat/mz-lictools
+
+  # Static type checking using mypy
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.17.1
+    hooks:
+      - id: mypy
+        files: ^(python/mqt|test/python|noxfile.py)
+        args: []
+        additional_dependencies:
+          - nox
+          - numpy
+          - pytest
+
+  # Also run Black on examples in the documentation
+  - repo: https://github.com/adamchainz/blacken-docs
+    rev: 1.20.0
+    hooks:
+      - id: blacken-docs
+        additional_dependencies: [black==25.*]
+
+  # Check for license headers
+  - repo: https://github.com/emzeat/mz-lictools
     rev: v2.8.0
-  - hooks:
-      - id: clang-format
-        types_or:
-          - c++
-          - c
-          - cuda
-    repo: https://github.com/pre-commit/mirrors-clang-format
+    hooks:
+      - id: license-tools
+
+  # Clang-format the C++ part of the code base automatically
+  - repo: https://github.com/pre-commit/mirrors-clang-format
     rev: v21.1.0
-  - hooks:
+    hooks:
+      - id: clang-format
+        types_or: [c++, c, cuda]
+
+  # CMake format and lint the CMakeLists.txt files
+  - repo: https://github.com/cheshirekow/cmake-format-precommit
+    rev: v0.6.13
+    hooks:
       - id: cmake-format
         additional_dependencies: [pyyaml]
         types: [file]
         files: (\.cmake|CMakeLists.txt)(.in)?$
-    repo: https://github.com/cheshirekow/cmake-format-precommit
-    rev: v0.6.13
-  - hooks:
+
+  # Format configuration files with prettier
+  - repo: https://github.com/rbubley/mirrors-prettier
+    rev: v3.6.2
+    hooks:
       - id: prettier
-        types_or:
-          - yaml
-          - markdown
-          - html
-          - css
-          - scss
-          - javascript
-          - json
-    repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v4.0.0-alpha.8
-  - hooks:
-      - additional_dependencies:
-          - importlib_resources
-          - numpy
-          - pytest
-        args: []
-        files: ^(python/mqt|test/python)
-        id: mypy
-    repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.17.1
-  - hooks:
-      - args:
-          - -L
-          - wille,linz,astroid,anc
-          - --skip
-          - "*.ipynb"
-        id: codespell
-    repo: https://github.com/codespell-project/codespell
-    rev: v2.4.1
-  - hooks:
-      - entry: PyBind|Numpy|Cmake|CCache|Github|PyTest|Mqt|Tum
-        exclude: .pre-commit-config.yaml
-        id: disallow-caps
-        language: pygrep
+        types_or: [yaml, markdown, html, css, scss, javascript, json]
+
+  # Check for spelling
+  - repo: https://github.com/crate-ci/typos
+    rev: v1.36.2
+    hooks:
+      - id: typos
+
+  # Catch common capitalization mistakes
+  - repo: local
+    hooks:
+      - id: disallow-caps
         name: Disallow improper capitalization
-    repo: local
+        language: pygrep
+        entry: PyBind|Numpy|Cmake|CCache|Github|PyTest|Mqt|Tum|MQTopt|MQTref
+        exclude: .pre-commit-config.yaml
+
+  # Check best practices for scientific Python code
+  - repo: https://github.com/scientific-python/cookie
+    rev: 2025.05.02
+    hooks:
+      - id: sp-repo-review
+        additional_dependencies: ["repo-review[cli]"]
+
+  # Check JSON schemata
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: 0.33.3
+    hooks:
+      - id: check-dependabot
+      - id: check-github-workflows
+      - id: check-readthedocs
+
+  # Check the pyproject.toml file
+  - repo: https://github.com/henryiii/validate-pyproject-schema-store
+    rev: 2025.09.12
+    hooks:
+      - id: validate-pyproject
+
+  # Tidy up BibTeX files
+  - repo: https://github.com/FlamingTempura/bibtex-tidy
+    rev: v1.14.0
+    hooks:
+      - id: bibtex-tidy
+        args:
+          [
+            "--align=20",
+            "--curly",
+            "--months",
+            "--blank-lines",
+            "--sort",
+            "--strip-enclosing-braces",
+            "--sort-fields",
+            "--trailing-commas",
+            "--remove-empty-fields",
+          ]
