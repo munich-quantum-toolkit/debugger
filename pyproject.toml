@@ -47,11 +47,12 @@ dependencies = []
 [project.optional-dependencies]
 check = [
     "qiskit>=1.2.4",
-    "scipy>=1.15; python_version >= '3.13'",
     "scipy>=1.13.1; python_version < '3.13'",
+    "scipy>=1.15; python_version >= '3.13'",
+    "scipy>=1.16.2; python_version >= '3.14'",
     "numpy>=2.1; python_version >= '3.13'",
+    "numpy>=2.3.2; python_version >= '3.14'",
 ]
-
 
 [project.scripts]
 mqt-debugger-check = "mqt.debugger.check.runtime_check:main"
@@ -248,7 +249,7 @@ ignore = ["GH200"]
 [tool.uv]
 required-version = ">=0.5.20"
 reinstall-package = ["mqt.debugger"]
-
+override-dependencies = ["symengine"]
 
 [tool.cibuildwheel]
 build = "cp3*"
@@ -264,9 +265,6 @@ manylinux-s390x-image = "manylinux_2_28"
 test-skip = [
   "cp3*t-*", # no freethreading qiskit wheels
   "cp*-win_arm64", # no numpy, qiskit, ... wheels
-  # TODO(denialhaag): Remove when all dependencies support Python 3.14
-  #   https://github.com/munich-quantum-toolkit/debugger/issues/101
-  "cp314-*",
 ]
 
 
@@ -289,6 +287,7 @@ build = [
 ]
 test = [
     "pytest>=7.0",
+    "pytest>=8.4.2; python_version >= '3.14'",
     "pytest-console-scripts>=1.4",
     "pytest-cov>=6.1.1",
     "pytest-sugar>=1.0.0",
