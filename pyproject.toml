@@ -249,7 +249,7 @@ ignore = ["GH200"]
 [tool.uv]
 required-version = ">=0.5.20"
 reinstall-package = ["mqt.debugger"]
-# symengine<14.0 (optional dependency of qiskit) is incompatible with Python 3.14
+# symengine<0.14.0 (optional dependency of qiskit) is incompatible with Python 3.14
 override-dependencies = ["symengine>=14.0"]
 
 [tool.cibuildwheel]
