@@ -54,7 +54,6 @@ check = [
     "numpy>=2.3.2; python_version >= '3.14'",
 ]
 
-
 [project.scripts]
 mqt-debugger-check = "mqt.debugger.check.runtime_check:main"
 
@@ -288,6 +287,7 @@ build = [
 ]
 test = [
     "pytest>=7.0",
+    "pytest>=8.4.2; python_version >= '3.14'",
     "pytest-console-scripts>=1.4",
     "pytest-cov>=6.1.1",
     "pytest-sugar>=1.0.0",

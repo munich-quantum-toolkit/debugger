@@ -1441,6 +1441,7 @@ dev = [
     { name = "pandas", extras = ["output-formatting"], specifier = ">=2.1.2" },
     { name = "pybind11", specifier = ">=3.0.0" },
     { name = "pytest", specifier = ">=7.0" },
+    { name = "pytest", marker = "python_full_version >= '3.14'", specifier = ">=8.4.2" },
     { name = "pytest-console-scripts", specifier = ">=1.4" },
     { name = "pytest-cov", specifier = ">=6.1.1" },
     { name = "pytest-sugar", specifier = ">=1.0.0" },
@@ -1477,6 +1478,7 @@ docs = [
 ]
 test = [
     { name = "pytest", specifier = ">=7.0" },
+    { name = "pytest", marker = "python_full_version >= '3.14'", specifier = ">=8.4.2" },
     { name = "pytest-console-scripts", specifier = ">=1.4" },
     { name = "pytest-cov", specifier = ">=6.1.1" },
     { name = "pytest-sugar", specifier = ">=1.0.0" },
