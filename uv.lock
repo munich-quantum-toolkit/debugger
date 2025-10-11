@@ -10,7 +10,7 @@ resolution-markers = [
 ]
 
 [manifest]
-overrides = [{ name = "symengine" }]
+overrides = [{ name = "symengine", specifier = ">=14.0" }]
 
 [[package]]
 name = "accessible-pygments"
