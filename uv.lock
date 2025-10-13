@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.14'",
@@ -1446,9 +1446,8 @@ dev = [
     { name = "openqasm-pygments", specifier = ">=0.1.2" },
     { name = "pandas", extras = ["output-formatting"], specifier = ">=2.1.2" },
     { name = "pybind11", specifier = ">=3.0.0" },
-    { name = "pytest", specifier = ">=7.0" },
-    { name = "pytest", marker = "python_full_version >= '3.14'", specifier = ">=8.4.2" },
-    { name = "pytest-console-scripts", specifier = ">=1.4" },
+    { name = "pytest", specifier = ">=8.4.2" },
+    { name = "pytest-console-scripts", specifier = ">=1.4.1" },
     { name = "pytest-cov", specifier = ">=6.1.1" },
     { name = "pytest-sugar", specifier = ">=1.0.0" },
     { name = "pytest-xdist", specifier = ">=3.7.0" },
@@ -1483,9 +1482,8 @@ docs = [
     { name = "sphinxext-opengraph", specifier = ">=0.10.0" },
 ]
 test = [
-    { name = "pytest", specifier = ">=7.0" },
-    { name = "pytest", marker = "python_full_version >= '3.14'", specifier = ">=8.4.2" },
-    { name = "pytest-console-scripts", specifier = ">=1.4" },
+    { name = "pytest", specifier = ">=8.4.2" },
+    { name = "pytest-console-scripts", specifier = ">=1.4.1" },
     { name = "pytest-cov", specifier = ">=6.1.1" },
     { name = "pytest-sugar", specifier = ">=1.0.0" },
     { name = "pytest-xdist", specifier = ">=3.7.0" },
