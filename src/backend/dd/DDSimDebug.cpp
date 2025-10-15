@@ -853,10 +853,10 @@ Result ddsimStepForward(SimulationState* self) {
       registerValue |= (value ? 1ULL : 0ULL) << i;
     }
     if (registerValue == exp) {
-      auto thenOp = op->getThenOp();
+      auto* thenOp = op->getThenOp();
       currDD = dd::getDD(*thenOp, *ddsim->dd);
     } else if (op->getElseOp() != nullptr) {
-      auto elseOp = op->getElseOp();
+      auto* elseOp = op->getElseOp();
       currDD = dd::getDD(*elseOp, *ddsim->dd);
     } else {
       currDD = dd::Package::makeIdent();
@@ -932,10 +932,10 @@ Result ddsimStepBackward(SimulationState* self) {
       registerValue |= (value ? 1ULL : 0ULL) << i;
     }
     if (registerValue == exp) {
-      auto thenOp = op->getThenOp();
+      auto* thenOp = op->getThenOp();
       currDD = dd::getInverseDD(*thenOp, *ddsim->dd);
     } else if (op->getElseOp() != nullptr) {
-      auto elseOp = op->getElseOp();
+      auto* elseOp = op->getElseOp();
       currDD = dd::getInverseDD(*elseOp, *ddsim->dd);
     } else {
       currDD = dd::Package::makeIdent();
