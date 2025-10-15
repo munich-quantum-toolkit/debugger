@@ -41,7 +41,7 @@ class CustomCodeTest : public CustomCodeFixture {};
  * @test Test the usage of classically controlled operations where the condition
  * evaluates to false.
  */
-TEST_F(CustomCodeTest, ClassicControlledOperationFalse) {
+TEST_F(CustomCodeTest, IfElseOperationFalse) {
   loadCode(2, 1,
            "z q[0];"
            "cx q[0], q[1];"
@@ -62,7 +62,7 @@ TEST_F(CustomCodeTest, ClassicControlledOperationFalse) {
  * @test Test the usage of classically controlled operations where the condition
  * evaluates to true.
  */
-TEST_F(CustomCodeTest, ClassicControlledOperationTrue) {
+TEST_F(CustomCodeTest, IfElseOperationTrue) {
   loadCode(2, 1,
            "x q[0];"
            "cx q[0], q[1];"
@@ -80,10 +80,9 @@ TEST_F(CustomCodeTest, ClassicControlledOperationTrue) {
 }
 
 /**
- * @test Test the usage of classically controlled operations with multiple
- * gates.
+ * @test Test the usage of if-else operations with multiple gates.
  */
-TEST_F(CustomCodeTest, ClassicControlledMultiOperation) {
+TEST_F(CustomCodeTest, IfElseOperationMulti) {
   loadCode(2, 1,
            "x q[0];"
            "measure q[0] -> c[0];"

@@ -32,7 +32,7 @@
 #include "dd/StateGeneration.hpp"
 #include "ir/Definitions.hpp"
 #include "ir/Register.hpp"
-#include "ir/operations/ClassicControlledOperation.hpp"
+#include "ir/operations/IfElseOperation.hpp"
 #include "ir/operations/OpType.hpp"
 #include "qasm3/Importer.hpp"
 
@@ -838,13 +838,21 @@ Result ddsimStepForward(SimulationState* self) {
     ddsim->iterator++;
     return OK;
   }
-  if ((*ddsim->iterator)->isClassicControlledOperation()) {
-    // For classic-controlled operations, we need to read the values of the
-    // classical register first.
+  if ((*ddsim->iterator)->isIfElseOperation()) {
+    // For if-else operations, we need to read the values of the classical
+    // register first.
     const auto* op =
-        dynamic_cast<qc::ClassicControlledOperation*>((*ddsim->iterator).get());
+        dynamic_cast<qc::IfElseOperation*>((*ddsim->iterator).get());
+    if (op->getComparisonKind() != qc::Eq) {
+      throw std::runtime_error("If-else operations with non-equality "
+                               "comparisons are currently not supported");
+    }
+    if (op->getControlBit().has_value()) {
+      throw std::runtime_error("If-else operations controlled by a single "
+                               "classical bit are currently not supported");
+    }
     const auto& controls = op->getControlRegister();
-    const auto& exp = op->getExpectedValue();
+    const auto& exp = op->getExpectedValueRegister();
     size_t registerValue = 0;
     for (size_t i = 0; i < controls->getSize(); i++) {
       const auto name =
@@ -853,7 +861,11 @@ Result ddsimStepForward(SimulationState* self) {
       registerValue |= (value ? 1ULL : 0ULL) << i;
     }
     if (registerValue == exp) {
-      currDD = dd::getDD(**ddsim->iterator, *ddsim->dd);
+      auto* thenOp = op->getThenOp();
+      currDD = dd::getDD(*thenOp, *ddsim->dd);
+    } else if (op->getElseOp() != nullptr) {
+      auto* elseOp = op->getElseOp();
+      currDD = dd::getDD(*elseOp, *ddsim->dd);
     } else {
       currDD = dd::Package::makeIdent();
     }
@@ -915,11 +927,19 @@ Result ddsimStepBackward(SimulationState* self) {
   if ((*ddsim->iterator)->getType() == qc::Barrier) {
     return OK;
   }
-  if ((*ddsim->iterator)->isClassicControlledOperation()) {
+  if ((*ddsim->iterator)->isIfElseOperation()) {
     const auto* op =
-        dynamic_cast<qc::ClassicControlledOperation*>((*ddsim->iterator).get());
+        dynamic_cast<qc::IfElseOperation*>((*ddsim->iterator).get());
+    if (op->getComparisonKind() != qc::Eq) {
+      throw std::runtime_error("If-else operations with non-equality "
+                               "comparisons are currently not supported");
+    }
+    if (op->getControlBit().has_value()) {
+      throw std::runtime_error("If-else operations controlled by a single "
+                               "classical bit are currently not supported");
+    }
     const auto& controls = op->getControlRegister();
-    const auto& exp = op->getExpectedValue();
+    const auto& exp = op->getExpectedValueRegister();
     size_t registerValue = 0;
     for (size_t i = 0; i < controls->getSize(); i++) {
       const auto name =
@@ -928,7 +948,11 @@ Result ddsimStepBackward(SimulationState* self) {
       registerValue |= (value ? 1ULL : 0ULL) << i;
     }
     if (registerValue == exp) {
-      currDD = dd::getInverseDD(**ddsim->iterator, *ddsim->dd);
+      auto* thenOp = op->getThenOp();
+      currDD = dd::getInverseDD(*thenOp, *ddsim->dd);
+    } else if (op->getElseOp() != nullptr) {
+      auto* elseOp = op->getElseOp();
+      currDD = dd::getInverseDD(*elseOp, *ddsim->dd);
     } else {
       currDD = dd::Package::makeIdent();
     }
