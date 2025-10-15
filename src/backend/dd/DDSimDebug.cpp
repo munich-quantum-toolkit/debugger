@@ -843,6 +843,14 @@ Result ddsimStepForward(SimulationState* self) {
     // register first.
     const auto* op =
         dynamic_cast<qc::IfElseOperation*>((*ddsim->iterator).get());
+    if (op->getComparisonKind() != qc::Eq) {
+      throw std::runtime_error("If-else operations with non-equality "
+                               "comparisons are currently not supported");
+    }
+    if (op->getControlBit().has_value()) {
+      throw std::runtime_error("If-else operations controlled by a single "
+                               "classical bit are currently not supported");
+    }
     const auto& controls = op->getControlRegister();
     const auto& exp = op->getExpectedValueRegister();
     size_t registerValue = 0;
@@ -922,6 +930,14 @@ Result ddsimStepBackward(SimulationState* self) {
   if ((*ddsim->iterator)->isIfElseOperation()) {
     const auto* op =
         dynamic_cast<qc::IfElseOperation*>((*ddsim->iterator).get());
+    if (op->getComparisonKind() != qc::Eq) {
+      throw std::runtime_error("If-else operations with non-equality "
+                               "comparisons are currently not supported");
+    }
+    if (op->getControlBit().has_value()) {
+      throw std::runtime_error("If-else operations controlled by a single "
+                               "classical bit are currently not supported");
+    }
     const auto& controls = op->getControlRegister();
     const auto& exp = op->getExpectedValueRegister();
     size_t registerValue = 0;
