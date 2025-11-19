@@ -159,11 +159,11 @@ class SimulationState:
         int: The number of assertions that failed during execution.
         """
 
-    def change_classical_values(self, changes: dict[str, VariableValue]) -> None:
-        """Changes the values of classical variables in the simulation.
+    def change_classical_value(self, variable_name: str) -> None:
+        """Changes the value of a classical bit variable in the simulation.
 
         Args:
-            changes (dict[str, VariableValue]): A mapping from variable names to their new values.
+            variable_name (str): The name of the classical bit that should be toggled.
         """
 
     def run_simulation(self) -> None:

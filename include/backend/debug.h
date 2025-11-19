@@ -175,12 +175,14 @@ struct SimulationStateStruct {
   bool (*canStepBackward)(SimulationState* self);
 
   /**
-   * @brief Indicates whether the variable is changed
-   * 
+   * @brief Toggles the value of a classical bit variable.
+   *
    * @param self The instance to query.
-   * @return True if the variable is changed, false otherwise.
+   * @param variableName The name of the classical bit that should be toggled.
+   * @return The result of the operation.
    */
-  Result (*changeClassicalVariable)(SimulationState* self);
+  Result (*changeClassicalVariable)(SimulationState* self,
+                                    const char* variableName);
 
   /**
    * @brief Indicates whether the execution has finished.

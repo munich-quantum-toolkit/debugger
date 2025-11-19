@@ -485,12 +485,14 @@ Result ddsimGetClassicalVariable(SimulationState* self, const char* name,
                                  Variable* output);
 
 /**
- * @brief change the value of the current classical bit variable to its opposite value.
- * 
+ * @brief Change the value of a classical bit variable to its opposite value.
+ *
  * @param self The instance to query.
+ * @param variableName The name of the classical bit variable to toggle.
  * @return The result of the operation.
  */
-Result ddsimChangeClassicalVariable(SimulationState* self);
+Result ddsimChangeClassicalVariable(SimulationState* self,
+                                    const char* variableName);
 /**
  * @brief Gets the number of classical variables in the simulation.
  *

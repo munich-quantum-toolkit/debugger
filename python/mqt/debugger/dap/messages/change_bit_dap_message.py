@@ -23,16 +23,23 @@ class BitChangeDAPMessage(DAPMessage):
 
     message_type_name: str = "bitChange"
 
+    variable_name: str | None
+
     def __init__(self, message: dict[str, Any]) -> None:
         """Initializes the 'BitChangeDAPMessage' instance.
 
         Args:
             message (dict[str, Any]): The object representing the 'bitChange' request.
         """
+        arguments = message.get("arguments", {})
+        self.variable_name = arguments.get("variableName")
         super().__init__(message)
 
     def validate(self) -> None:
         """Validates the 'BitChangeDAPMessage' instance."""
+        if not isinstance(self.variable_name, str) or not self.variable_name:
+            msg = "The 'bitChange' request requires a non-empty 'variableName' argument."
+            raise ValueError(msg)
 
     def handle(self, server: DAPServer) -> dict[str, Any]:
         """Performs the action requested by the 'bitChange' DAP request.
@@ -43,6 +50,5 @@ class BitChangeDAPMessage(DAPMessage):
         Returns:
             dict[str, Any]: The response to the request.
         """
-        server.simulation_state.change_classical_value()
+        server.simulation_state.change_classical_value(self.variable_name)
         return super().handle(server)
-

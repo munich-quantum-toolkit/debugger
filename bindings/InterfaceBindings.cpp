@@ -286,12 +286,13 @@ Returns:
 bool: is giving back the new state of the classical bit variable.)")
       .def(
           "change_classical_value",
-          [](SimulationState* self) {return self->changeClassicalVariable(self); },
-          R"(Changes the value of the current classical bit variable to its
-opposite value.
+          [](SimulationState* self, const std::string& variableName) {
+            checkOrThrow(self->changeClassicalVariable(self, variableName.c_str()));
+          },
+          R"(Changes the value of the given classical bit variable to its opposite value.
 
-Returns:
-bool: True, if the simulation can step backward.)")
+Args:
+    variableName (str): The name of the classical bit that should be toggled.)")
       .def(
           "is_finished",
           [](SimulationState* self) { return self->isFinished(self); },
