@@ -61,6 +61,7 @@ supported_messages: list[type[Request]] = [
     RestartDAPMessage,
     ScopesDAPMessage,
     VariablesDAPMessage,
+    BitChangeDAPMessage,
     ReverseContinueDAPMessage,
     StepOutDAPMessage,
     PauseDAPMessage,

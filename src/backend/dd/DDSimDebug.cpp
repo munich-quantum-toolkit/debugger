@@ -39,6 +39,7 @@
 #include <Eigen/Dense>
 #include <algorithm>
 #include <cmath>
+#include <cctype>
 #include <cstddef>
 #include <cstring>
 #include <exception>
@@ -616,7 +617,28 @@ Result ddsimLoadCode(SimulationState* self, const char* code) {
 
 Result ddsimChangeClassicalVariable(SimulationState* self, const char* variableName) {
   auto* ddsim = toDDSimulationState(self);
-  const auto it = ddsim->variables.find(variableName);
+  std::string fullName{variableName};
+  bool hasExplicitValue = false;
+  bool explicitValue = false;
+  if (const auto pos = fullName.find('='); pos != std::string::npos) {
+    auto valueToken = fullName.substr(pos + 1);
+    fullName = fullName.substr(0, pos);
+    std::transform(valueToken.begin(), valueToken.end(), valueToken.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    if (valueToken == "1" || valueToken == "true" || valueToken == "t" ||
+        valueToken == "yes" || valueToken == "on") {
+      explicitValue = true;
+      hasExplicitValue = true;
+    } else if (valueToken == "0" || valueToken == "false" ||
+               valueToken == "f" || valueToken == "no" ||
+               valueToken == "off") {
+      explicitValue = false;
+      hasExplicitValue = true;
+    } else {
+      return ERROR; // unsupported literal
+    }
+  }
+  const auto it = ddsim->variables.find(fullName);
   if (it == ddsim->variables.end()) {
     return ERROR; // no such classical bit
   }
@@ -624,7 +646,11 @@ Result ddsimChangeClassicalVariable(SimulationState* self, const char* variableN
   if (var.type != VariableType::VarBool) {
     return ERROR; // can only toggle bits
   }
-  var.value.boolValue = !var.value.boolValue;
+  if (hasExplicitValue) {
+    var.value.boolValue = explicitValue;
+  } else {
+    var.value.boolValue = !var.value.boolValue;
+  }
   return OK;
 }
 
