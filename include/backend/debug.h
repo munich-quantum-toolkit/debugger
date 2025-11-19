@@ -175,6 +175,14 @@ struct SimulationStateStruct {
   bool (*canStepBackward)(SimulationState* self);
 
   /**
+   * @brief Indicates whether the variable is changed
+   * 
+   * @param self The instance to query.
+   * @return True if the variable is changed, false otherwise.
+   */
+  bool (*changeClassicalVariable)(SimulationState* self);
+
+  /**
    * @brief Indicates whether the execution has finished.
    *
    * The execution is considered finished if it has reached the end of the code.

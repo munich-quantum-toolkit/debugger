@@ -20,6 +20,7 @@ import mqt.debugger
 from .messages import (
     ConfigurationDoneDAPMessage,
     ContinueDAPMessage,
+    BitChangeDAPMessage,
     DisconnectDAPMessage,
     ExceptionInfoDAPMessage,
     InitializeDAPMessage,

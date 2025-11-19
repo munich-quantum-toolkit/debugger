@@ -525,6 +525,7 @@ Result createDDSimulationState(DDSimulationState* self) {
   self->interface.pauseSimulation = ddsimPauseSimulation;
   self->interface.canStepForward = ddsimCanStepForward;
   self->interface.canStepBackward = ddsimCanStepBackward;
+  self->interface.changeClassicalVariable = ddsimChangeClassicalVariable;
   self->interface.isFinished = ddsimIsFinished;
   self->interface.didAssertionFail = ddsimDidAssertionFail;
   self->interface.wasBreakpointHit = ddsimWasBreakpointHit;
@@ -612,6 +613,21 @@ Result ddsimLoadCode(SimulationState* self, const char* code) {
 
   return OK;
 }
+
+Result ddsimChangeClassicalVariable(SimulationState* self, const char* variableName) {
+  auto* ddsim = toDDSimulationState(self);
+  const auto it = ddsim->variables.find(variableName);
+  if (it == ddsim->variables.end()) {
+    return ERROR; // no such classical bit
+  }
+  auto& var = it->second;
+  if (var.type != VariableType::VarBool) {
+    return ERROR; // can only toggle bits
+  }
+  var.value.boolValue = !var.value.boolValue;
+  return OK;
+}
+
 
 Result ddsimStepOverForward(SimulationState* self) {
   if (!self->canStepForward(self)) {
@@ -1136,6 +1152,7 @@ Result ddsimGetAmplitudeBitstring(SimulationState* self, const char* bitstring,
   output->imaginary = result.imag();
   return OK;
 }
+
 
 Result ddsimGetClassicalVariable(SimulationState* self, const char* name,
                                  Variable* output) {

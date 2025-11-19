@@ -283,6 +283,14 @@ The simulation is unable to step backward if it is at the beginning or if
 the simulation has not been set up yet.
 
 Returns:
+bool: is giving back the new state of the classical bit variable.)")
+      .def(
+          "change_bit",
+          [](SimulationState* self) { self->changeBit(self); },
+          R"(Changes the value of the current classical bit variable to its
+opposite value.
+
+Returns:
 bool: True, if the simulation can step backward.)")
       .def(
           "is_finished",

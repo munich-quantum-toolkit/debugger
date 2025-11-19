@@ -485,6 +485,13 @@ Result ddsimGetClassicalVariable(SimulationState* self, const char* name,
                                  Variable* output);
 
 /**
+ * @brief change the value of the current classical bit variable to its opposite value.
+ * 
+ * @param self The instance to query.
+ * @return The result of the operation.
+ */
+Result ddsimChangeClassicalVariable(SimulationState* self);
+/**
  * @brief Gets the number of classical variables in the simulation.
  *
  * For registers, each index is counted as a separate variable.
