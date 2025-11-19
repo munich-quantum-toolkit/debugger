@@ -180,7 +180,7 @@ struct SimulationStateStruct {
    * @param self The instance to query.
    * @return True if the variable is changed, false otherwise.
    */
-  bool (*changeClassicalVariable)(SimulationState* self);
+  Result (*changeClassicalVariable)(SimulationState* self);
 
   /**
    * @brief Indicates whether the execution has finished.
