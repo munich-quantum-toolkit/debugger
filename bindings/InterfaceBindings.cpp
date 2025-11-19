@@ -286,7 +286,7 @@ Returns:
 bool: is giving back the new state of the classical bit variable.)")
       .def(
           "change_classical_value",
-          [](SimulationState* self) { self->changeBit(self); },
+          [](SimulationState* self) {return self->changeClassicalVariable(self); },
           R"(Changes the value of the current classical bit variable to its
 opposite value.
 
