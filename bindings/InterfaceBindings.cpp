@@ -285,7 +285,7 @@ the simulation has not been set up yet.
 Returns:
 bool: is giving back the new state of the classical bit variable.)")
       .def(
-          "change_bit",
+          "change_classical_value",
           [](SimulationState* self) { self->changeBit(self); },
           R"(Changes the value of the current classical bit variable to its
 opposite value.

@@ -159,6 +159,13 @@ class SimulationState:
         int: The number of assertions that failed during execution.
         """
 
+    def change_classical_values(self, changes: dict[str, VariableValue]) -> None:
+        """Changes the values of classical variables in the simulation.
+
+        Args:
+            changes (dict[str, VariableValue]): A mapping from variable names to their new values.
+        """
+
     def run_simulation(self) -> None:
         """Runs the simulation until it finishes or an assertion fails.
 
