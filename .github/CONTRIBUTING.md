@@ -4,4 +4,4 @@
 # Contributing
 
 Thank you for your interest in contributing to MQT Debugger!
-An extensive contribution guide is available in our [documentation](https://mqt.readthedocs.io/projects/debugger/en/latest/CONTRIBUTING.html).
+An extensive contribution guide is available in our [documentation](https://mqt.readthedocs.io/projects/debugger/en/latest/contributing.html).
