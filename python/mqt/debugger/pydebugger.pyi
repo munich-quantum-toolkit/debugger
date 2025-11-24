@@ -166,6 +166,14 @@ class SimulationState:
             variable_name (str): The name of the classical bit that should be toggled.
         """
 
+    def change_amplitude_value(self, basis_state: str, value: Complex) -> None:
+        """Sets the amplitude of a computational basis state in the simulation.
+
+        Args:
+            basis_state (str): The bitstring identifying the basis state (e.g. ``"010"``).
+            value (Complex): The desired complex amplitude.
+        """
+
     def run_simulation(self) -> None:
         """Runs the simulation until it finishes or an assertion fails.
 

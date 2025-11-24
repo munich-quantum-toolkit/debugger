@@ -13,6 +13,7 @@ from __future__ import annotations
 from .capabilities_dap_event import CapabilitiesDAPEvent
 from .configuration_done_dap_message import ConfigurationDoneDAPMessage
 from .continue_dap_message import ContinueDAPMessage
+from .change_amplitude_dap_message import AmplitudeChangeDAPMessage
 from .change_bit_dap_message import BitChangeDAPMessage
 from .dap_event import DAPEvent
 from .dap_message import DAPMessage
@@ -48,6 +49,7 @@ __all__ = [
     "CapabilitiesDAPEvent",
     "ConfigurationDoneDAPMessage",
     "ContinueDAPMessage",
+    "AmplitudeChangeDAPMessage",
     "BitChangeDAPMessage",
     "DAPEvent",
     "DAPMessage",

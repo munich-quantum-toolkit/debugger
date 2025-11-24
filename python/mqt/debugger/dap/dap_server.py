@@ -21,6 +21,7 @@ from .messages import (
     ConfigurationDoneDAPMessage,
     ContinueDAPMessage,
     BitChangeDAPMessage,
+    AmplitudeChangeDAPMessage,
     DisconnectDAPMessage,
     ExceptionInfoDAPMessage,
     InitializeDAPMessage,
@@ -62,6 +63,7 @@ supported_messages: list[type[Request]] = [
     ScopesDAPMessage,
     VariablesDAPMessage,
     BitChangeDAPMessage,
+    AmplitudeChangeDAPMessage,
     ReverseContinueDAPMessage,
     StepOutDAPMessage,
     PauseDAPMessage,
@@ -263,6 +265,12 @@ class DAPServer:
         Returns:
             tuple[dict[str, Any], mqt.debugger.dap.messages.DAPMessage]: The response to the message as a dictionary and the message object.
         """
+        if command["command"] == "setVariable":
+            arguments = command.get("arguments", {})
+            variables_reference = arguments.get("variablesReference")
+            message_type = AmplitudeChangeDAPMessage if variables_reference == 2 else BitChangeDAPMessage
+            message = message_type(command)
+            return (message.handle(self), message)
         for message_type in supported_messages:
             if message_type.message_type_name == command["command"]:
                 message = message_type(command)

@@ -45,6 +45,7 @@
 #include <exception>
 #include <iostream>
 #include <iterator>
+#include <limits>
 #include <map>
 #include <memory>
 #include <numeric>
@@ -527,6 +528,7 @@ Result createDDSimulationState(DDSimulationState* self) {
   self->interface.canStepForward = ddsimCanStepForward;
   self->interface.canStepBackward = ddsimCanStepBackward;
   self->interface.changeClassicalVariable = ddsimChangeClassicalVariable;
+  self->interface.changeAmplitudeVariable = ddsimChangeAmplitudeVariable;
   self->interface.isFinished = ddsimIsFinished;
   self->interface.didAssertionFail = ddsimDidAssertionFail;
   self->interface.wasBreakpointHit = ddsimWasBreakpointHit;
@@ -654,6 +656,104 @@ Result ddsimChangeClassicalVariable(SimulationState* self, const char* variableN
   return OK;
 }
 
+Result ddsimChangeAmplitudeVariable(SimulationState* self,
+                                    const char* basisState,
+                                    const Complex* value) {
+  if (basisState == nullptr || value == nullptr) {
+    return ERROR;
+  }
+  auto* ddsim = toDDSimulationState(self);
+  const auto numQubits = ddsim->qc->getNqubits();
+  const std::string state{basisState};
+  if (state.size() != numQubits) {
+    return ERROR;
+  }
+  if (std::ranges::any_of(state,
+                          [](char c) { return c != '0' && c != '1'; })) {
+    return ERROR;
+  }
+
+  std::size_t index = 0;
+  for (const char bit : state) {
+    index <<= 1U;
+    if (bit == '1') {
+      index |= 1U;
+    }
+  }
+
+  const auto numStates = 1ULL << numQubits;
+  std::vector<Complex> amplitudes(numStates);
+  Statevector sv{numQubits, numStates, amplitudes.data()};
+  if (self->getStateVectorFull(self, &sv) != OK) {
+    return ERROR;
+  }
+
+  constexpr double tolerance = 1e-9;
+  double otherNormSquared = 0.0;
+  for (std::size_t i = 0; i < numStates; i++) {
+    if (i == index) {
+      continue;
+    }
+    const auto& amp = amplitudes[i];
+    otherNormSquared +=
+        amp.real * amp.real + amp.imaginary * amp.imaginary;
+  }
+
+  const double desiredReal = value->real;
+  const double desiredImag = value->imaginary;
+  const double desiredNormSquared =
+      desiredReal * desiredReal + desiredImag * desiredImag;
+  if (desiredNormSquared > 1.0 + tolerance) {
+    return ERROR;
+  }
+  if (otherNormSquared <= tolerance &&
+      std::abs(desiredNormSquared - 1.0) > tolerance) {
+    return ERROR;
+  }
+
+  double scalingFactor = 0.0;
+  if (otherNormSquared > tolerance) {
+    const double remaining = 1.0 - desiredNormSquared;
+    if (remaining < -tolerance) {
+      return ERROR;
+    }
+    if (remaining <= tolerance) {
+      scalingFactor = 0.0;
+    } else {
+      scalingFactor = std::sqrt(remaining / otherNormSquared);
+    }
+  }
+
+  amplitudes[index] = *value;
+  if (otherNormSquared > tolerance) {
+    for (std::size_t i = 0; i < numStates; i++) {
+      if (i == index) {
+        continue;
+      }
+      amplitudes[i].real *= scalingFactor;
+      amplitudes[i].imaginary *= scalingFactor;
+    }
+  }
+
+  dd::CVec ddVector;
+  ddVector.reserve(numStates);
+  for (const auto& amp : amplitudes) {
+    ddVector.emplace_back(amp.real, amp.imaginary);
+  }
+
+  try {
+    auto newState = dd::makeStateFromVector(ddVector, *(ddsim->dd));
+    ddsim->dd->incRef(newState);
+    if (ddsim->simulationState.p != nullptr) {
+      ddsim->dd->decRef(ddsim->simulationState);
+    }
+    ddsim->simulationState = newState;
+  } catch (const std::exception& e) {
+    std::cerr << e.what() << "\n";
+    return ERROR;
+  }
+  return OK;
+}
 
 Result ddsimStepOverForward(SimulationState* self) {
   if (!self->canStepForward(self)) {

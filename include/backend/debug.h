@@ -183,6 +183,17 @@ struct SimulationStateStruct {
    */
   Result (*changeClassicalVariable)(SimulationState* self,
                                     const char* variableName);
+  /**
+   * @brief Changes the amplitude of a computational basis state.
+   *
+   * @param self The instance to query.
+   * @param basisState The bitstring identifying the basis state to update.
+   * @param value The desired complex amplitude.
+   * @return The result of the operation.
+   */
+  Result (*changeAmplitudeVariable)(SimulationState* self,
+                                    const char* basisState,
+                                    const Complex* value);
 
   /**
    * @brief Indicates whether the execution has finished.

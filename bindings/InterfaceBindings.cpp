@@ -294,6 +294,19 @@ bool: is giving back the new state of the classical bit variable.)")
 Args:
     variableName (str): The name of the classical bit that should be toggled.)")
       .def(
+          "change_amplitude_value",
+          [](SimulationState* self, const std::string& basisState, const Complex& value) {
+            checkOrThrow(self->changeAmplitudeVariable(self, basisState.c_str(), &value));
+          },
+          R"(Sets the amplitude of the given computational basis state.
+
+The basis state must be provided as a bitstring (e.g., ``"010"``) whose length
+matches the number of qubits in the circuit.
+
+Args:
+    basisState (str): The bitstring describing the basis state whose amplitude should be changed.
+    value (Complex): The desired complex amplitude.)")
+      .def(
           "is_finished",
           [](SimulationState* self) { return self->isFinished(self); },
           R"(Indicates whether the execution has finished.

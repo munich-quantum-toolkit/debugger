@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import locale
 from pathlib import Path
+import math
 from typing import TYPE_CHECKING, cast
 
 import pytest
@@ -219,6 +220,23 @@ def test_access_state(simulation_instance_jumps: SimulationInstance) -> None:
     c = sv.amplitudes[2]
     assert abs(c.imaginary) < 1e-6
     assert abs(c.real) < 1e-6
+
+
+def test_change_amplitude_value(simulation_instance_ghz: SimulationInstance) -> None:
+    """Tests manipulating amplitudes through the bindings."""
+    (simulation_state, _state_id) = simulation_instance_ghz
+    simulation_state.run_simulation()
+
+    desired = mqt.debugger.Complex(0.25, 0.0)
+    simulation_state.change_amplitude_value("111", desired)
+    updated = simulation_state.get_amplitude_bitstring("111")
+    assert updated.real == pytest.approx(0.25, abs=1e-9)
+    assert updated.imaginary == pytest.approx(0.0, abs=1e-9)
+
+    zero_state = simulation_state.get_amplitude_bitstring("000")
+    expected_magnitude = math.sqrt(1 - 0.25**2)
+    assert zero_state.real == pytest.approx(expected_magnitude, abs=1e-9)
+    assert zero_state.imaginary == pytest.approx(0.0, abs=1e-9)
 
 
 def test_get_state_vector_sub(simulation_instance_classical: SimulationInstance) -> None:
