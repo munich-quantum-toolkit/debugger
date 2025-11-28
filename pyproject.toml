@@ -300,7 +300,6 @@ build = [
     "pybind11>=3.0.1",
     "setuptools-scm>=9.2.2",
     "scikit-build-core>=0.11.6",
-    "mqt.core~=3.3.3",
 ]
 test = [
     "pytest>=9.0.1",
