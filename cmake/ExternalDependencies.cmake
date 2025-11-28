@@ -22,7 +22,7 @@ if(BUILD_MQT_DEBUGGER_BINDINGS)
   endif()
 
   # add pybind11 library
-  find_package(pybind11 3.0.0 CONFIG REQUIRED)
+  find_package(pybind11 3.0.1 CONFIG REQUIRED)
 endif()
 
 # ---------------------------------------------------------------------------------Fetch MQT Core
