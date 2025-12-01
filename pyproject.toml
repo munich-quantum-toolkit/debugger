@@ -7,7 +7,11 @@
 # Licensed under the MIT License
 
 [build-system]
-requires = ["scikit-build-core>=0.11.1", "setuptools-scm>=8.2", "pybind11>=3.0.0"]
+requires = [
+  "pybind11>=3.0.1",
+  "setuptools-scm>=9.2.2",
+  "scikit-build-core>=0.11.6",
+]
 build-backend = "scikit_build_core.build"
 
 [project]
@@ -111,22 +115,21 @@ BUILD_MQT_DEBUGGER_APP = "OFF"
 write_to = "python/mqt/debugger/_version.py"
 
 
-[tool.pytest.ini_options]
-minversion = "7.0"
+[tool.pytest]
+minversion = "9.0"
+testpaths = ["test/python"]
+strict = true
 addopts = [
   "-ra",
-  "--strict-markers",
-  "--strict-config",
+  "--showlocals",
   "--numprocesses=auto", # Automatically use all available CPU cores for parallel testing
 ]
-log_cli_level = "INFO"
-xfail_strict = true
+log_level = "INFO"
 filterwarnings = [
     "error",
     'ignore:\s.*Pyarrow.*:DeprecationWarning:',
     'ignore:.*datetime\.datetime\.utcfromtimestamp.*:DeprecationWarning:',
 ]
-testpaths = ["test/python"]
 
 
 [tool.coverage]
@@ -157,12 +160,17 @@ warn_unreachable = true
 module = ["qiskit.*", "matplotlib.*", "pytest_console_scripts.*"]
 ignore_missing_imports = true
 
+
 [tool.ruff]
 line-length = 120
-extend-include = ["*.ipynb"]
-src = ["python"]
 preview = true
+fix = true
 unsafe-fixes = true
+show-fixes = true
+src = ["python"]
+
+[tool.ruff.format]
+docstring-code-format = true
 
 [tool.ruff.lint]
 extend-select = [
@@ -255,6 +263,10 @@ override-dependencies = [
     "symengine>=0.14.1; python_version >= '3.14'",
 ]
 
+[tool.uv.sources]
+mqt-debugger = { workspace = true }
+
+
 [tool.cibuildwheel]
 build = "cp3*"
 skip = "*-musllinux_*"
@@ -285,37 +297,37 @@ repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel} --namespace-pkg 
 
 [dependency-groups]
 build = [
-  "pybind11>=3.0.0",
-  "scikit-build-core>=0.11.1",
-  "setuptools-scm>=8.2",
+    "pybind11>=3.0.1",
+    "setuptools-scm>=9.2.2",
+    "scikit-build-core>=0.11.6",
 ]
 test = [
-    "pytest>=8.4.2",
+    "pytest>=9.0.1",
+    "pytest-cov>=7.0.0",
     "pytest-console-scripts>=1.4.1",
-    "pytest-cov>=6.1.1",
-    "pytest-sugar>=1.0.0",
-    "pytest-xdist>=3.7.0",
+    "pytest-sugar>=1.1.1",
+    "pytest-xdist>=3.8.0",
 ]
 docs = [
-    "furo>=2024.8.6",
-    "myst-nb>=1.2.0",
-    "setuptools-scm>=8.2",
-    "sphinx-copybutton>=0.5.2",
-    "sphinx-design>=0.6.1",
-    "sphinxcontrib-bibtex>=2.6.3",
-    "sphinxcontrib-svg2pdfconverter>=1.3.0",
-    "sphinxext-opengraph>=0.10.0",
-    "sphinx-hoverxref>=1.4.2",
-    "pandas[output-formatting]>=2.1.2",
-    "qiskit[qasm3-import,visualization]>=1.0.0",
-    "openqasm-pygments>=0.1.2",
     "breathe>=4.36.0",
-    "graphviz>=0.20.3",
+    "furo>=2025.09.25",
+    "graphviz>=0.21.0",
+    "myst-nb>=1.3.0",
+    "openqasm-pygments>=0.2.0",
+    "pandas[output-formatting]>=2.1.2",
+    "setuptools-scm>=9.2.2",
     "sphinx>=8.1.3",
     "sphinx>=8.2.3; python_version >= '3.11'",
+    "sphinx-copybutton>=0.5.2",
+    "sphinx-design>=0.6.1",
+    "sphinx-hoverxref>=1.4.2",
+    "sphinxcontrib-bibtex>=2.6.5",
+    "sphinxcontrib-svg2pdfconverter>=1.3.0",
+    "sphinxext-opengraph>=0.10.0",
+    "qiskit[qasm3-import,visualization]>=1.0.0",
 ]
 dev = [
     {include-group = "build"},
-    {include-group = "docs"},
     {include-group = "test"},
+    "nox>=2025.11.12",
 ]
