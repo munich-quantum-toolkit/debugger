@@ -98,7 +98,7 @@ class BitChangeDAPMessage(DAPMessage):
     def _apply_change(self, server: DAPServer, name: str) -> bool:
         try:
             variable = server.simulation_state.get_classical_variable(name)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             msg = f"The variable '{name}' is not a classical bit."
             raise ValueError(msg) from exc
 

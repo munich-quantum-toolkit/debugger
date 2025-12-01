@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 _QUANTUM_REFERENCE = 2
 _EPS = 1e-9
 
+
 @dataclass
 class _TargetAmplitude:
     bitstring: str
@@ -105,7 +106,7 @@ class AmplitudeChangeDAPMessage(DAPMessage):
         normalized = _normalize_value(self.new_value or "")
         try:
             desired = complex(normalized)
-        except ValueError as exc:  # noqa: BLE001
+        except ValueError as exc:
             msg = f"The provided value '{self.new_value}' is not a valid complex number."
             raise ValueError(msg) from exc
         return _TargetAmplitude(bitstring, desired)

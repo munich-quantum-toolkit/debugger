@@ -14,8 +14,8 @@ It only tests whether the bindings are working correctly. It does not stress-tes
 from __future__ import annotations
 
 import locale
-from pathlib import Path
 import math
+from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 import pytest

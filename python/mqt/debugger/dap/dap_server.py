@@ -18,10 +18,10 @@ from typing import TYPE_CHECKING, Any, cast
 import mqt.debugger
 
 from .messages import (
+    AmplitudeChangeDAPMessage,
+    BitChangeDAPMessage,
     ConfigurationDoneDAPMessage,
     ContinueDAPMessage,
-    BitChangeDAPMessage,
-    AmplitudeChangeDAPMessage,
     DisconnectDAPMessage,
     ExceptionInfoDAPMessage,
     InitializeDAPMessage,

@@ -44,9 +44,10 @@ namespace {
  * @param result The result to check.
  */
 void checkOrThrow(Result result) {
-  //if (result != OK) {
-  //  throw std::runtime_error("An error occurred while executing the operation");
-  //}
+  // if (result != OK) {
+  //   throw std::runtime_error("An error occurred while executing the
+  //   operation");
+  // }
 }
 
 } // namespace
@@ -287,7 +288,8 @@ bool: is giving back the new state of the classical bit variable.)")
       .def(
           "change_classical_value",
           [](SimulationState* self, const std::string& variableName) {
-            checkOrThrow(self->changeClassicalVariable(self, variableName.c_str()));
+            checkOrThrow(
+                self->changeClassicalVariable(self, variableName.c_str()));
           },
           R"(Changes the value of the given classical bit variable to its opposite value.
 
@@ -295,8 +297,10 @@ Args:
     variableName (str): The name of the classical bit that should be toggled.)")
       .def(
           "change_amplitude_value",
-          [](SimulationState* self, const std::string& basisState, const Complex& value) {
-            checkOrThrow(self->changeAmplitudeVariable(self, basisState.c_str(), &value));
+          [](SimulationState* self, const std::string& basisState,
+             const Complex& value) {
+            checkOrThrow(self->changeAmplitudeVariable(self, basisState.c_str(),
+                                                       &value));
           },
           R"(Sets the amplitude of the given computational basis state.
 

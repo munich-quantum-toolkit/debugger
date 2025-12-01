@@ -38,8 +38,8 @@
 
 #include <Eigen/Dense>
 #include <algorithm>
-#include <cmath>
 #include <cctype>
+#include <cmath>
 #include <cstddef>
 #include <cstring>
 #include <exception>
@@ -617,7 +617,8 @@ Result ddsimLoadCode(SimulationState* self, const char* code) {
   return OK;
 }
 
-Result ddsimChangeClassicalVariable(SimulationState* self, const char* variableName) {
+Result ddsimChangeClassicalVariable(SimulationState* self,
+                                    const char* variableName) {
   auto* ddsim = toDDSimulationState(self);
   std::string fullName{variableName};
   bool hasExplicitValue = false;
@@ -625,15 +626,15 @@ Result ddsimChangeClassicalVariable(SimulationState* self, const char* variableN
   if (const auto pos = fullName.find('='); pos != std::string::npos) {
     auto valueToken = fullName.substr(pos + 1);
     fullName = fullName.substr(0, pos);
-    std::transform(valueToken.begin(), valueToken.end(), valueToken.begin(),
-                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    std::transform(
+        valueToken.begin(), valueToken.end(), valueToken.begin(),
+        [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
     if (valueToken == "1" || valueToken == "true" || valueToken == "t" ||
         valueToken == "yes" || valueToken == "on") {
       explicitValue = true;
       hasExplicitValue = true;
     } else if (valueToken == "0" || valueToken == "false" ||
-               valueToken == "f" || valueToken == "no" ||
-               valueToken == "off") {
+               valueToken == "f" || valueToken == "no" || valueToken == "off") {
       explicitValue = false;
       hasExplicitValue = true;
     } else {
@@ -668,8 +669,7 @@ Result ddsimChangeAmplitudeVariable(SimulationState* self,
   if (state.size() != numQubits) {
     return ERROR;
   }
-  if (std::ranges::any_of(state,
-                          [](char c) { return c != '0' && c != '1'; })) {
+  if (std::ranges::any_of(state, [](char c) { return c != '0' && c != '1'; })) {
     return ERROR;
   }
 
@@ -695,8 +695,7 @@ Result ddsimChangeAmplitudeVariable(SimulationState* self,
       continue;
     }
     const auto& amp = amplitudes[i];
-    otherNormSquared +=
-        amp.real * amp.real + amp.imaginary * amp.imaginary;
+    otherNormSquared += amp.real * amp.real + amp.imaginary * amp.imaginary;
   }
 
   const double desiredReal = value->real;
@@ -1278,7 +1277,6 @@ Result ddsimGetAmplitudeBitstring(SimulationState* self, const char* bitstring,
   output->imaginary = result.imag();
   return OK;
 }
-
 
 Result ddsimGetClassicalVariable(SimulationState* self, const char* name,
                                  Variable* output) {
