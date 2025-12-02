@@ -700,13 +700,13 @@ Result ddsimChangeAmplitudeVariable(SimulationState* self,
       continue;
     }
     const auto& amp = amplitudes[i];
-    otherNormSquared += amp.real * amp.real + amp.imaginary * amp.imaginary;
+    otherNormSquared += (amp.real * amp.real) + (amp.imaginary * amp.imaginary);
   }
 
   const double desiredReal = value->real;
   const double desiredImag = value->imaginary;
   const double desiredNormSquared =
-      desiredReal * desiredReal + desiredImag * desiredImag;
+      (desiredReal * desiredReal) + (desiredImag * desiredImag);
   if (desiredNormSquared > 1.0 + tolerance) {
     return ERROR;
   }
