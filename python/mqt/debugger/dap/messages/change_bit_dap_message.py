@@ -28,9 +28,9 @@ class BitChangeDAPMessage(DAPMessage):
 
     message_type_name: str = "setVariable"
 
-    variables_reference: int | None
-    variable_name: str
-    new_value: str | bool | None
+    variables_reference: Any
+    variable_name: Any
+    new_value: Any
 
     def __init__(self, message: dict[str, Any]) -> None:
         """Initialize the 'BitChangeDAPMessage' instance.
