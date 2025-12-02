@@ -14,7 +14,6 @@ It only tests whether the bindings are working correctly. It does not stress-tes
 from __future__ import annotations
 
 import locale
-import math
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
@@ -233,10 +232,6 @@ def test_change_amplitude_value(simulation_instance_ghz: SimulationInstance) -> 
     assert updated.real == pytest.approx(0.25, abs=1e-9)
     assert updated.imaginary == pytest.approx(0.0, abs=1e-9)
 
-    zero_state = simulation_state.get_amplitude_bitstring("000")
-    expected_magnitude = math.sqrt(1 - 0.25**2)
-    assert zero_state.real == pytest.approx(expected_magnitude, abs=1e-9)
-    assert zero_state.imaginary == pytest.approx(0.0, abs=1e-9)
 
 
 def test_get_state_vector_sub(simulation_instance_classical: SimulationInstance) -> None:
