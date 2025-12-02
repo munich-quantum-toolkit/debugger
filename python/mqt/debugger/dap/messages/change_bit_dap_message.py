@@ -33,7 +33,7 @@ class BitChangeDAPMessage(DAPMessage):
     new_value: str | bool | None
 
     def __init__(self, message: dict[str, Any]) -> None:
-        """Initializes the 'BitChangeDAPMessage' instance.
+        """Initialize the 'BitChangeDAPMessage' instance.
 
         Args:
             message (dict[str, Any]): The object representing the 'bitChange' or 'setVariable' request.
@@ -45,7 +45,7 @@ class BitChangeDAPMessage(DAPMessage):
         super().__init__(message)
 
     def validate(self) -> None:
-        """Validates the 'BitChangeDAPMessage' instance."""
+        """Validate that the request targets classical bits and uses boolean data."""
         if self.variables_reference is not None and not isinstance(self.variables_reference, int):
             msg = "The 'setVariable' request requires an integer 'variablesReference' argument."
             raise ValueError(msg)
@@ -57,7 +57,14 @@ class BitChangeDAPMessage(DAPMessage):
             raise ValueError(msg)
 
     def handle(self, server: DAPServer) -> dict[str, Any]:
-        """Performs the action requested by the 'bitChange' DAP request."""
+        """Perform the action requested by the 'bitChange' DAP request.
+
+        Args:
+            server (DAPServer): The DAP server handling the request.
+
+        Returns:
+            dict[str, Any]: The DAP response describing the resulting boolean value.
+        """
         response = super().handle(server)
         try:
             target_name = self._get_target_variable_name()
@@ -75,6 +82,14 @@ class BitChangeDAPMessage(DAPMessage):
         return response
 
     def _parse_boolean_value(self, current_value: bool) -> bool:
+        """Interpret ``self.new_value`` (or flip the bit if absent) as a boolean.
+
+        Args:
+            current_value (bool): Value currently stored by the simulator.
+
+        Returns:
+            bool: Desired value after interpreting the request payload.
+        """
         if self.new_value is None:
             return not current_value
         if isinstance(self.new_value, bool):
@@ -88,6 +103,11 @@ class BitChangeDAPMessage(DAPMessage):
         raise ValueError(msg)
 
     def _get_target_variable_name(self) -> str:
+        """Return the variable name if the reference points to classical data.
+
+        Returns:
+            str: Name of the classical variable that should be updated.
+        """
         if self.variables_reference is None:
             return self.variable_name
         if self.variables_reference == 1 or self.variables_reference >= 10:
@@ -96,6 +116,15 @@ class BitChangeDAPMessage(DAPMessage):
         raise ValueError(msg)
 
     def _apply_change(self, server: DAPServer, name: str) -> bool:
+        """Toggle the classical bit in the simulation state if necessary.
+
+        Args:
+            server (DAPServer): The DAP server exposing simulator APIs.
+            name (str): The classical variable requested by the client.
+
+        Returns:
+            bool: Resulting value reported by the simulator.
+        """
         try:
             variable = server.simulation_state.get_classical_variable(name)
         except Exception as exc:

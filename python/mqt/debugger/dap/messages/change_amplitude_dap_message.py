@@ -26,11 +26,14 @@ _EPS = 1e-9
 
 @dataclass
 class _TargetAmplitude:
+    """Container describing the requested bitstring and desired complex value."""
+
     bitstring: str
     desired: complex
 
 
 def _format_complex(value: mqt.debugger.Complex) -> str:
+    """Represent a complex number in the format expected by Visual Studio Code."""
     real = value.real
     imag = value.imaginary
     sign = "+" if imag >= 0 else "-"
@@ -38,11 +41,19 @@ def _format_complex(value: mqt.debugger.Complex) -> str:
 
 
 def _complex_matches(current: mqt.debugger.Complex, desired: complex) -> bool:
+    """Return ``True`` if the debugger amplitude equals the desired value."""
     return abs(current.real - desired.real) <= _EPS and abs(current.imaginary - desired.imag) <= _EPS
 
 
 def _normalize_value(value: str) -> str:
-    """Normalize complex literals so that Python's complex() can parse them."""
+    """Normalize a string literal so Python's :func:`complex` can parse it.
+
+    Args:
+        value (str): Raw value received from the DAP client.
+
+    Returns:
+        str: Normalized literal accepted by ``complex``.
+    """
     normalized = value.strip().replace(" ", "")
     if not normalized:
         msg = "The new amplitude value must not be empty."
@@ -63,6 +74,11 @@ class AmplitudeChangeDAPMessage(DAPMessage):
     new_value: str | None
 
     def __init__(self, message: dict[str, Any]) -> None:
+        """Initialize the amplitude 'setVariable' handler instance.
+
+        Args:
+            message (dict[str, Any]): The raw DAP request.
+        """
         arguments = message.get("arguments", {})
         self.variables_reference = arguments.get("variablesReference")
         self.variable_name = arguments.get("variableName") or arguments.get("name", "")
@@ -71,6 +87,7 @@ class AmplitudeChangeDAPMessage(DAPMessage):
         super().__init__(message)
 
     def validate(self) -> None:
+        """Validate that the request targets amplitudes and provides a new value."""
         if self.variables_reference != _QUANTUM_REFERENCE:
             msg = "This handler only supports quantum amplitudes."
             raise ValueError(msg)
@@ -82,6 +99,14 @@ class AmplitudeChangeDAPMessage(DAPMessage):
             raise ValueError(msg)
 
     def handle(self, server: DAPServer) -> dict[str, Any]:
+        """Apply the amplitude change and return the new complex value.
+
+        Args:
+            server (DAPServer): The DAP server handling the request.
+
+        Returns:
+            dict[str, Any]: The DAP response with the updated value.
+        """
         response = super().handle(server)
         try:
             target = self._parse_request(server)
@@ -99,6 +124,14 @@ class AmplitudeChangeDAPMessage(DAPMessage):
         return response
 
     def _parse_request(self, server: DAPServer) -> _TargetAmplitude:
+        """Extract the targeted bitstring and desired complex amplitude.
+
+        Args:
+            server (DAPServer): The DAP server providing simulator metadata.
+
+        Returns:
+            _TargetAmplitude: Bitstring and target value requested by VS Code.
+        """
         bitstring = self._extract_bitstring()
         if len(bitstring) != server.simulation_state.get_num_qubits():
             msg = f"The bitstring '{bitstring}' must have length {server.simulation_state.get_num_qubits()}."
@@ -112,6 +145,11 @@ class AmplitudeChangeDAPMessage(DAPMessage):
         return _TargetAmplitude(bitstring, desired)
 
     def _extract_bitstring(self) -> str:
+        """Return the ``|...>`` bitstring referenced in the request.
+
+        Returns:
+            str: The computational basis state name without delimiters.
+        """
         name = self.variable_name.strip()
         if not name.startswith("|") or not name.endswith(">"):
             msg = "Quantum amplitudes must be addressed using the '|...>' notation."
@@ -123,6 +161,15 @@ class AmplitudeChangeDAPMessage(DAPMessage):
         return bitstring
 
     def _apply_change(self, server: DAPServer, target: _TargetAmplitude) -> mqt.debugger.Complex:
+        """Write the requested amplitude into the simulation state if needed.
+
+        Args:
+            server (DAPServer): The DAP server providing simulator access.
+            target (_TargetAmplitude): The desired bitstring/value pair.
+
+        Returns:
+            mqt.debugger.Complex: The amplitude returned by the simulator after the update.
+        """
         current = server.simulation_state.get_amplitude_bitstring(target.bitstring)
         if _complex_matches(current, target.desired):
             return current
