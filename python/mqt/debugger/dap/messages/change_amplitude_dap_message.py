@@ -46,7 +46,13 @@ def _complex_matches(current: mqt.debugger.Complex, desired: complex) -> bool:
 
 
 def _normalize_value(value: str) -> str:
-    """Normalize a string literal so Python's :func:`complex` can parse it.
+    """Normalize DAP complex literals so Python's :func:`complex` can parse them.
+
+    Visual Studio Code currently sends amplitudes in the ``a+bi`` / ``a-bi`` form,
+    but also accepts real-only (``a``) or imaginary-only (``bi``) literals with
+    arbitrary whitespace. Plain ``i``/``-i`` or inputs mixing ``i`` and ``j`` are
+    intentionally unsupported. When a literal contains ``i`` but no ``j``, this
+    function rewrites ``i`` to ``j`` so Python understands the imaginary unit.
 
     Args:
         value (str): Raw value received from the DAP client.
@@ -56,7 +62,11 @@ def _normalize_value(value: str) -> str:
     """
     normalized = value.strip().replace(" ", "")
     if not normalized:
-        msg = "The new amplitude value must not be empty."
+        msg = (
+            "The new amplitude value must not be empty; use literals such as "
+            "'a+bi', 'a-bi', 'a', or 'bi'. Plain 'i'/'-i' and mixed 'i'/'j' "
+            "inputs are rejected, and 'i' is only converted to 'j' when no 'j' is present."
+        )
         raise ValueError(msg)
     # Visual Studio Code allows using `i` as the imaginary unit. Python expects `j`.
     if "i" in normalized and "j" not in normalized:
