@@ -625,8 +625,8 @@ Result ddsimChangeClassicalVariable(SimulationState* self,
   if (const auto pos = fullName.find('='); pos != std::string::npos) {
     auto valueToken = fullName.substr(pos + 1);
     fullName = fullName.substr(0, pos);
-    std::transform(
-        valueToken.begin(), valueToken.end(), valueToken.begin(),
+    std::ranges::transform(
+        valueToken, valueToken.begin(),
         [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
     if (valueToken == "1" || valueToken == "true" || valueToken == "t" ||
         valueToken == "yes" || valueToken == "on") {
