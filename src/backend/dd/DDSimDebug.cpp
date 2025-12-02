@@ -666,15 +666,21 @@ Result ddsimChangeAmplitudeVariable(SimulationState* self,
                                     const char* basisState,
                                     const Complex* value) {
   if (basisState == nullptr || value == nullptr) {
+    std::cerr << "ddsimChangeAmplitudeVariable: basisState or value is null.\n";
     return ERROR;
   }
   auto* ddsim = toDDSimulationState(self);
   const auto numQubits = ddsim->qc->getNqubits();
   const std::string state{basisState};
   if (state.size() != numQubits) {
+    std::cerr
+        << "ddsimChangeAmplitudeVariable: basisState length does not match the "
+           "number of qubits.\n";
     return ERROR;
   }
   if (std::ranges::any_of(state, [](char c) { return c != '0' && c != '1'; })) {
+    std::cerr << "ddsimChangeAmplitudeVariable: basisState must contain only "
+                 "'0' and '1'.\n";
     return ERROR;
   }
 
@@ -708,10 +714,14 @@ Result ddsimChangeAmplitudeVariable(SimulationState* self,
   const double desiredNormSquared =
       (desiredReal * desiredReal) + (desiredImag * desiredImag);
   if (desiredNormSquared > 1.0 + tolerance) {
+    std::cerr << "ddsimChangeAmplitudeVariable: requested amplitude norm^2 "
+                 "exceeds 1.\n";
     return ERROR;
   }
   if (otherNormSquared <= tolerance &&
       std::abs(desiredNormSquared - 1.0) > tolerance) {
+    std::cerr << "ddsimChangeAmplitudeVariable: cannot target a sub-normalized "
+                 "state when all other amplitudes are effectively zero.\n";
     return ERROR;
   }
 
@@ -719,6 +729,8 @@ Result ddsimChangeAmplitudeVariable(SimulationState* self,
   if (otherNormSquared > tolerance) {
     const double remaining = 1.0 - desiredNormSquared;
     if (remaining < -tolerance) {
+      std::cerr << "ddsimChangeAmplitudeVariable: normalization would require "
+                   "negative residual probability mass.\n";
       return ERROR;
     }
     if (remaining <= tolerance) {

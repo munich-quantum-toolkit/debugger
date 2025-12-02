@@ -146,4 +146,8 @@ class BitChangeDAPMessage(DAPMessage):
         if current_value != desired_value:
             server.simulation_state.change_classical_value(name)
             variable = server.simulation_state.get_classical_variable(name)
-        return bool(variable.value.bool_value)
+        final_value = bool(variable.value.bool_value)
+        if final_value != desired_value:
+            msg = f"Failed to set '{name}' to {desired_value}; current value is {final_value}."
+            raise ValueError(msg)
+        return desired_value
