@@ -637,16 +637,22 @@ Result ddsimChangeClassicalVariable(SimulationState* self,
       explicitValue = false;
       hasExplicitValue = true;
     } else {
-      return ERROR; // unsupported literal
+      std::cerr << "ddsimChangeClassicalVariable: unsupported literal '"
+                << valueToken << "' for explicit value.\n";
+      return ERROR;
     }
   }
   const auto it = ddsim->variables.find(fullName);
   if (it == ddsim->variables.end()) {
-    return ERROR; // no such classical bit
+    std::cerr << "ddsimChangeClassicalVariable: no classical variable named '"
+              << fullName << "'.\n";
+    return ERROR;
   }
   auto& var = it->second;
   if (var.type != VariableType::VarBool) {
-    return ERROR; // can only toggle bits
+    std::cerr << "ddsimChangeClassicalVariable: variable '" << fullName
+              << "' is not boolean and cannot be toggled.\n";
+    return ERROR;
   }
   if (hasExplicitValue) {
     var.value.boolValue = explicitValue;
