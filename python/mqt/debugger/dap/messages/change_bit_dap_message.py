@@ -18,6 +18,9 @@ from .dap_message import DAPMessage
 
 _TRUE_VALUES = {"1", "true", "t", "yes", "on"}
 _FALSE_VALUES = {"0", "false", "f", "no", "off"}
+# Reference IDs used by VS Code's UI to address classical data.
+_CLASSICAL_VARS_REFERENCE = 1
+_CLASSICAL_REGISTERS_MIN = 10
 
 if TYPE_CHECKING:
     from .. import DAPServer
@@ -110,7 +113,10 @@ class BitChangeDAPMessage(DAPMessage):
         """
         if self.variables_reference is None:
             return self.variable_name
-        if self.variables_reference == 1 or self.variables_reference >= 10:
+        if (
+            self.variables_reference == _CLASSICAL_VARS_REFERENCE
+            or self.variables_reference >= _CLASSICAL_REGISTERS_MIN
+        ):
             return self.variable_name
         msg = "Only classical variables can be changed."
         raise ValueError(msg)
