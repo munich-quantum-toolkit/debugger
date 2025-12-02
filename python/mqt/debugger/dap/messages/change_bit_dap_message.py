@@ -81,7 +81,7 @@ class BitChangeDAPMessage(DAPMessage):
         }
         return response
 
-    def _parse_boolean_value(self, current_value: bool) -> bool:
+    def _parse_boolean_value(self, *, current_value: bool) -> bool:
         """Interpret ``self.new_value`` (or flip the bit if absent) as a boolean.
 
         Args:
@@ -136,7 +136,7 @@ class BitChangeDAPMessage(DAPMessage):
             raise ValueError(msg)
 
         current_value = bool(variable.value.bool_value)
-        desired_value = self._parse_boolean_value(current_value)
+        desired_value = self._parse_boolean_value(current_value=current_value)
         if current_value != desired_value:
             server.simulation_state.change_classical_value(name)
             variable = server.simulation_state.get_classical_variable(name)

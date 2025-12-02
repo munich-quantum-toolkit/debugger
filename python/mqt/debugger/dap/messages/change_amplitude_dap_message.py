@@ -80,7 +80,7 @@ class AmplitudeChangeDAPMessage(DAPMessage):
     message_type_name: str = "setVariable"
 
     variables_reference: int | None
-    variable_name: str
+    variable_name: Any
     new_value: str | None
 
     def __init__(self, message: dict[str, Any]) -> None:
