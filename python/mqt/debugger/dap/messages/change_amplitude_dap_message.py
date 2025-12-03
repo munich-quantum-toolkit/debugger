@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import mqt.debugger
 
@@ -160,7 +160,7 @@ class AmplitudeChangeDAPMessage(DAPMessage):
         Returns:
             str: The computational basis state name without delimiters.
         """
-        name = self.variable_name.strip()
+        name = cast("str", self.variable_name).strip()
         if not name.startswith("|") or not name.endswith(">"):
             msg = "Quantum amplitudes must be addressed using the '|...>' notation."
             raise ValueError(msg)
@@ -170,7 +170,8 @@ class AmplitudeChangeDAPMessage(DAPMessage):
             raise ValueError(msg)
         return bitstring
 
-    def _apply_change(self, server: DAPServer, target: _TargetAmplitude) -> mqt.debugger.Complex:
+    @staticmethod
+    def _apply_change(server: DAPServer, target: _TargetAmplitude) -> mqt.debugger.Complex:
         """Write the requested amplitude into the simulation state if needed.
 
         Args:
