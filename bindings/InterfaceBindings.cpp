@@ -43,10 +43,9 @@ namespace {
  * @param result The result to check.
  */
 void checkOrThrow(Result result) {
-  // if (result != OK) {
-  //   throw std::runtime_error("An error occurred while executing the
-  //   operation");
-  // }
+  if (result != OK) {
+    throw std::runtime_error("An error occurred while executing the operation");
+  }
 }
 
 } // namespace
