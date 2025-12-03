@@ -19,7 +19,7 @@
 #include "backend/debug.h"
 #include "backend/diagnostics.h"
 #include "common.h"
-
+#include <stdexcept>
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
