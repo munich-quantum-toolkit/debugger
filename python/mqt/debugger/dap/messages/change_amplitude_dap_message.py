@@ -160,7 +160,7 @@ class AmplitudeChangeDAPMessage(DAPMessage):
         Returns:
             str: The computational basis state name without delimiters.
         """
-        name = cast(str, self.variable_name).strip()
+        name = cast("str", self.variable_name).strip()
         if not name.startswith("|") or not name.endswith(">"):
             msg = "Quantum amplitudes must be addressed using the '|...>' notation."
             raise ValueError(msg)

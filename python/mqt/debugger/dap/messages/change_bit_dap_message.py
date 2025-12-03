@@ -97,7 +97,7 @@ class BitChangeDAPMessage(DAPMessage):
             return not current_value
         if isinstance(self.new_value, bool):
             return self.new_value
-        value_str = cast(str, self.new_value)
+        value_str = cast("str", self.new_value)
         normalized_value = value_str.strip().lower()
         if normalized_value in _TRUE_VALUES:
             return True
@@ -112,7 +112,7 @@ class BitChangeDAPMessage(DAPMessage):
         Returns:
             str: Name of the classical variable that should be updated.
         """
-        name = cast(str, self.variable_name)
+        name = cast("str", self.variable_name)
         if self.variables_reference is None:
             return name
         if (
