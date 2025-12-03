@@ -19,7 +19,7 @@
 #include "backend/debug.h"
 #include "backend/diagnostics.h"
 #include "common.h"
-#include <stdexcept>
+
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -28,6 +28,7 @@
 #include <pybind11/native_enum.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h> // NOLINT(misc-include-cleaner)
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
