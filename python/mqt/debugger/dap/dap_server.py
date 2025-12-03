@@ -268,13 +268,14 @@ class DAPServer:
         if command["command"] == "setVariable":
             arguments = command.get("arguments", {})
             variables_reference = arguments.get("variablesReference")
+            message_type: type[mqt.debugger.dap.messages.DAPMessage]
             message_type = AmplitudeChangeDAPMessage if variables_reference == 2 else BitChangeDAPMessage
-            message = message_type(command)
+            message: mqt.debugger.dap.messages.DAPMessage = message_type(command)
             return (message.handle(self), message)
         for message_type in supported_messages:
             if message_type.message_type_name == command["command"]:
-                message = message_type(command)
-                return (message.handle(self), message)
+                msg_instance: mqt.debugger.dap.messages.DAPMessage = message_type(command)
+                return (msg_instance.handle(self), msg_instance)
         msg = f"Unsupported command: {command['command']}"
         raise RuntimeError(msg)
 

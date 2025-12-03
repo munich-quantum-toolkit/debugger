@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import mqt.debugger
 
@@ -97,7 +97,8 @@ class BitChangeDAPMessage(DAPMessage):
             return not current_value
         if isinstance(self.new_value, bool):
             return self.new_value
-        normalized_value = self.new_value.strip().lower()
+        value_str = cast(str, self.new_value)
+        normalized_value = value_str.strip().lower()
         if normalized_value in _TRUE_VALUES:
             return True
         if normalized_value in _FALSE_VALUES:
@@ -111,13 +112,14 @@ class BitChangeDAPMessage(DAPMessage):
         Returns:
             str: Name of the classical variable that should be updated.
         """
+        name = cast(str, self.variable_name)
         if self.variables_reference is None:
-            return self.variable_name
+            return name
         if (
             self.variables_reference == _CLASSICAL_VARS_REFERENCE
             or self.variables_reference >= _CLASSICAL_REGISTERS_MIN
         ):
-            return self.variable_name
+            return name
         msg = "Only classical variables can be changed."
         raise ValueError(msg)
 
