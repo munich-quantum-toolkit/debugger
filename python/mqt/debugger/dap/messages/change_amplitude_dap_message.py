@@ -170,7 +170,8 @@ class AmplitudeChangeDAPMessage(DAPMessage):
             raise ValueError(msg)
         return bitstring
 
-    def _apply_change(self, server: DAPServer, target: _TargetAmplitude) -> mqt.debugger.Complex:
+    @staticmethod
+    def _apply_change(server: DAPServer, target: _TargetAmplitude) -> mqt.debugger.Complex:
         """Write the requested amplitude into the simulation state if needed.
 
         Args:
