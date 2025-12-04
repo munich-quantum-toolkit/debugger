@@ -188,6 +188,11 @@ struct SimulationStateStruct {
   /**
    * @brief Changes the amplitude of a computational basis state.
    *
+   * The basis state is provided as a bitstring whose length matches the
+   * current number of qubits. Implementations are expected to renormalize the
+   * remaining amplitudes so that the state vector stays normalized and to
+   * reject invalid bitstrings or amplitudes that violate normalization.
+   *
    * @param self The instance to query.
    * @param basisState The bitstring identifying the basis state to update.
    * @param value The desired complex amplitude.

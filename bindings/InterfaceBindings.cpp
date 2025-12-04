@@ -318,7 +318,10 @@ Args:
           R"(Sets the amplitude of the given computational basis state.
 
 The basis state must be provided as a bitstring (e.g., ``"010"``) whose length
-matches the number of qubits in the circuit.
+matches the number of qubits in the circuit. The simulator rescales the
+remaining amplitudes to keep the state normalized. Attempts to set amplitudes
+that violate normalization, target out-of-range states, or use invalid
+bitstrings raise an error.
 
 Args:
     basisState (str): The bitstring describing the basis state whose amplitude should be changed.
