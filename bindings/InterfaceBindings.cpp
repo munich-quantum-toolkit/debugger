@@ -285,7 +285,7 @@ the simulation has not been set up yet.
 Returns:
     bool: True if the simulation can step backward.)")
       .def(
-          "change_classical_value",
+          "change_classical_variable_value",
           [](SimulationState* self, const std::string& variableName,
              py::object newValue) {
             VariableValue value{};
@@ -296,10 +296,11 @@ Returns:
             } else if (py::isinstance<py::float_>(newValue)) {
               value.floatValue = newValue.cast<double>();
             } else {
-              throw py::type_error("change_classical_value requires a bool, "
-                                   "int, or float value");
+              throw py::type_error(
+                  "change_classical_variable_value requires a bool, "
+                  "int, or float value");
             }
-            checkOrThrow(self->changeClassicalVariable(
+            checkOrThrow(self->changeClassicalVariableValue(
                 self, variableName.c_str(), &value));
           },
           R"(Sets the value of the given classical variable.
@@ -311,8 +312,8 @@ Args:
           "change_amplitude_value",
           [](SimulationState* self, const std::string& basisState,
              const Complex& value) {
-            checkOrThrow(self->changeAmplitudeVariable(self, basisState.c_str(),
-                                                       &value));
+            checkOrThrow(
+                self->changeAmplitudeValue(self, basisState.c_str(), &value));
           },
           R"(Sets the amplitude of the given computational basis state.
 

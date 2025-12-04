@@ -182,9 +182,9 @@ struct SimulationStateStruct {
    * @param value The desired value encoded as a `VariableValue`.
    * @return The result of the operation.
    */
-  Result (*changeClassicalVariable)(SimulationState* self,
-                                    const char* variableName,
-                                    const VariableValue* value);
+  Result (*changeClassicalVariableValue)(SimulationState* self,
+                                         const char* variableName,
+                                         const VariableValue* value);
   /**
    * @brief Changes the amplitude of a computational basis state.
    *
@@ -193,9 +193,8 @@ struct SimulationStateStruct {
    * @param value The desired complex amplitude.
    * @return The result of the operation.
    */
-  Result (*changeAmplitudeVariable)(SimulationState* self,
-                                    const char* basisState,
-                                    const Complex* value);
+  Result (*changeAmplitudeValue)(SimulationState* self, const char* basisState,
+                                 const Complex* value);
 
   /**
    * @brief Indicates whether the execution has finished.

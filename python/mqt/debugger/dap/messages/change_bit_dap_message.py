@@ -139,7 +139,7 @@ class BitChangeDAPMessage(DAPMessage):
 
         desired_value = self._parse_boolean_value()
         try:
-            server.simulation_state.change_classical_value(name, desired_value)
+            server.simulation_state.change_classical_variable_value(name, desired_value)
         except Exception as exc:  # pragma: no cover - transport errors mapped above
             msg = f"Failed to set '{name}' to {desired_value}."
             raise ValueError(msg) from exc

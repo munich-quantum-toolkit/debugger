@@ -492,9 +492,9 @@ Result ddsimGetClassicalVariable(SimulationState* self, const char* name,
  * @param value The desired value encoded as a `VariableValue`.
  * @return The result of the operation.
  */
-Result ddsimChangeClassicalVariable(SimulationState* self,
-                                    const char* variableName,
-                                    const VariableValue* value);
+Result ddsimChangeClassicalVariableValue(SimulationState* self,
+                                         const char* variableName,
+                                         const VariableValue* value);
 
 /**
  * @brief Updates the amplitude of a given computational basis state.
@@ -504,9 +504,8 @@ Result ddsimChangeClassicalVariable(SimulationState* self,
  * @param value The desired complex amplitude.
  * @return The result of the operation.
  */
-Result ddsimChangeAmplitudeVariable(SimulationState* self,
-                                    const char* basisState,
-                                    const Complex* value);
+Result ddsimChangeAmplitudeValue(SimulationState* self, const char* basisState,
+                                 const Complex* value);
 
 /**
  * @brief Gets the number of classical variables in the simulation.

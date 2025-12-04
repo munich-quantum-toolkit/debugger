@@ -249,14 +249,14 @@ TEST_F(DataRetrievalTest, ChangeClassicalVariableUpdatesValue) {
 
   VariableValue desired{};
   desired.boolValue = true;
-  ASSERT_EQ(state->changeClassicalVariable(state, "c[0]", &desired), OK);
+  ASSERT_EQ(state->changeClassicalVariableValue(state, "c[0]", &desired), OK);
 
   Variable updated;
   ASSERT_EQ(state->getClassicalVariable(state, "c[0]", &updated), OK);
   ASSERT_TRUE(classicalEquals(updated, true));
 
   desired.boolValue = false;
-  ASSERT_EQ(state->changeClassicalVariable(state, "c[0]", &desired), OK);
+  ASSERT_EQ(state->changeClassicalVariableValue(state, "c[0]", &desired), OK);
   ASSERT_EQ(state->getClassicalVariable(state, "c[0]", &updated), OK);
   ASSERT_TRUE(classicalEquals(updated, false));
 }
@@ -267,8 +267,9 @@ TEST_F(DataRetrievalTest, ChangeClassicalVariableUpdatesValue) {
 TEST_F(DataRetrievalTest, ChangeClassicalVariableUnknown) {
   VariableValue desired{};
   desired.boolValue = true;
-  ASSERT_EQ(state->changeClassicalVariable(state, "does_not_exist", &desired),
-            ERROR);
+  ASSERT_EQ(
+      state->changeClassicalVariableValue(state, "does_not_exist", &desired),
+      ERROR);
 }
 
 /**
@@ -276,7 +277,7 @@ TEST_F(DataRetrievalTest, ChangeClassicalVariableUnknown) {
  */
 TEST_F(DataRetrievalTest, ChangeClassicalVariableNullValue) {
   forwardTo(6);
-  ASSERT_EQ(state->changeClassicalVariable(state, "c[0]", nullptr), ERROR);
+  ASSERT_EQ(state->changeClassicalVariableValue(state, "c[0]", nullptr), ERROR);
 }
 
 } // namespace mqt::debugger::test

@@ -159,7 +159,7 @@ class SimulationState:
         int: The number of assertions that failed during execution.
         """
 
-    def change_classical_value(self, variable_name: str, value: bool | float) -> None:
+    def change_classical_variable_value(self, variable_name: str, value: bool | float) -> None:
         """Sets the value of a classical variable in the simulation.
 
         Args:
