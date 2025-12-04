@@ -617,47 +617,35 @@ Result ddsimLoadCode(SimulationState* self, const char* code) {
 }
 
 Result ddsimChangeClassicalVariable(SimulationState* self,
-                                    const char* variableName) {
-  auto* ddsim = toDDSimulationState(self);
-  std::string fullName{variableName};
-  bool hasExplicitValue = false;
-  bool explicitValue = false;
-  if (const auto pos = fullName.find('='); pos != std::string::npos) {
-    auto valueToken = fullName.substr(pos + 1);
-    fullName = fullName.substr(0, pos);
-    std::ranges::transform(valueToken, valueToken.begin(), [](unsigned char c) {
-      return static_cast<char>(std::tolower(c));
-    });
-    if (valueToken == "1" || valueToken == "true" || valueToken == "t" ||
-        valueToken == "yes" || valueToken == "on") {
-      explicitValue = true;
-      hasExplicitValue = true;
-    } else if (valueToken == "0" || valueToken == "false" ||
-               valueToken == "f" || valueToken == "no" || valueToken == "off") {
-      explicitValue = false;
-      hasExplicitValue = true;
-    } else {
-      std::cerr << "ddsimChangeClassicalVariable: unsupported literal '"
-                << valueToken << "' for explicit value.\n";
-      return ERROR;
-    }
+                                    const char* variableName,
+                                    const VariableValue* value) {
+  if (variableName == nullptr || value == nullptr) {
+    std::cerr
+        << "ddsimChangeClassicalVariable: variableName or value is null.\n";
+    return ERROR;
   }
-  const auto it = ddsim->variables.find(fullName);
+  auto* ddsim = toDDSimulationState(self);
+  const auto it = ddsim->variables.find(variableName);
   if (it == ddsim->variables.end()) {
     std::cerr << "ddsimChangeClassicalVariable: no classical variable named '"
-              << fullName << "'.\n";
+              << variableName << "'.\n";
     return ERROR;
   }
   auto& var = it->second;
-  if (var.type != VariableType::VarBool) {
-    std::cerr << "ddsimChangeClassicalVariable: variable '" << fullName
-              << "' is not boolean and cannot be toggled.\n";
+  switch (var.type) {
+  case VariableType::VarBool:
+    var.value.boolValue = value->boolValue;
+    break;
+  case VariableType::VarInt:
+    var.value.intValue = value->intValue;
+    break;
+  case VariableType::VarFloat:
+    var.value.floatValue = value->floatValue;
+    break;
+  default:
+    std::cerr << "ddsimChangeClassicalVariable: unsupported variable type for '"
+              << variableName << "'.\n";
     return ERROR;
-  }
-  if (hasExplicitValue) {
-    var.value.boolValue = explicitValue;
-  } else {
-    var.value.boolValue = !var.value.boolValue;
   }
   return OK;
 }

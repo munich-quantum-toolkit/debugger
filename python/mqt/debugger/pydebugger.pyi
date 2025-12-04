@@ -159,11 +159,12 @@ class SimulationState:
         int: The number of assertions that failed during execution.
         """
 
-    def change_classical_value(self, variable_name: str) -> None:
-        """Changes the value of a classical bit variable in the simulation.
+    def change_classical_value(self, variable_name: str, value: bool | float) -> None:
+        """Sets the value of a classical variable in the simulation.
 
         Args:
-            variable_name (str): The name of the classical bit that should be toggled.
+            variable_name (str): The name of the classical variable that should be updated.
+            value (bool | int | float): The desired value.
         """
 
     def change_amplitude_value(self, basis_state: str, value: Complex) -> None:

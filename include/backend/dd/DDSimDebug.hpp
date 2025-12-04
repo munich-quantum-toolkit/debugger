@@ -485,14 +485,16 @@ Result ddsimGetClassicalVariable(SimulationState* self, const char* name,
                                  Variable* output);
 
 /**
- * @brief Change the value of a classical bit variable to its opposite value.
+ * @brief Update the value of a classical variable.
  *
  * @param self The instance to query.
- * @param variableName The name of the classical bit variable to toggle.
+ * @param variableName The name of the classical variable to update.
+ * @param value The desired value encoded as a `VariableValue`.
  * @return The result of the operation.
  */
 Result ddsimChangeClassicalVariable(SimulationState* self,
-                                    const char* variableName);
+                                    const char* variableName,
+                                    const VariableValue* value);
 
 /**
  * @brief Updates the amplitude of a given computational basis state.

@@ -238,4 +238,45 @@ TEST_F(DataRetrievalTest, GetBadClassicalVariableName) {
   ASSERT_EQ(state->getClassicalVariableName(state, 5, name.data()), ERROR);
 }
 
+/**
+ * @test Test that classical variables can be updated explicitly.
+ */
+TEST_F(DataRetrievalTest, ChangeClassicalVariableUpdatesValue) {
+  Variable initial;
+  forwardTo(6);
+  ASSERT_EQ(state->getClassicalVariable(state, "c[0]", &initial), OK);
+  ASSERT_TRUE(classicalEquals(initial, false));
+
+  VariableValue desired{};
+  desired.boolValue = true;
+  ASSERT_EQ(state->changeClassicalVariable(state, "c[0]", &desired), OK);
+
+  Variable updated;
+  ASSERT_EQ(state->getClassicalVariable(state, "c[0]", &updated), OK);
+  ASSERT_TRUE(classicalEquals(updated, true));
+
+  desired.boolValue = false;
+  ASSERT_EQ(state->changeClassicalVariable(state, "c[0]", &desired), OK);
+  ASSERT_EQ(state->getClassicalVariable(state, "c[0]", &updated), OK);
+  ASSERT_TRUE(classicalEquals(updated, false));
+}
+
+/**
+ * @test Test that change requests for unknown variables are rejected.
+ */
+TEST_F(DataRetrievalTest, ChangeClassicalVariableUnknown) {
+  VariableValue desired{};
+  desired.boolValue = true;
+  ASSERT_EQ(state->changeClassicalVariable(state, "does_not_exist", &desired),
+            ERROR);
+}
+
+/**
+ * @test Test that passing a null value pointer results in an error.
+ */
+TEST_F(DataRetrievalTest, ChangeClassicalVariableNullValue) {
+  forwardTo(6);
+  ASSERT_EQ(state->changeClassicalVariable(state, "c[0]", nullptr), ERROR);
+}
+
 } // namespace mqt::debugger::test

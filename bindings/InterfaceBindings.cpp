@@ -286,14 +286,27 @@ Returns:
 bool: is giving back the new state of the classical bit variable.)")
       .def(
           "change_classical_value",
-          [](SimulationState* self, const std::string& variableName) {
-            checkOrThrow(
-                self->changeClassicalVariable(self, variableName.c_str()));
+          [](SimulationState* self, const std::string& variableName,
+             py::object newValue) {
+            VariableValue value{};
+            if (py::isinstance<py::bool_>(newValue)) {
+              value.boolValue = newValue.cast<bool>();
+            } else if (py::isinstance<py::int_>(newValue)) {
+              value.intValue = newValue.cast<int>();
+            } else if (py::isinstance<py::float_>(newValue)) {
+              value.floatValue = newValue.cast<double>();
+            } else {
+              throw py::type_error("change_classical_value requires a bool, "
+                                   "int, or float value");
+            }
+            checkOrThrow(self->changeClassicalVariable(
+                self, variableName.c_str(), &value));
           },
-          R"(Changes the value of the given classical bit variable to its opposite value.
+          R"(Sets the value of the given classical variable.
 
 Args:
-    variableName (str): The name of the classical bit that should be toggled.)")
+    variableName (str): The name of the classical variable that should be updated.
+    newValue (bool | int | float): The desired value.)")
       .def(
           "change_amplitude_value",
           [](SimulationState* self, const std::string& basisState,

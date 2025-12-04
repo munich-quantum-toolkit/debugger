@@ -55,9 +55,12 @@ class BitChangeDAPMessage(DAPMessage):
         if not isinstance(self.variable_name, str) or not self.variable_name:
             msg = "The 'bitChange' request requires a non-empty 'variableName' or 'name' argument."
             raise ValueError(msg)
-        if self.new_value is not None and not isinstance(self.new_value, (bool, str)):
-            msg = "The 'bitChange' request only accepts boolean or string values."
+        if self.new_value is None:
+            msg = "The 'bitChange' request requires a 'value' argument."
             raise ValueError(msg)
+        if not isinstance(self.new_value, (bool, str)):
+            msg = "The 'bitChange' request only accepts boolean or string values."
+            raise TypeError(msg)
 
     def handle(self, server: DAPServer) -> dict[str, Any]:
         """Perform the action requested by the 'bitChange' DAP request.
@@ -84,17 +87,8 @@ class BitChangeDAPMessage(DAPMessage):
         }
         return response
 
-    def _parse_boolean_value(self, *, current_value: bool) -> bool:
-        """Interpret ``self.new_value`` (or flip the bit if absent) as a boolean.
-
-        Args:
-            current_value (bool): Value currently stored by the simulator.
-
-        Returns:
-            bool: Desired value after interpreting the request payload.
-        """
-        if self.new_value is None:
-            return not current_value
+    def _parse_boolean_value(self) -> bool:
+        """Interpret ``self.new_value`` as a boolean."""
         if isinstance(self.new_value, bool):
             return self.new_value
         value_str = cast("str", self.new_value)
@@ -124,7 +118,7 @@ class BitChangeDAPMessage(DAPMessage):
         raise ValueError(msg)
 
     def _apply_change(self, server: DAPServer, name: str) -> bool:
-        """Toggle the classical bit in the simulation state if necessary.
+        """Apply the requested boolean value to the simulator state.
 
         Args:
             server (DAPServer): The DAP server exposing simulator APIs.
@@ -143,13 +137,16 @@ class BitChangeDAPMessage(DAPMessage):
             msg = "Only boolean classical variables can be changed."
             raise ValueError(msg)
 
-        current_value = bool(variable.value.bool_value)
-        desired_value = self._parse_boolean_value(current_value=current_value)
-        if current_value != desired_value:
-            server.simulation_state.change_classical_value(name)
-            variable = server.simulation_state.get_classical_variable(name)
+        desired_value = self._parse_boolean_value()
+        try:
+            server.simulation_state.change_classical_value(name, desired_value)
+        except Exception as exc:  # pragma: no cover - transport errors mapped above
+            msg = f"Failed to set '{name}' to {desired_value}."
+            raise ValueError(msg) from exc
+
+        variable = server.simulation_state.get_classical_variable(name)
         final_value = bool(variable.value.bool_value)
         if final_value != desired_value:
             msg = f"Failed to set '{name}' to {desired_value}; current value is {final_value}."
             raise ValueError(msg)
-        return desired_value
+        return final_value
