@@ -159,6 +159,22 @@ class SimulationState:
         int: The number of assertions that failed during execution.
         """
 
+    def change_classical_variable_value(self, variable_name: str, value: bool | float) -> None:
+        """Sets the value of a classical variable in the simulation.
+
+        Args:
+            variable_name (str): The name of the classical variable that should be updated.
+            value (bool | int | float): The desired value.
+        """
+
+    def change_amplitude_value(self, basis_state: str, value: Complex) -> None:
+        """Sets the amplitude of a computational basis state in the simulation.
+
+        Args:
+            basis_state (str): The bitstring identifying the basis state (e.g. ``"010"``).
+            value (Complex): The desired complex amplitude.
+        """
+
     def run_simulation(self) -> None:
         """Runs the simulation until it finishes or an assertion fails.
 
