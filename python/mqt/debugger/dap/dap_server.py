@@ -24,7 +24,6 @@ from .messages import (
     ContinueDAPMessage,
     DisconnectDAPMessage,
     ExceptionInfoDAPMessage,
-    HighlightError,
     InitializeDAPMessage,
     LaunchDAPMessage,
     NextDAPMessage,
@@ -445,7 +444,8 @@ class DAPServer:
             "message": message,
         }
 
-    def _format_highlight_reason(self, cause_type: mqt.debugger.ErrorCauseType | None) -> str:
+    @staticmethod
+    def _format_highlight_reason(cause_type: mqt.debugger.ErrorCauseType | None) -> str:
         """Return a short identifier for the highlight reason."""
         if cause_type == mqt.debugger.ErrorCauseType.MissingInteraction:
             return "missingInteraction"
