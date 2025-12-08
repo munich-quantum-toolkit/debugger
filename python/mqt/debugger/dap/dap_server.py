@@ -52,7 +52,6 @@ supported_messages: list[type[Request]] = [
     InitializeDAPMessage,
     DisconnectDAPMessage,
     LaunchDAPMessage,
-    HighlightError,
     SetBreakpointsDAPMessage,
     ThreadsDAPMessage,
     StackTraceDAPMessage,
@@ -329,6 +328,10 @@ class DAPServer:
             connection,
             "stderr",
         )
+        highlight_entries = self.collect_highlight_entries(current_instruction)
+        if highlight_entries:
+            highlight_event = mqt.debugger.dap.messages.HighlightError(highlight_entries, self.source_file)
+            send_message(json.dumps(highlight_event.encode()), connection)
 
     def code_pos_to_coordinates(self, pos: int) -> tuple[int, int]:
         """Helper method to convert a code position to line and column.
@@ -393,6 +396,62 @@ class DAPServer:
             if cause.type == mqt.debugger.ErrorCauseType.ControlAlwaysZero
             else ""
         )
+
+    def collect_highlight_entries(self, failing_instruction: int) -> list[dict[str, Any]]:
+        """Collect highlight entries for the current assertion failure."""
+        highlights: list[dict[str, Any]] = []
+        if getattr(self, "source_code", ""):
+            try:
+                diagnostics = self.simulation_state.get_diagnostics()
+                error_causes = diagnostics.potential_error_causes()
+            except RuntimeError:
+                error_causes = []
+
+            for cause in error_causes:
+                message = self.format_error_cause(cause)
+                reason = self._format_highlight_reason(cause.type)
+                entry = self._build_highlight_entry(cause.instruction, reason, message)
+                if entry is not None:
+                    highlights.append(entry)
+
+        if not highlights:
+            entry = self._build_highlight_entry(
+                failing_instruction,
+                "assertionFailed",
+                "Assertion failed at this instruction.",
+            )
+            if entry is not None:
+                highlights.append(entry)
+
+        return highlights
+
+    def _build_highlight_entry(self, instruction: int, reason: str, message: str) -> dict[str, Any] | None:
+        """Create a highlight entry for a specific instruction."""
+        try:
+            start_pos, end_pos = self.simulation_state.get_instruction_position(instruction)
+        except RuntimeError:
+            return None
+        start_line, start_column = self.code_pos_to_coordinates(start_pos)
+        end_line, end_column = self.code_pos_to_coordinates(end_pos)
+        snippet = self.source_code[start_pos : end_pos + 1].replace("\r", "")
+        return {
+            "instruction": int(instruction),
+            "range": {
+                "start": {"line": start_line, "column": start_column},
+                "end": {"line": end_line, "column": end_column},
+            },
+            "reason": reason,
+            "code": snippet.strip(),
+            "message": message,
+        }
+
+    def _format_highlight_reason(self, cause_type: mqt.debugger.ErrorCauseType | None) -> str:
+        """Return a short identifier for the highlight reason."""
+        if cause_type == mqt.debugger.ErrorCauseType.MissingInteraction:
+            return "missingInteraction"
+        if cause_type == mqt.debugger.ErrorCauseType.ControlAlwaysZero:
+            return "controlAlwaysZero"
+        return "unknown"
 
     def send_message_hierarchy(
         self,
