@@ -63,23 +63,22 @@ class LaunchDAPMessage(DAPMessage):
             dict[str, Any]: The response to the request.
         """
         program_path = Path(self.program)
+        server.source_file = {"name": program_path.name, "path": self.program}
         with program_path.open("r", encoding=locale.getpreferredencoding(False)) as f:
             code = f.read()
             server.source_code = code
             try:
                 server.simulation_state.load_code(code)
             except RuntimeError as exc:
-                message = str(exc) or "An error occurred while parsing the code."
+                server.queue_parse_error(str(exc))
                 return {
                     "type": "response",
                     "request_seq": self.sequence_number,
                     "success": False,
                     "command": "launch",
-                    "message": message,
                 }
         if not self.stop_on_entry:
             server.simulation_state.run_simulation()
-        server.source_file = {"name": program_path.name, "path": self.program}
         return {
             "type": "response",
             "request_seq": self.sequence_number,

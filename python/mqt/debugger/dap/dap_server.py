@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import json
+import re
 import socket
 import sys
 from typing import TYPE_CHECKING, Any, cast
@@ -114,6 +115,7 @@ class DAPServer:
         self.simulation_state = mqt.debugger.SimulationState()
         self.lines_start_at_one = True
         self.columns_start_at_one = True
+        self.pending_highlights: list[dict[str, Any]] = []
 
     def start(self) -> None:
         """Start the DAP server and listen for one connection."""
@@ -236,6 +238,10 @@ class DAPServer:
                 )
                 event_payload = json.dumps(e.encode())
                 send_message(event_payload, connection)
+            if self.pending_highlights:
+                highlight_event = mqt.debugger.dap.messages.HighlightError(self.pending_highlights, self.source_file)
+                send_message(json.dumps(highlight_event.encode()), connection)
+                self.pending_highlights = []
             self.regular_checks(connection)
 
     def regular_checks(self, connection: socket.socket) -> None:
@@ -452,6 +458,49 @@ class DAPServer:
         if cause_type == mqt.debugger.ErrorCauseType.ControlAlwaysZero:
             return "controlAlwaysZero"
         return "unknown"
+
+    def queue_parse_error(self, error_message: str) -> None:
+        """Store highlight data for a parse error to be emitted later."""
+        line, column, detail = self._parse_error_location(error_message)
+        entry = self._build_parse_error_highlight(line, column, detail)
+        if entry is not None:
+            self.pending_highlights = [entry]
+
+    @staticmethod
+    def _parse_error_location(error_message: str) -> tuple[int, int, str]:
+        """Parse a compiler error string and extract the source location."""
+        match = re.match(r"<input>:(\d+):(\d+):\s*(.*)", error_message.strip())
+        if match:
+            line = int(match.group(1))
+            column = int(match.group(2))
+            detail = match.group(3).strip()
+        else:
+            line = 1
+            column = 1
+            detail = error_message.strip()
+        return (line, column, detail)
+
+    def _build_parse_error_highlight(self, line: int, column: int, detail: str) -> dict[str, Any] | None:
+        """Create a highlight entry for a parse error."""
+        if not getattr(self, "source_code", ""):
+            return None
+        lines = self.source_code.split("\n")
+        if not lines:
+            return None
+        line = max(1, min(line, len(lines)))
+        line_text = lines[line - 1]
+        end_column = max(column, len(line_text))
+        snippet = line_text.strip() or line_text
+        return {
+            "instruction": -1,
+            "range": {
+                "start": {"line": line, "column": column},
+                "end": {"line": line, "column": end_column if end_column > 0 else column},
+            },
+            "reason": "parseError",
+            "code": snippet,
+            "message": detail,
+        }
 
     def send_message_hierarchy(
         self,
