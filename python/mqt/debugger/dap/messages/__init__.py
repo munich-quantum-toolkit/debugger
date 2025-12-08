@@ -21,6 +21,7 @@ from .disconnect_dap_message import DisconnectDAPMessage
 from .exception_info_message import ExceptionInfoDAPMessage
 from .exited_dap_event import ExitedDAPEvent
 from .gray_out_event import GrayOutDAPEvent
+from .highlight_error_dap_message import HighlightError
 from .initialize_dap_message import InitializeDAPMessage
 from .initialized_dap_event import InitializedDAPEvent
 from .launch_dap_message import LaunchDAPMessage
@@ -57,6 +58,7 @@ __all__ = [
     "ExceptionInfoDAPMessage",
     "ExitedDAPEvent",
     "GrayOutDAPEvent",
+    "HighlightError",
     "InitializeDAPMessage",
     "InitializedDAPEvent",
     "LaunchDAPMessage",
