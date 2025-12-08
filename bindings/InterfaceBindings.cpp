@@ -23,8 +23,10 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <iostream>
 #include <pybind11/cast.h>
 #include <pybind11/detail/common.h>
+#include <pybind11/iostream.h>
 #include <pybind11/native_enum.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h> // NOLINT(misc-include-cleaner)
@@ -173,7 +175,20 @@ Args:
       .def(
           "load_code",
           [](SimulationState* self, const char* code) {
-            checkOrThrow(self->loadCode(self, code));
+            py::module io = py::module::import("io");
+            py::object string_io = io.attr("StringIO")();
+            Result result = OK;
+            {
+              py::scoped_ostream_redirect redirect(std::cerr, string_io);
+              result = self->loadCode(self, code);
+            }
+            if (result != OK) {
+              auto message = string_io.attr("getvalue")().cast<std::string>();
+              if (message.empty()) {
+                message = "An error occurred while executing the operation";
+              }
+              throw std::runtime_error(message);
+            }
           },
           R"(Loads the given code into the simulation state.
 
