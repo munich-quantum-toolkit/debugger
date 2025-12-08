@@ -83,10 +83,6 @@ jobs:
     needs: change-detection
     if: fromJSON(needs.change-detection.outputs.run-cpp-linter)
     uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-cpp-linter.yml@89734354f64f30a80dd16602d4e271df34348987 # v1.17.4
-    permissions:
-      contents: read
-      pull-requests: write
-      issues: write
     with:
       build-project: true
       clang-version: 20
