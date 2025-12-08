@@ -24,7 +24,6 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 from mqt.debugger import check
-from mqt.debugger.check import calibration as calibration_module
 from mqt.debugger.check import result_checker, runtime_check
 
 if TYPE_CHECKING:
@@ -33,21 +32,6 @@ if TYPE_CHECKING:
 
 CALIBRATION = check.Calibration(0.1, 0.1, 0.1)
 BASE_PATH = Path("test/python/resources/compilation/")
-
-
-def _missing_reason(dependencies: tuple[str, ...]) -> str:
-    joined = ", ".join(dependencies)
-    return f"Missing optional dependencies required for this test: {joined or 'unspecified'}."
-
-
-CALIBRATION_OPTIONALS = tuple(calibration_module.missing_optionals)
-RESULT_CHECKER_OPTIONALS = tuple(result_checker.missing_optionals)
-requires_calibration_optionals = pytest.mark.skipif(
-    bool(CALIBRATION_OPTIONALS), reason=_missing_reason(CALIBRATION_OPTIONALS)
-)
-requires_result_checker_optionals = pytest.mark.skipif(
-    bool(RESULT_CHECKER_OPTIONALS), reason=_missing_reason(RESULT_CHECKER_OPTIONALS)
-)
 
 
 class GeneratedOutput:
@@ -146,8 +130,6 @@ def compiled_slice_1() -> str:
         return f.read()
 
 
-@requires_calibration_optionals
-@requires_result_checker_optionals
 def test_correct_good_sample_size(compiled_slice_1: str) -> None:
     """Test the correctness of a run result with a large enough sample size.
 
@@ -165,8 +147,6 @@ def test_correct_good_sample_size(compiled_slice_1: str) -> None:
     assert errors <= 5
 
 
-@requires_calibration_optionals
-@requires_result_checker_optionals
 def test_correct_bad_sample_size(compiled_slice_1: str) -> None:
     """Test the correctness of a run result with a bad sample size.
 
@@ -184,8 +164,6 @@ def test_correct_bad_sample_size(compiled_slice_1: str) -> None:
     assert errors >= 5
 
 
-@requires_calibration_optionals
-@requires_result_checker_optionals
 def test_incorrect_bad_sample_size(compiled_slice_1: str) -> None:
     """Test the incorrectness of a run result with a bad sample size.
 
@@ -204,8 +182,6 @@ def test_incorrect_bad_sample_size(compiled_slice_1: str) -> None:
     assert errors <= 75
 
 
-@requires_calibration_optionals
-@requires_result_checker_optionals
 def test_incorrect_good_sample_size(compiled_slice_1: str) -> None:
     """Test the incorrectness of a run result with a good sample size.
 
@@ -223,8 +199,6 @@ def test_incorrect_good_sample_size(compiled_slice_1: str) -> None:
     assert errors >= 75
 
 
-@requires_calibration_optionals
-@requires_result_checker_optionals
 def test_sample_estimate(compiled_slice_1: str) -> None:
     """Test the estimation of required shots.
 
@@ -280,8 +254,6 @@ def test_main_prepare(compiled_slice_1: str, monkeypatch: pytest.MonkeyPatch) ->
     check_dir_contents_and_delete(Path("tmp-test"), {"slice_1.qasm": compiled_slice_1})
 
 
-@requires_calibration_optionals
-@requires_result_checker_optionals
 def test_main_check_equality_sv(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
     """Test the correctness of the "check" mode of the main function with a statevector-equality assertion.
 
@@ -313,8 +285,6 @@ def test_main_check_equality_sv(monkeypatch: pytest.MonkeyPatch, capsys: pytest.
     assert "passed" in captured.out
 
 
-@requires_calibration_optionals
-@requires_result_checker_optionals
 def test_main_check_equality_circuit(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
     """Test the correctness of the "check" mode of the main function with a circuit-equality assertion.
 
@@ -346,8 +316,6 @@ def test_main_check_equality_circuit(monkeypatch: pytest.MonkeyPatch, capsys: py
     assert "passed" in captured.out
 
 
-@requires_calibration_optionals
-@requires_result_checker_optionals
 def test_main_check_sup(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
     """Test the correctness of the "check" mode of the main function with a superposition assertion.
 
@@ -379,8 +347,6 @@ def test_main_check_sup(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureF
     assert "passed" in captured.out
 
 
-@requires_calibration_optionals
-@requires_result_checker_optionals
 def test_main_check_eq_incorrect(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
     """Test the correctness of the "check" mode of the main function with a statevector-equality assertion with incorrect results.
 
@@ -412,8 +378,6 @@ def test_main_check_eq_incorrect(monkeypatch: pytest.MonkeyPatch, capsys: pytest
     assert "passed" not in captured.out
 
 
-@requires_calibration_optionals
-@requires_result_checker_optionals
 def test_main_check_sup_incorrect(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
     """Test the correctness of the "check" mode of the main function with a superposition assertion with incorrect results.
 
@@ -445,8 +409,6 @@ def test_main_check_sup_incorrect(monkeypatch: pytest.MonkeyPatch, capsys: pytes
     assert "passed" not in captured.out
 
 
-@requires_calibration_optionals
-@requires_result_checker_optionals
 def test_main_shots(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
     """Test the correctness of the "check" mode of the main function.
 
@@ -480,7 +442,6 @@ def test_main_shots(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixtu
     assert shots == 180, f"Expected 100 shots, but got {shots}."
 
 
-@requires_result_checker_optionals
 def test_contribution_equal_under_noise_big_difference() -> None:
     """Test the correctness of the `distribution_equal_under_noise` function when distributions are very different."""
     assert not result_checker.distribution_equal_under_noise(
@@ -488,7 +449,6 @@ def test_contribution_equal_under_noise_big_difference() -> None:
     )
 
 
-@requires_result_checker_optionals
 def test_check_power_divergence_zeros() -> None:
     """Tests that `check_power_divergence` correctly returns `False` if the expected distribution has a zero entry while the observed distribution's entry is non-zero."""
     statistic, p = result_checker.check_power_divergence([99, 1, 0, 0], [100, 0, 0, 0])

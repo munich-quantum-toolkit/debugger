@@ -280,4 +280,41 @@ TEST_F(DataRetrievalTest, ChangeClassicalVariableNullValue) {
   ASSERT_EQ(state->changeClassicalVariableValue(state, "c[0]", nullptr), ERROR);
 }
 
+/**
+ * @test Test that amplitudes can be updated and the remaining state is
+ * rescaled.
+ */
+TEST_F(DataRetrievalTest, ChangeAmplitudeValueRescalesOtherStates) {
+  forwardTo(12);
+  Complex desired{0.5, 0.0};
+  ASSERT_EQ(state->changeAmplitudeValue(state, "0010", &desired), OK);
+
+  Complex updated{};
+  ASSERT_EQ(state->getAmplitudeBitstring(state, "0010", &updated), OK);
+  ASSERT_TRUE(complexEquality(updated, 0.5, 0.0));
+
+  ASSERT_EQ(state->getAmplitudeBitstring(state, "1011", &updated), OK);
+  ASSERT_TRUE(complexEquality(updated, -0.866, 0.0));
+}
+
+/**
+ * @test Test that invalid bitstrings for amplitude updates are rejected.
+ */
+TEST_F(DataRetrievalTest, ChangeAmplitudeValueRejectsInvalidBitstring) {
+  Complex desired{0.25, 0.0};
+  forwardTo(12);
+  ASSERT_EQ(state->changeAmplitudeValue(state, "10", &desired), ERROR);
+  ASSERT_EQ(state->changeAmplitudeValue(state, "10a1", &desired), ERROR);
+}
+
+/**
+ * @test Test that sub-normalized targets without residual amplitudes are
+ * refused.
+ */
+TEST_F(DataRetrievalTest, ChangeAmplitudeValueRejectsSubNormalizedVacuum) {
+  Complex desired{0.5, 0.0};
+  ASSERT_EQ(state->changeAmplitudeValue(state, "0000", &desired), ERROR);
+  ASSERT_EQ(state->changeAmplitudeValue(state, "0000", nullptr), ERROR);
+}
+
 } // namespace mqt::debugger::test

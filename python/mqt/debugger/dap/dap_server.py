@@ -42,6 +42,7 @@ from .messages import (
     ThreadsDAPMessage,
     VariablesDAPMessage,
 )
+from .messages.change_amplitude_dap_message import _QUANTUM_REFERENCE
 
 if TYPE_CHECKING:
     from .messages import Request
@@ -269,7 +270,9 @@ class DAPServer:
             arguments = command.get("arguments", {})
             variables_reference = arguments.get("variablesReference")
             message_type: type[mqt.debugger.dap.messages.DAPMessage]
-            message_type = AmplitudeChangeDAPMessage if variables_reference == 2 else BitChangeDAPMessage
+            message_type = (
+                AmplitudeChangeDAPMessage if variables_reference == _QUANTUM_REFERENCE else BitChangeDAPMessage
+            )
             message: mqt.debugger.dap.messages.DAPMessage = message_type(command)
             return (message.handle(self), message)
         for message_type in supported_messages:

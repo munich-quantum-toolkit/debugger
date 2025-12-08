@@ -6,7 +6,7 @@
 #
 # Licensed under the MIT License
 
-"""Handles edits of quantum amplitudes via the DAP ``setVariable`` request."""
+"""Handles edits of quantum amplitudes via the DAP `setVariable` request."""
 
 from __future__ import annotations
 
@@ -41,33 +41,38 @@ def _format_complex(value: mqt.debugger.Complex) -> str:
 
 
 def _complex_matches(current: mqt.debugger.Complex, desired: complex) -> bool:
-    """Return ``True`` if the debugger amplitude equals the desired value."""
+    """Return "True" if the debugger amplitude equals the desired value."""
     return abs(current.real - desired.real) <= _EPS and abs(current.imaginary - desired.imag) <= _EPS
 
 
 def _normalize_value(value: str) -> str:
     """Normalize DAP complex literals so Python's :func:`complex` can parse them.
 
-    Visual Studio Code currently sends amplitudes in the ``a+bi`` / ``a-bi`` form,
-    but also accepts real-only (``a``) or imaginary-only (``bi``) literals with
-    arbitrary whitespace. Plain ``i``/``-i`` or inputs mixing ``i`` and ``j`` are
-    intentionally unsupported. When a literal contains ``i`` but no ``j``, this
-    function rewrites ``i`` to ``j`` so Python understands the imaginary unit.
+    Visual Studio Code currently sends amplitudes in the `a+bi` / `a-bi` form,
+    but also accepts real-only (`a`) or imaginary-only (`bi`) literals with
+    arbitrary whitespace. Plain `i`/`-i` inputs are normalized to `1i`/`-1i`,
+    while strings mixing `i` and `j` remain unsupported. When a literal contains
+    `i` but no `j`, this function rewrites `i` to `j` so Python understands the
+    imaginary unit.
 
     Args:
         value (str): Raw value received from the DAP client.
 
     Returns:
-        str: Normalized literal accepted by ``complex``.
+        str: Normalized literal accepted by `complex`.
     """
     normalized = value.strip().replace(" ", "")
     if not normalized:
         msg = (
             "The new amplitude value must not be empty; use literals such as "
-            "'a+bi', 'a-bi', 'a', or 'bi'. Plain 'i'/'-i' and mixed 'i'/'j' "
-            "inputs are rejected, and 'i' is only converted to 'j' when no 'j' is present."
+            "'a+bi', 'a-bi', 'a', or 'bi'. Mixed 'i'/'j' inputs are rejected, "
+            "and 'i' is only converted to 'j' when no 'j' is present."
         )
         raise ValueError(msg)
+    if normalized in {"i", "+i"}:
+        normalized = "1i"
+    elif normalized == "-i":
+        normalized = "-1i"
     # Visual Studio Code allows using `i` as the imaginary unit. Python expects `j`.
     if "i" in normalized and "j" not in normalized:
         normalized = normalized.replace("i", "j")
@@ -155,7 +160,7 @@ class AmplitudeChangeDAPMessage(DAPMessage):
         return _TargetAmplitude(bitstring, desired)
 
     def _extract_bitstring(self) -> str:
-        """Return the ``|...>`` bitstring referenced in the request.
+        """Return the `|...>` bitstring referenced in the request.
 
         Returns:
             str: The computational basis state name without delimiters.

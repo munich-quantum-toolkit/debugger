@@ -233,6 +233,17 @@ def test_change_amplitude_value(simulation_instance_ghz: SimulationInstance) -> 
     assert updated.imaginary == pytest.approx(0.0, abs=1e-9)
 
 
+def test_change_amplitude_value_invalid_bitstring(simulation_instance_ghz: SimulationInstance) -> None:
+    """Ensure invalid amplitude edit requests raise an error at the Python layer."""
+    (simulation_state, _state_id) = simulation_instance_ghz
+    simulation_state.run_simulation()
+    desired = mqt.debugger.Complex(0.25, 0.0)
+    with pytest.raises(RuntimeError):
+        simulation_state.change_amplitude_value("11", desired)
+    with pytest.raises(RuntimeError):
+        simulation_state.change_amplitude_value("11a", desired)
+
+
 def test_get_state_vector_sub(simulation_instance_classical: SimulationInstance) -> None:
     """Tests the `get_state_vector_sub()` method."""
     (simulation_state, _state_id) = simulation_instance_classical
