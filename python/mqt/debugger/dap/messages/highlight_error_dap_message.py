@@ -7,11 +7,17 @@
 # Licensed under the MIT License
 
 """Represents the custom 'highlightError' DAP event."""
+
 from __future__ import annotations
 
-from typing import Any, Mapping, Sequence
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any
 
 from .dap_event import DAPEvent
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
 
 class HighlightError(DAPEvent):
     """Represents the 'highlightError' custom DAP event."""
@@ -21,12 +27,12 @@ class HighlightError(DAPEvent):
     highlights: list[dict[str, Any]]
     source: dict[str, Any]
 
-    def __init__(self, highlights: Sequence[Mapping[str, Any]], source: Mapping[str, Any]) -> None:
+    def __init__(self, highlights: Sequence[Mapping[str, Any]], source: Mapping[str, Any] | None) -> None:
         """Create a new 'highlightError' DAP event message.
 
         Args:
             highlights (Sequence[Mapping[str, Any]]): Highlight entries describing the problematic ranges.
-            source (Mapping[str, Any]): Information about the current source file.
+            source (Mapping[str, Any] | None): Information about the current source file.
         """
         self.highlights = [self._normalize_highlight(entry) for entry in highlights]
         self.source = self._normalize_source(source)
@@ -45,12 +51,12 @@ class HighlightError(DAPEvent):
             highlight_range = highlight.get("range")
             if not isinstance(highlight_range, dict):
                 msg = "Each highlight entry must provide a 'range' dictionary."
-                raise ValueError(msg)
+                raise TypeError(msg)
             start = highlight_range.get("start")
             end = highlight_range.get("end")
             if not isinstance(start, dict) or not isinstance(end, dict):
                 msg = "Highlight ranges must define 'start' and 'end' coordinates."
-                raise ValueError(msg)
+                raise TypeError(msg)
             if self._later_than(start, end):
                 msg = "Highlight range 'end' must not precede 'start'."
                 raise ValueError(msg)
@@ -103,14 +109,15 @@ class HighlightError(DAPEvent):
             line = int(position["line"])
             column = int(position["column"])
         except KeyError as exc:
-            raise ValueError("Highlight positions require 'line' and 'column'.") from exc
+            msg = "Highlight positions require 'line' and 'column'."
+            raise ValueError(msg) from exc
         return {
             "line": line,
             "column": column,
         }
 
     @staticmethod
-    def _normalize_source(source: Mapping[str, Any]) -> dict[str, Any]:
+    def _normalize_source(source: Mapping[str, Any] | None) -> dict[str, Any]:
         """Create a defensive copy of the provided DAP Source information."""
         if not isinstance(source, Mapping):
             msg = "Source information must be provided as a mapping."

@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import locale
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -77,10 +78,8 @@ class RestartDAPMessage(DAPMessage):
         if parsed_successfully and not self.stop_on_entry:
             server.simulation_state.run_simulation()
         if not parsed_successfully:
-            try:
+            with contextlib.suppress(RuntimeError):
                 server.simulation_state.reset_simulation()
-            except RuntimeError:
-                pass
         return {
             "type": "response",
             "request_seq": self.sequence_number,
