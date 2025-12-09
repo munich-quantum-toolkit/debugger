@@ -1,3 +1,11 @@
+# Copyright (c) 2024 - 2025 Chair for Design Automation, TUM
+# Copyright (c) 2025 Munich Quantum Software Company GmbH
+# All rights reserved.
+#
+# SPDX-License-Identifier: MIT
+#
+# Licensed under the MIT License
+
 """Tests for the DAP server helper utilities."""
 
 from __future__ import annotations
@@ -22,10 +30,15 @@ def test_build_highlight_entry_does_not_span_next_instruction() -> None:
     server = DAPServer()
     server.source_code = "measure q[0] -> c[0];\nmeasure q[1] -> c[1];\n"
     first_line_end = server.source_code.index("\n")
-    fake_state = SimpleNamespace(get_instruction_position=lambda _instr: (0, first_line_end))
+    fake_diagnostics = SimpleNamespace(potential_error_causes=list)
+    fake_state = SimpleNamespace(
+        get_instruction_position=lambda _instr: (0, first_line_end),
+        get_diagnostics=lambda: fake_diagnostics,
+    )
     server.simulation_state = fake_state  # type: ignore[assignment]
 
-    entry = server._build_highlight_entry(0, "reason", "message")
-    assert entry is not None
+    entries = server.collect_highlight_entries(0)
+    assert entries
+    entry = entries[0]
     assert entry["range"]["start"]["line"] == 1
     assert entry["range"]["end"]["line"] == 1
