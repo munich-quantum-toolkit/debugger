@@ -515,7 +515,7 @@ class DAPServer:
         if not lines:
             return None
         line = max(1, min(line, len(lines)))
-        column = max(1, column)
+        column = max(1, column)^
         line_index = line - 1
         line_text = lines[line_index]
 
@@ -533,7 +533,7 @@ class DAPServer:
                 else:
                     column = 1
 
-        end_column = max(column, len(line_text))
+        end_column = max(column, len(line_text) + 1)
         snippet = line_text.strip() or line_text
         return {
             "instruction": -1,
