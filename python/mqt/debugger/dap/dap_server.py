@@ -515,7 +515,24 @@ class DAPServer:
         if not lines:
             return None
         line = max(1, min(line, len(lines)))
-        line_text = lines[line - 1]
+        column = max(1, column)
+        line_index = line - 1
+        line_text = lines[line_index]
+
+        if column <= 1 and line_index > 0:
+            prev_index = line_index - 1
+            while prev_index >= 0 and not lines[prev_index].strip():
+                prev_index -= 1
+            if prev_index >= 0:
+                line_index = prev_index
+                line = line_index + 1
+                line_text = lines[line_index]
+                stripped = line_text.lstrip()
+                if stripped:
+                    column = max(1, len(line_text) - len(stripped) + 1)
+                else:
+                    column = 1
+
         end_column = max(column, len(line_text))
         snippet = line_text.strip() or line_text
         return {
