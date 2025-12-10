@@ -27,6 +27,7 @@
 #include <pybind11/detail/common.h>
 #include <pybind11/native_enum.h>
 #include <pybind11/pybind11.h>
+#include <pybind11/pytypes.h>
 #include <pybind11/stl.h> // NOLINT(misc-include-cleaner)
 #include <stdexcept>
 #include <string>
@@ -287,7 +288,7 @@ Returns:
       .def(
           "change_classical_variable_value",
           [](SimulationState* self, const std::string& variableName,
-             py::object newValue) {
+             const py::object& newValue) {
             VariableValue value{};
             if (py::isinstance<py::bool_>(newValue)) {
               value.boolValue = newValue.cast<bool>();
