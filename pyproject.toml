@@ -30,11 +30,12 @@ classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
     "Natural Language :: English",
+    "Operating System :: POSIX :: Linux",
     "Operating System :: MacOS",
     "Operating System :: Microsoft :: Windows",
-    "Operating System :: POSIX :: Linux",
     "Programming Language :: C++",
     "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -269,7 +270,7 @@ mqt-debugger = { workspace = true }
 
 [tool.cibuildwheel]
 build = "cp3*"
-skip = "*-musllinux_*"
+skip = ["*-musllinux_*", "cp313t-*"]
 archs = "auto64"
 test-command = "python -c \"from mqt import debugger\""
 build-frontend = "build[uv]"
@@ -279,7 +280,7 @@ manylinux-aarch64-image = "manylinux_2_28"
 manylinux-ppc64le-image = "manylinux_2_28"
 manylinux-s390x-image = "manylinux_2_28"
 test-skip = [
-  "cp3*t-*", # no freethreading qiskit wheels
+  "cp3??t-*", # no freethreading qiskit wheels
   "cp*-win_arm64", # no numpy, qiskit, ... wheels
 ]
 
@@ -291,7 +292,7 @@ environment = { DEPLOY = "ON" }
 environment = { MACOSX_DEPLOYMENT_TARGET = "11.0" }
 
 [tool.cibuildwheel.windows]
-before-build = "uv pip install delvewheel>=1.9.0"
+before-build = "uv pip install delvewheel>=1.11.2"
 repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel} --namespace-pkg mqt --ignore-existing"
 
 
