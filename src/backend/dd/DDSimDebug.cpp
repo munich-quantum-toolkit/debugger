@@ -532,7 +532,6 @@ Result createDDSimulationState(DDSimulationState* self) {
   self->interface.isFinished = ddsimIsFinished;
   self->interface.didAssertionFail = ddsimDidAssertionFail;
   self->interface.wasBreakpointHit = ddsimWasBreakpointHit;
-
   self->interface.getCurrentInstruction = ddsimGetCurrentInstruction;
   self->interface.getInstructionCount = ddsimGetInstructionCount;
   self->interface.getInstructionPosition = ddsimGetInstructionPosition;
