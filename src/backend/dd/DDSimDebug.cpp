@@ -38,6 +38,7 @@
 
 #include <Eigen/Dense>
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstddef>
 #include <cstring>
@@ -525,10 +526,12 @@ Result createDDSimulationState(DDSimulationState* self) {
   self->interface.pauseSimulation = ddsimPauseSimulation;
   self->interface.canStepForward = ddsimCanStepForward;
   self->interface.canStepBackward = ddsimCanStepBackward;
+  self->interface.changeClassicalVariableValue =
+      ddsimChangeClassicalVariableValue;
+  self->interface.changeAmplitudeValue = ddsimChangeAmplitudeValue;
   self->interface.isFinished = ddsimIsFinished;
   self->interface.didAssertionFail = ddsimDidAssertionFail;
   self->interface.wasBreakpointHit = ddsimWasBreakpointHit;
-
   self->interface.getCurrentInstruction = ddsimGetCurrentInstruction;
   self->interface.getInstructionCount = ddsimGetInstructionCount;
   self->interface.getInstructionPosition = ddsimGetInstructionPosition;
@@ -610,6 +613,150 @@ Result ddsimLoadCode(SimulationState* self, const char* code) {
 
   ddsim->ready = true;
 
+  return OK;
+}
+
+Result ddsimChangeClassicalVariableValue(SimulationState* self,
+                                         const char* variableName,
+                                         const VariableValue* value) {
+  if (variableName == nullptr || value == nullptr) {
+    std::cerr << "ddsimChangeClassicalVariableValue: variableName or value is "
+                 "null.\n";
+    return ERROR;
+  }
+  auto* ddsim = toDDSimulationState(self);
+  const auto it = ddsim->variables.find(variableName);
+  if (it == ddsim->variables.end()) {
+    std::cerr
+        << "ddsimChangeClassicalVariableValue: no classical variable named '"
+        << variableName << "'.\n";
+    return ERROR;
+  }
+  auto& var = it->second;
+  switch (var.type) {
+  case VariableType::VarBool:
+    var.value.boolValue = value->boolValue;
+    break;
+  case VariableType::VarInt:
+    var.value.intValue = value->intValue;
+    break;
+  case VariableType::VarFloat:
+    var.value.floatValue = value->floatValue;
+    break;
+  default:
+    std::cerr
+        << "ddsimChangeClassicalVariableValue: unsupported variable type for '"
+        << variableName << "'.\n";
+    return ERROR;
+  }
+  return OK;
+}
+
+Result ddsimChangeAmplitudeValue(SimulationState* self, const char* basisState,
+                                 const Complex* value) {
+  if (basisState == nullptr || value == nullptr) {
+    std::cerr << "ddsimChangeAmplitudeValue: basisState or value is null.\n";
+    return ERROR;
+  }
+  auto* ddsim = toDDSimulationState(self);
+  const auto numQubits = ddsim->qc->getNqubits();
+  const std::string state{basisState};
+  if (state.size() != numQubits) {
+    std::cerr
+        << "ddsimChangeAmplitudeValue: basisState length does not match the "
+           "number of qubits.\n";
+    return ERROR;
+  }
+  if (std::ranges::any_of(state, [](char c) { return c != '0' && c != '1'; })) {
+    std::cerr << "ddsimChangeAmplitudeValue: basisState must contain only "
+                 "'0' and '1'.\n";
+    return ERROR;
+  }
+
+  std::size_t index = 0;
+  for (const char bit : state) {
+    index <<= 1U;
+    if (bit == '1') {
+      index |= 1U;
+    }
+  }
+
+  const auto numStates = 1ULL << numQubits;
+  std::vector<Complex> amplitudes(numStates);
+  Statevector sv{numQubits, numStates, amplitudes.data()};
+  if (self->getStateVectorFull(self, &sv) != OK) {
+    return ERROR;
+  }
+
+  constexpr double tolerance = 1e-9;
+  double otherNormSquared = 0.0;
+  for (std::size_t i = 0; i < numStates; i++) {
+    if (i == index) {
+      continue;
+    }
+    const auto& amp = amplitudes[i];
+    otherNormSquared += (amp.real * amp.real) + (amp.imaginary * amp.imaginary);
+  }
+
+  const double desiredReal = value->real;
+  const double desiredImag = value->imaginary;
+  const double desiredNormSquared =
+      (desiredReal * desiredReal) + (desiredImag * desiredImag);
+  if (desiredNormSquared > 1.0 + tolerance) {
+    std::cerr << "ddsimChangeAmplitudeValue: requested amplitude norm^2 "
+                 "exceeds 1.\n";
+    return ERROR;
+  }
+  if (otherNormSquared <= tolerance &&
+      std::abs(desiredNormSquared - 1.0) > tolerance) {
+    std::cerr << "ddsimChangeAmplitudeValue: cannot target a sub-normalized "
+                 "state when all other amplitudes are effectively zero.\n";
+    return ERROR;
+  }
+
+  double scalingFactor = 0.0;
+  if (otherNormSquared > tolerance) {
+    const double remaining = 1.0 - desiredNormSquared;
+    if (remaining < -tolerance) {
+      std::cerr << "ddsimChangeAmplitudeValue: normalization would require "
+                   "negative residual probability mass.\n";
+      return ERROR;
+    }
+    if (remaining <= tolerance) {
+      scalingFactor = 0.0;
+    } else {
+      scalingFactor = std::sqrt(remaining / otherNormSquared);
+    }
+  }
+
+  amplitudes[index] = *value;
+  if (otherNormSquared > tolerance) {
+    for (std::size_t i = 0; i < numStates; i++) {
+      if (i == index) {
+        continue;
+      }
+      amplitudes[i].real *= scalingFactor;
+      amplitudes[i].imaginary *= scalingFactor;
+    }
+  }
+
+  dd::CVec ddVector;
+  ddVector.reserve(numStates);
+  for (const auto& amp : amplitudes) {
+    ddVector.emplace_back(amp.real, amp.imaginary);
+  }
+
+  try {
+    auto newState = dd::makeStateFromVector(ddVector, *(ddsim->dd));
+    ddsim->dd->incRef(newState);
+    if (ddsim->simulationState.p != nullptr) {
+      ddsim->dd->decRef(ddsim->simulationState);
+    }
+    ddsim->simulationState = newState;
+  } catch (const std::exception& e) {
+    std::cerr << e.what() << "\n";
+    return ERROR;
+  }
   return OK;
 }
 
