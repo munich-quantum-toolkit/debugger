@@ -284,7 +284,7 @@ The simulation is unable to step backward if it is at the beginning or if
 the simulation has not been set up yet.
 
 Returns:
-    bool: True if the simulation can step backward.)")
+bool: True, if the simulation can step backward.)")
       .def(
           "change_classical_variable_value",
           [](SimulationState* self, const std::string& variableName,
