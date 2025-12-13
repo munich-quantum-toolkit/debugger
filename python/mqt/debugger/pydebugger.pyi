@@ -171,7 +171,7 @@ class SimulationState:
         """Sets the amplitude of a computational basis state in the simulation.
 
         Args:
-            basis_state (str): The bitstring identifying the basis state (e.g. ``"010"``).
+            basis_state (str): The bitstring identifying the basis state (e.g. `010`).
             value (Complex): The desired complex amplitude.
         """
 

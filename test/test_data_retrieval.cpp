@@ -286,7 +286,7 @@ TEST_F(DataRetrievalTest, ChangeClassicalVariableNullValue) {
  */
 TEST_F(DataRetrievalTest, ChangeAmplitudeValueRescalesOtherStates) {
   forwardTo(12);
-  Complex desired{0.5, 0.0};
+  const Complex desired{0.5, 0.0};
   ASSERT_EQ(state->changeAmplitudeValue(state, "0010", &desired), OK);
 
   Complex updated{};
@@ -301,7 +301,7 @@ TEST_F(DataRetrievalTest, ChangeAmplitudeValueRescalesOtherStates) {
  * @test Test that invalid bitstrings for amplitude updates are rejected.
  */
 TEST_F(DataRetrievalTest, ChangeAmplitudeValueRejectsInvalidBitstring) {
-  Complex desired{0.25, 0.0};
+  const Complex desired{0.25, 0.0};
   forwardTo(12);
   ASSERT_EQ(state->changeAmplitudeValue(state, "10", &desired), ERROR);
   ASSERT_EQ(state->changeAmplitudeValue(state, "10a1", &desired), ERROR);
@@ -312,7 +312,7 @@ TEST_F(DataRetrievalTest, ChangeAmplitudeValueRejectsInvalidBitstring) {
  * refused.
  */
 TEST_F(DataRetrievalTest, ChangeAmplitudeValueRejectsSubNormalizedVacuum) {
-  Complex desired{0.5, 0.0};
+  const Complex desired{0.5, 0.0};
   ASSERT_EQ(state->changeAmplitudeValue(state, "0000", &desired), ERROR);
   ASSERT_EQ(state->changeAmplitudeValue(state, "0000", nullptr), ERROR);
 }
