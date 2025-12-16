@@ -308,6 +308,15 @@ TEST_F(DataRetrievalTest, ChangeAmplitudeValueRejectsInvalidBitstring) {
 }
 
 /**
+ * @test Test that over-normalized targets are rejected.
+ */
+TEST_F(DataRetrievalTest, ChangeAmplitudeValueRejectsOverNormalizedTarget) {
+  const Complex desired{1.1, 0.0};
+  forwardTo(12);
+  ASSERT_EQ(state->changeAmplitudeValue(state, "0010", &desired), ERROR);
+}
+
+/**
  * @test Test that sub-normalized targets without residual amplitudes are
  * refused.
  */
