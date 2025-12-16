@@ -14,6 +14,7 @@ It only tests whether the bindings are working correctly. It does not stress-tes
 from __future__ import annotations
 
 import locale
+import math
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
@@ -233,6 +234,45 @@ def test_change_amplitude_value(simulation_instance_ghz: SimulationInstance) -> 
     assert updated.imaginary == pytest.approx(0.0, abs=1e-9)
 
 
+def test_change_amplitude_value_rescales_other_states(simulation_instance_ghz: SimulationInstance) -> None:
+    """Ensure rewriting a single amplitude rescales the remaining state."""
+    (simulation_state, _state_id) = simulation_instance_ghz
+    simulation_state.run_simulation()
+
+    target_state = "111"
+    desired = mqt.debugger.Complex(0.25, 0.0)
+    target_index = int(target_state, 2)
+
+    state_vector = simulation_state.get_state_vector_full()
+    other_norm_squared = sum(
+        (amp.real * amp.real) + (amp.imaginary * amp.imaginary)
+        for idx, amp in enumerate(state_vector.amplitudes)
+        if idx != target_index
+    )
+    assert other_norm_squared > 0.0
+
+    interesting_states = ("000", "011")
+    original_amplitudes = {
+        bitstring: simulation_state.get_amplitude_bitstring(bitstring)
+        for bitstring in interesting_states
+    }
+
+    simulation_state.change_amplitude_value(target_state, desired)
+
+    updated = simulation_state.get_amplitude_bitstring(target_state)
+    assert updated.real == pytest.approx(desired.real, abs=1e-9)
+    assert updated.imaginary == pytest.approx(desired.imaginary, abs=1e-9)
+
+    desired_norm = (desired.real * desired.real) + (desired.imaginary * desired.imaginary)
+    remaining_prob = max(0.0, 1.0 - desired_norm)
+    expected_scale = math.sqrt(remaining_prob / other_norm_squared)
+    for bitstring in interesting_states:
+        current = simulation_state.get_amplitude_bitstring(bitstring)
+        original = original_amplitudes[bitstring]
+        assert current.real == pytest.approx(original.real * expected_scale, abs=1e-9)
+        assert current.imaginary == pytest.approx(original.imaginary * expected_scale, abs=1e-9)
+
+
 def test_change_amplitude_value_invalid_bitstring(simulation_instance_ghz: SimulationInstance) -> None:
     """Ensure invalid amplitude edit requests raise an error at the Python layer."""
     (simulation_state, _state_id) = simulation_instance_ghz
@@ -242,6 +282,24 @@ def test_change_amplitude_value_invalid_bitstring(simulation_instance_ghz: Simul
         simulation_state.change_amplitude_value("11", desired)
     with pytest.raises(RuntimeError):
         simulation_state.change_amplitude_value("11a", desired)
+
+
+def test_change_amplitude_value_rejects_over_normalized_target(simulation_instance_ghz: SimulationInstance) -> None:
+    """Ensure overly large amplitudes are rejected and surface as Python errors."""
+    (simulation_state, _state_id) = simulation_instance_ghz
+    simulation_state.run_simulation()
+    desired = mqt.debugger.Complex(1.1, 0.0)
+    with pytest.raises(RuntimeError):
+        simulation_state.change_amplitude_value("111", desired)
+
+
+def test_change_amplitude_value_rejects_subnormalized_vacuum(simulation_instance_ghz: SimulationInstance) -> None:
+    """Ensure we cannot lower the only populated basis state."""
+    (simulation_state, _state_id) = simulation_instance_ghz
+    simulation_state.reset_simulation()
+    desired = mqt.debugger.Complex(0.5, 0.0)
+    with pytest.raises(RuntimeError):
+        simulation_state.change_amplitude_value("000", desired)
 
 
 def test_get_state_vector_sub(simulation_instance_classical: SimulationInstance) -> None:
