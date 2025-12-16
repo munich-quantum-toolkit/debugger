@@ -253,8 +253,7 @@ def test_change_amplitude_value_rescales_other_states(simulation_instance_ghz: S
 
     interesting_states = ("000", "011")
     original_amplitudes = {
-        bitstring: simulation_state.get_amplitude_bitstring(bitstring)
-        for bitstring in interesting_states
+        bitstring: simulation_state.get_amplitude_bitstring(bitstring) for bitstring in interesting_states
     }
 
     simulation_state.change_amplitude_value(target_state, desired)
