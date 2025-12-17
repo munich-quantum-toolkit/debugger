@@ -238,4 +238,101 @@ TEST_F(DataRetrievalTest, GetBadClassicalVariableName) {
   ASSERT_EQ(state->getClassicalVariableName(state, 5, name.data()), ERROR);
 }
 
+/**
+ * @test Test that classical variables can be updated explicitly.
+ */
+TEST_F(DataRetrievalTest, ChangeClassicalVariableUpdatesValue) {
+  Variable initial;
+  forwardTo(6);
+  ASSERT_EQ(state->getClassicalVariable(state, "c[0]", &initial), OK);
+  ASSERT_TRUE(classicalEquals(initial, false));
+
+  VariableValue desired{};
+  desired.boolValue = true;
+  ASSERT_EQ(state->changeClassicalVariableValue(state, "c[0]", &desired), OK);
+
+  Variable updated;
+  ASSERT_EQ(state->getClassicalVariable(state, "c[0]", &updated), OK);
+  ASSERT_TRUE(classicalEquals(updated, true));
+
+  desired.boolValue = false;
+  ASSERT_EQ(state->changeClassicalVariableValue(state, "c[0]", &desired), OK);
+  ASSERT_EQ(state->getClassicalVariable(state, "c[0]", &updated), OK);
+  ASSERT_TRUE(classicalEquals(updated, false));
+}
+
+/**
+ * @test Test that change requests for unknown variables are rejected.
+ */
+TEST_F(DataRetrievalTest, ChangeClassicalVariableUnknown) {
+  VariableValue desired{};
+  desired.boolValue = true;
+  ASSERT_EQ(
+      state->changeClassicalVariableValue(state, "does_not_exist", &desired),
+      ERROR);
+}
+
+/**
+ * @test Test that passing a null value pointer results in an error.
+ */
+TEST_F(DataRetrievalTest, ChangeClassicalVariableNullValue) {
+  forwardTo(6);
+  ASSERT_EQ(state->changeClassicalVariableValue(state, "c[0]", nullptr), ERROR);
+}
+
+/**
+ * @test Test that amplitudes can be updated and the remaining state is
+ * rescaled.
+ */
+TEST_F(DataRetrievalTest, ChangeAmplitudeValueRescalesOtherStates) {
+  forwardTo(12);
+  const Complex desired{0.5, 0.0};
+  ASSERT_EQ(state->changeAmplitudeValue(state, "0010", &desired), OK);
+
+  Complex updated{};
+  ASSERT_EQ(state->getAmplitudeBitstring(state, "0010", &updated), OK);
+  ASSERT_TRUE(complexEquality(updated, 0.5, 0.0));
+
+  ASSERT_EQ(state->getAmplitudeBitstring(state, "1011", &updated), OK);
+  ASSERT_TRUE(complexEquality(updated, -0.866, 0.0));
+}
+
+/**
+ * @test Test that invalid bitstrings for amplitude updates are rejected.
+ */
+TEST_F(DataRetrievalTest, ChangeAmplitudeValueRejectsInvalidBitstring) {
+  const Complex desired{0.25, 0.0};
+  forwardTo(12);
+  ASSERT_EQ(state->changeAmplitudeValue(state, "10", &desired), ERROR);
+  ASSERT_EQ(state->changeAmplitudeValue(state, "10a1", &desired), ERROR);
+}
+
+/**
+ * @test Test that amplitudes with magnitude larger than one are rejected.
+ */
+TEST_F(DataRetrievalTest, ChangeAmplitudeValueRejectsMagnitudeAboveOne) {
+  const Complex desired{0.9, 0.6}; // norm^2 > 1, should fail.
+  forwardTo(12);
+  ASSERT_EQ(state->changeAmplitudeValue(state, "0010", &desired), ERROR);
+}
+
+/**
+ * @test Test that over-normalized targets are rejected.
+ */
+TEST_F(DataRetrievalTest, ChangeAmplitudeValueRejectsOverNormalizedTarget) {
+  const Complex desired{1.1, 0.0};
+  forwardTo(12);
+  ASSERT_EQ(state->changeAmplitudeValue(state, "0010", &desired), ERROR);
+}
+
+/**
+ * @test Test that sub-normalized targets without residual amplitudes are
+ * refused.
+ */
+TEST_F(DataRetrievalTest, ChangeAmplitudeValueRejectsSubNormalizedVacuum) {
+  const Complex desired{0.5, 0.0};
+  ASSERT_EQ(state->changeAmplitudeValue(state, "0000", &desired), ERROR);
+  ASSERT_EQ(state->changeAmplitudeValue(state, "0000", nullptr), ERROR);
+}
+
 } // namespace mqt::debugger::test

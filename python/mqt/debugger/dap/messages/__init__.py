@@ -11,6 +11,8 @@
 from __future__ import annotations
 
 from .capabilities_dap_event import CapabilitiesDAPEvent
+from .change_amplitude_dap_message import AmplitudeChangeDAPMessage
+from .change_bit_dap_message import BitChangeDAPMessage
 from .configuration_done_dap_message import ConfigurationDoneDAPMessage
 from .continue_dap_message import ContinueDAPMessage
 from .dap_event import DAPEvent
@@ -44,6 +46,8 @@ from .variables_dap_message import VariablesDAPMessage
 Request = DAPMessage
 
 __all__ = [
+    "AmplitudeChangeDAPMessage",
+    "BitChangeDAPMessage",
     "CapabilitiesDAPEvent",
     "ConfigurationDoneDAPMessage",
     "ContinueDAPMessage",

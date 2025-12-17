@@ -175,6 +175,33 @@ struct SimulationStateStruct {
   bool (*canStepBackward)(SimulationState* self);
 
   /**
+   * @brief Updates the value of a classical variable.
+   *
+   * @param self The instance to query.
+   * @param variableName The name of the classical variable to update.
+   * @param value The desired value.
+   * @return The result of the operation.
+   */
+  Result (*changeClassicalVariableValue)(SimulationState* self,
+                                         const char* variableName,
+                                         const VariableValue* value);
+  /**
+   * @brief Updates the amplitude of a given computational basis state.
+   *
+   * The basis state is provided as a bitstring whose length matches the
+   * current number of qubits. Implementations are expected to renormalize the
+   * remaining amplitudes so that the state vector stays normalized and to
+   * reject invalid bitstrings or amplitudes that violate normalization.
+   *
+   * @param self The instance to query.
+   * @param basisState The bitstring identifying the basis state to update.
+   * @param value The desired complex amplitude.
+   * @return The result of the operation.
+   */
+  Result (*changeAmplitudeValue)(SimulationState* self, const char* basisState,
+                                 const Complex* value);
+
+  /**
    * @brief Indicates whether the execution has finished.
    *
    * The execution is considered finished if it has reached the end of the code.

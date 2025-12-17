@@ -27,6 +27,7 @@
 #include <pybind11/detail/common.h>
 #include <pybind11/native_enum.h>
 #include <pybind11/pybind11.h>
+#include <pybind11/pytypes.h>
 #include <pybind11/stl.h> // NOLINT(misc-include-cleaner)
 #include <stdexcept>
 #include <string>
@@ -284,6 +285,47 @@ the simulation has not been set up yet.
 
 Returns:
 bool: True, if the simulation can step backward.)")
+      .def(
+          "change_classical_variable_value",
+          [](SimulationState* self, const std::string& variableName,
+             const py::object& newValue) {
+            VariableValue value{};
+            if (py::isinstance<py::bool_>(newValue)) {
+              value.boolValue = newValue.cast<bool>();
+            } else if (py::isinstance<py::int_>(newValue)) {
+              value.intValue = newValue.cast<int>();
+            } else if (py::isinstance<py::float_>(newValue)) {
+              value.floatValue = newValue.cast<double>();
+            } else {
+              throw py::type_error(
+                  "change_classical_variable_value requires a bool, "
+                  "int, or float value");
+            }
+            checkOrThrow(self->changeClassicalVariableValue(
+                self, variableName.c_str(), &value));
+          },
+          R"(Updates the value of a classical variable.
+
+Args:
+    variableName (str): The name of the classical variable to update.
+    newValue (bool | float): The desired value.)")
+      .def(
+          "change_amplitude_value",
+          [](SimulationState* self, const std::string& basisState,
+             const Complex& value) {
+            checkOrThrow(
+                self->changeAmplitudeValue(self, basisState.c_str(), &value));
+          },
+          R"(Updates the amplitude of a given computational basis state.
+
+The basis state is provided as a bitstring whose length matches the
+current number of qubits. Implementations are expected to renormalize the
+remaining amplitudes so that the state vector stays normalized and to
+reject invalid bitstrings or amplitudes that violate normalization.
+
+Args:
+    basisState (str): The bitstring identifying the basis state to update.
+    value (Complex): The desired complex amplitude.)")
       .def(
           "is_finished",
           [](SimulationState* self) { return self->isFinished(self); },

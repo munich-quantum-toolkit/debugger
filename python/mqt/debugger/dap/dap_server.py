@@ -18,6 +18,8 @@ from typing import TYPE_CHECKING, Any, cast
 import mqt.debugger
 
 from .messages import (
+    AmplitudeChangeDAPMessage,
+    BitChangeDAPMessage,
     ConfigurationDoneDAPMessage,
     ContinueDAPMessage,
     DisconnectDAPMessage,
@@ -40,6 +42,7 @@ from .messages import (
     ThreadsDAPMessage,
     VariablesDAPMessage,
 )
+from .messages.change_amplitude_dap_message import _QUANTUM_REFERENCE
 
 if TYPE_CHECKING:
     from .messages import Request
@@ -60,6 +63,8 @@ supported_messages: list[type[Request]] = [
     RestartDAPMessage,
     ScopesDAPMessage,
     VariablesDAPMessage,
+    BitChangeDAPMessage,
+    AmplitudeChangeDAPMessage,
     ReverseContinueDAPMessage,
     StepOutDAPMessage,
     PauseDAPMessage,
@@ -261,10 +266,19 @@ class DAPServer:
         Returns:
             tuple[dict[str, Any], mqt.debugger.dap.messages.DAPMessage]: The response to the message as a dictionary and the message object.
         """
+        if command["command"] == "setVariable":
+            arguments = command.get("arguments", {})
+            variables_reference = arguments.get("variablesReference")
+            message_type: type[mqt.debugger.dap.messages.DAPMessage]
+            message_type = (
+                AmplitudeChangeDAPMessage if variables_reference == _QUANTUM_REFERENCE else BitChangeDAPMessage
+            )
+            message: mqt.debugger.dap.messages.DAPMessage = message_type(command)
+            return (message.handle(self), message)
         for message_type in supported_messages:
             if message_type.message_type_name == command["command"]:
-                message = message_type(command)
-                return (message.handle(self), message)
+                msg_instance: mqt.debugger.dap.messages.DAPMessage = message_type(command)
+                return (msg_instance.handle(self), msg_instance)
         msg = f"Unsupported command: {command['command']}"
         raise RuntimeError(msg)
 
