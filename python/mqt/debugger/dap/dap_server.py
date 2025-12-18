@@ -528,10 +528,7 @@ class DAPServer:
                 line = line_index + 1
                 line_text = lines[line_index]
                 stripped = line_text.lstrip()
-                if stripped:
-                    column = max(1, len(line_text) - len(stripped) + 1)
-                else:
-                    column = 1
+                column = max(1, len(line_text) - len(stripped) + 1) if stripped else 1
 
         end_column = max(column, len(line_text) + 1)
         snippet = line_text.strip() or line_text
