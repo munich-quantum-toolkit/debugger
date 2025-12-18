@@ -160,18 +160,23 @@ class SimulationState:
         """
 
     def change_classical_variable_value(self, variable_name: str, value: bool | float) -> None:
-        """Sets the value of a classical variable in the simulation.
+        """Updates the value of a classical variable.
 
         Args:
-            variable_name (str): The name of the classical variable that should be updated.
-            value (bool | int | float): The desired value.
+            variable_name (str): The name of the classical variable to update.
+            value (bool | float): The desired value.
         """
 
     def change_amplitude_value(self, basis_state: str, value: Complex) -> None:
-        """Sets the amplitude of a computational basis state in the simulation.
+        """Updates the amplitude of a given computational basis state.
+
+        The basis state is provided as a bitstring whose length matches the
+        current number of qubits. Implementations are expected to renormalize the
+        remaining amplitudes so that the state vector stays normalized and to
+        reject invalid bitstrings or amplitudes that violate normalization.
 
         Args:
-            basis_state (str): The bitstring identifying the basis state (e.g. `010`).
+            basis_state (str): The bitstring identifying the basis state to update.
             value (Complex): The desired complex amplitude.
         """
 

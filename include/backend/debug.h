@@ -179,14 +179,14 @@ struct SimulationStateStruct {
    *
    * @param self The instance to query.
    * @param variableName The name of the classical variable to update.
-   * @param value The desired value encoded as a `VariableValue`.
+   * @param value The desired value.
    * @return The result of the operation.
    */
   Result (*changeClassicalVariableValue)(SimulationState* self,
                                          const char* variableName,
                                          const VariableValue* value);
   /**
-   * @brief Changes the amplitude of a computational basis state.
+   * @brief Updates the amplitude of a given computational basis state.
    *
    * The basis state is provided as a bitstring whose length matches the
    * current number of qubits. Implementations are expected to renormalize the

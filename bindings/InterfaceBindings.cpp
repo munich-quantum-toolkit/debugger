@@ -319,11 +319,11 @@ bool: True, if the simulation can step backward.)")
             checkOrThrow(self->changeClassicalVariableValue(
                 self, variableName.c_str(), &value));
           },
-          R"(Sets the value of the given classical variable.
+          R"(Updates the value of a classical variable.
 
 Args:
-    variableName (str): The name of the classical variable that should be updated.
-    newValue (bool | int | float): The desired value.)")
+    variableName (str): The name of the classical variable to update.
+    newValue (bool | float): The desired value.)")
       .def(
           "change_amplitude_value",
           [](SimulationState* self, const std::string& basisState,
@@ -331,16 +331,15 @@ Args:
             checkOrThrow(
                 self->changeAmplitudeValue(self, basisState.c_str(), &value));
           },
-          R"(Sets the amplitude of the given computational basis state.
+          R"(Updates the amplitude of a given computational basis state.
 
-The basis state must be provided as a bitstring (e.g., `010`) whose length
-matches the number of qubits in the circuit. The simulator rescales the
-remaining amplitudes to keep the state normalized. Attempts to set amplitudes
-that violate normalization, target out-of-range states, or use invalid
-bitstrings raise an error.
+The basis state is provided as a bitstring whose length matches the
+current number of qubits. Implementations are expected to renormalize the
+remaining amplitudes so that the state vector stays normalized and to
+reject invalid bitstrings or amplitudes that violate normalization.
 
 Args:
-    basisState (str): The bitstring describing the basis state whose amplitude should be changed.
+    basisState (str): The bitstring identifying the basis state to update.
     value (Complex): The desired complex amplitude.)")
       .def(
           "is_finished",
