@@ -289,7 +289,6 @@ class DAPServer:
 
     def reset_gray_out(self, connection: socket.socket) -> None:
         """Reset all gray-out highlights in the client."""
-
         if not self.source_file:
             return
         e = mqt.debugger.dap.messages.GrayOutDAPEvent([], self.source_file)
