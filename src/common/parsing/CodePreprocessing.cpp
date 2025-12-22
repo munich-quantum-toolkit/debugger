@@ -20,6 +20,7 @@
 #include "common/parsing/Utils.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <cstddef>
 #include <iterator>
 #include <map>
@@ -32,6 +33,121 @@
 namespace mqt::debugger {
 
 namespace {
+
+bool isDigits(const std::string& text) {
+  if (text.empty()) {
+    return false;
+  }
+  return std::all_of(text.begin(), text.end(),
+                     [](unsigned char c) { return std::isdigit(c) != 0; });
+}
+
+struct LineColumn {
+  size_t line = 1;
+  size_t column = 1;
+};
+
+LineColumn lineColumnForOffset(const std::string& code, size_t offset) {
+  LineColumn location;
+  const auto lineStartPos = code.rfind('\n', offset);
+  const size_t lineStart = (lineStartPos == std::string::npos)
+                               ? 0
+                               : static_cast<size_t>(lineStartPos + 1);
+  location.line = 1;
+  for (size_t i = 0; i < lineStart; i++) {
+    if (code[i] == '\n') {
+      location.line++;
+    }
+  }
+  location.column = offset - lineStart + 1;
+  return location;
+}
+
+LineColumn lineColumnForTarget(const std::string& code, size_t instructionStart,
+                               const std::string& target) {
+  LineColumn location = lineColumnForOffset(code, instructionStart);
+  const auto lineStartPos = code.rfind('\n', instructionStart);
+  const size_t lineStart = (lineStartPos == std::string::npos)
+                               ? 0
+                               : static_cast<size_t>(lineStartPos + 1);
+  auto lineEndPos = code.find('\n', instructionStart);
+  const size_t lineEnd = (lineEndPos == std::string::npos)
+                             ? code.size()
+                             : static_cast<size_t>(lineEndPos);
+  const auto lineText = code.substr(lineStart, lineEnd - lineStart);
+  if (!target.empty()) {
+    const auto targetPos = lineText.find(target);
+    if (targetPos != std::string::npos) {
+      location.column = targetPos + 1;
+      return location;
+    }
+  }
+  const auto nonSpace = lineText.find_first_not_of(" \t");
+  if (nonSpace != std::string::npos) {
+    location.column = nonSpace + 1;
+  }
+  return location;
+}
+
+std::string formatParseError(const std::string& code, size_t instructionStart,
+                             const std::string& detail,
+                             const std::string& target = "") {
+  const auto location = lineColumnForTarget(code, instructionStart, target);
+  return "<input>:" + std::to_string(location.line) + ":" +
+         std::to_string(location.column) + ": " + detail;
+}
+
+void validateTargets(const std::string& code, size_t instructionStart,
+                     const std::vector<std::string>& targets,
+                     const std::map<std::string, size_t>& definedRegisters,
+                     const std::vector<std::string>& shadowedRegisters,
+                     const std::string& context) {
+  for (const auto& target : targets) {
+    if (target.empty()) {
+      continue;
+    }
+    const auto open = target.find('[');
+    if (open == std::string::npos) {
+      continue;
+    }
+    const auto close = target.find(']', open + 1);
+    if (open == 0 || close == std::string::npos ||
+        close != target.size() - 1) {
+      throw ParsingError(
+          formatParseError(code, instructionStart,
+                           "Invalid target qubit " + target + context + ".",
+                           target));
+    }
+    const auto registerName = target.substr(0, open);
+    const auto indexText = target.substr(open + 1, close - open - 1);
+    if (!isDigits(indexText)) {
+      throw ParsingError(
+          formatParseError(code, instructionStart,
+                           "Invalid target qubit " + target + context + ".",
+                           target));
+    }
+    size_t registerIndex = 0;
+    try {
+      registerIndex = std::stoul(indexText);
+    } catch (const std::exception&) {
+      throw ParsingError(
+          formatParseError(code, instructionStart,
+                           "Invalid target qubit " + target + context + ".",
+                           target));
+    }
+    if (std::ranges::find(shadowedRegisters, registerName) !=
+        shadowedRegisters.end()) {
+      continue;
+    }
+    const auto found = definedRegisters.find(registerName);
+    if (found == definedRegisters.end() || found->second <= registerIndex) {
+      throw ParsingError(
+          formatParseError(code, instructionStart,
+                           "Invalid target qubit " + target + context + ".",
+                           target));
+    }
+  }
+}
 
 /**
  * @brief Sweep a given code string for blocks and replace them with a unique
@@ -332,7 +448,12 @@ preprocessCode(const std::string& code, size_t startIndex,
     auto isAssert = isAssertion(line);
     auto blockPos = line.find("$__block");
 
-    const size_t trueStart = pos + blocksOffset;
+    const auto leadingPos =
+        blocksRemoved.find_first_not_of(" \t\r\n", pos);
+    const size_t trueStart =
+        ((leadingPos != std::string::npos && leadingPos < end) ? leadingPos
+                                                               : pos) +
+        blocksOffset;
 
     Block block{.valid = false, .code = ""};
     if (blockPos != std::string::npos) {
@@ -358,7 +479,20 @@ preprocessCode(const std::string& code, size_t startIndex,
           replaceString(replaceString(trimmedLine, "creg", ""), "qreg", ""));
       const auto parts = splitString(declaration, {'[', ']'});
       const auto& name = parts[0];
-      const auto size = std::stoi(parts[1]);
+      const auto sizeText = parts.size() > 1 ? parts[1] : "";
+      if (name.empty() || !isDigits(sizeText)) {
+        throw ParsingError(formatParseError(
+            code, trueStart,
+            "Invalid register declaration " + trimmedLine + "."));
+      }
+      size_t size = 0;
+      try {
+        size = std::stoul(sizeText);
+      } catch (const std::exception&) {
+        throw ParsingError(formatParseError(
+            code, trueStart,
+            "Invalid register declaration " + trimmedLine + "."));
+      }
       definedRegisters.insert({name, size});
     }
 
@@ -423,25 +557,16 @@ preprocessCode(const std::string& code, size_t startIndex,
       auto a = parseAssertion(line, block.code);
       unfoldAssertionTargetRegisters(*a, definedRegisters, shadowedRegisters);
       a->validate();
-      for (const auto& target : a->getTargetQubits()) {
-        if (std::ranges::find(shadowedRegisters, target) !=
-            shadowedRegisters.end()) {
-          continue;
-        }
-        const auto registerName = variableBaseName(target);
-        const auto registerIndex =
-            std::stoul(splitString(splitString(target, '[')[1], ']')[0]);
-
-        if (!definedRegisters.contains(registerName) ||
-            definedRegisters[registerName] <= registerIndex) {
-          throw ParsingError("Invalid target qubit " + target +
-                             " in assertion.");
-        }
-      }
+      validateTargets(code, trueStart, a->getTargetQubits(), definedRegisters,
+                      shadowedRegisters, " in assertion");
       instructions.emplace_back(i, line, a, a->getTargetQubits(), trueStart,
                                 trueEnd, i + 1, isFunctionCall, calledFunction,
                                 false, false, block);
     } else {
+      if (!isVariableDeclaration(line)) {
+        validateTargets(code, trueStart, targets, definedRegisters,
+                        shadowedRegisters, "");
+      }
       std::unique_ptr<Assertion> a(nullptr);
       instructions.emplace_back(i, line, a, targets, trueStart, trueEnd, i + 1,
                                 isFunctionCall, calledFunction, false, false,

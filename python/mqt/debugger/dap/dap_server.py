@@ -532,7 +532,7 @@ class DAPServer:
         line_index = line - 1
         line_text = lines[line_index]
 
-        if column <= 1 and line_index > 0:
+        if column <= 1 and line_index > 0 and not line_text.strip():
             prev_index = line_index - 1
             while prev_index >= 0 and not lines[prev_index].strip():
                 prev_index -= 1
