@@ -111,29 +111,25 @@ void validateTargets(const std::string& code, size_t instructionStart,
       continue;
     }
     const auto close = target.find(']', open + 1);
-    if (open == 0 || close == std::string::npos ||
-        close != target.size() - 1) {
-      throw ParsingError(
-          formatParseError(code, instructionStart,
-                           "Invalid target qubit " + target + context + ".",
-                           target));
+    if (open == 0 || close == std::string::npos || close != target.size() - 1) {
+      throw ParsingError(formatParseError(
+          code, instructionStart,
+          "Invalid target qubit " + target + context + ".", target));
     }
     const auto registerName = target.substr(0, open);
     const auto indexText = target.substr(open + 1, close - open - 1);
     if (!isDigits(indexText)) {
-      throw ParsingError(
-          formatParseError(code, instructionStart,
-                           "Invalid target qubit " + target + context + ".",
-                           target));
+      throw ParsingError(formatParseError(
+          code, instructionStart,
+          "Invalid target qubit " + target + context + ".", target));
     }
     size_t registerIndex = 0;
     try {
       registerIndex = std::stoul(indexText);
     } catch (const std::exception&) {
-      throw ParsingError(
-          formatParseError(code, instructionStart,
-                           "Invalid target qubit " + target + context + ".",
-                           target));
+      throw ParsingError(formatParseError(
+          code, instructionStart,
+          "Invalid target qubit " + target + context + ".", target));
     }
     if (std::ranges::find(shadowedRegisters, registerName) !=
         shadowedRegisters.end()) {
@@ -141,10 +137,9 @@ void validateTargets(const std::string& code, size_t instructionStart,
     }
     const auto found = definedRegisters.find(registerName);
     if (found == definedRegisters.end() || found->second <= registerIndex) {
-      throw ParsingError(
-          formatParseError(code, instructionStart,
-                           "Invalid target qubit " + target + context + ".",
-                           target));
+      throw ParsingError(formatParseError(
+          code, instructionStart,
+          "Invalid target qubit " + target + context + ".", target));
     }
   }
 }
@@ -448,8 +443,7 @@ preprocessCode(const std::string& code, size_t startIndex,
     auto isAssert = isAssertion(line);
     auto blockPos = line.find("$__block");
 
-    const auto leadingPos =
-        blocksRemoved.find_first_not_of(" \t\r\n", pos);
+    const auto leadingPos = blocksRemoved.find_first_not_of(" \t\r\n", pos);
     const size_t trueStart =
         ((leadingPos != std::string::npos && leadingPos < end) ? leadingPos
                                                                : pos) +
@@ -481,17 +475,17 @@ preprocessCode(const std::string& code, size_t startIndex,
       const auto& name = parts[0];
       const auto sizeText = parts.size() > 1 ? parts[1] : "";
       if (name.empty() || !isDigits(sizeText)) {
-        throw ParsingError(formatParseError(
-            code, trueStart,
-            "Invalid register declaration " + trimmedLine + "."));
+        throw ParsingError(formatParseError(code, trueStart,
+                                            "Invalid register declaration " +
+                                                trimmedLine + "."));
       }
       size_t size = 0;
       try {
         size = std::stoul(sizeText);
       } catch (const std::exception&) {
-        throw ParsingError(formatParseError(
-            code, trueStart,
-            "Invalid register declaration " + trimmedLine + "."));
+        throw ParsingError(formatParseError(code, trueStart,
+                                            "Invalid register declaration " +
+                                                trimmedLine + "."));
       }
       definedRegisters.insert({name, size});
     }
