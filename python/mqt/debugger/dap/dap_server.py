@@ -113,7 +113,6 @@ class DAPServer:
         self.port = port
         self.can_step_back = False
         self.simulation_state = mqt.debugger.SimulationState()
-        self.source_file = {}
         self.lines_start_at_one = True
         self.columns_start_at_one = True
         self.pending_highlights: list[dict[str, Any]] = []
@@ -191,10 +190,6 @@ class DAPServer:
                 e = mqt.debugger.dap.messages.InitializedDAPEvent()
                 event_payload = json.dumps(e.encode())
                 send_message(event_payload, connection)
-            if isinstance(
-                cmd, (mqt.debugger.dap.messages.LaunchDAPMessage, mqt.debugger.dap.messages.RestartDAPMessage)
-            ):
-                self.reset_gray_out(connection)
             if (
                 isinstance(
                     cmd, (mqt.debugger.dap.messages.LaunchDAPMessage, mqt.debugger.dap.messages.RestartDAPMessage)
@@ -313,14 +308,6 @@ class DAPServer:
                 return (msg_instance.handle(self), msg_instance)
         msg = f"Unsupported command: {command['command']}"
         raise RuntimeError(msg)
-
-    def reset_gray_out(self, connection: socket.socket) -> None:
-        """Reset all gray-out highlights in the client."""
-        if not self.source_file:
-            return
-        e = mqt.debugger.dap.messages.GrayOutDAPEvent([], self.source_file)
-        event_payload = json.dumps(e.encode())
-        send_message(event_payload, connection)
 
     def handle_assertion_fail(self, connection: socket.socket) -> None:
         """Handles the sending of output events when an assertion fails.
