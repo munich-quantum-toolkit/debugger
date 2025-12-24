@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import locale
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -63,22 +64,21 @@ class LaunchDAPMessage(DAPMessage):
             dict[str, Any]: The response to the request.
         """
         program_path = Path(self.program)
+        server.source_file = {"name": program_path.name, "path": self.program}
+        parsed_successfully = True
         with program_path.open("r", encoding=locale.getpreferredencoding(False)) as f:
             code = f.read()
             server.source_code = code
             try:
                 server.simulation_state.load_code(code)
-            except RuntimeError:
-                return {
-                    "type": "response",
-                    "request_seq": self.sequence_number,
-                    "success": False,
-                    "command": "launch",
-                    "message": "An error occurred while parsing the code.",
-                }
-        if not self.stop_on_entry:
+            except RuntimeError as exc:
+                parsed_successfully = False
+                server.queue_parse_error(str(exc))
+        if parsed_successfully and not self.stop_on_entry:
             server.simulation_state.run_simulation()
-        server.source_file = {"name": program_path.name, "path": self.program}
+        if not parsed_successfully:
+            with contextlib.suppress(RuntimeError):
+                server.simulation_state.reset_simulation()
         return {
             "type": "response",
             "request_seq": self.sequence_number,
