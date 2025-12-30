@@ -48,22 +48,6 @@ class HighlightError(DAPEvent):
             if "message" not in highlight or not str(highlight["message"]).strip():
                 msg = "Each highlight entry must contain a descriptive 'message'."
                 raise ValueError(msg)
-            highlight_range = highlight.get("range")
-            if not isinstance(highlight_range, dict):
-                msg = "Each highlight entry must provide a 'range' dictionary."
-                raise TypeError(msg)
-            start = highlight_range.get("start")
-            end = highlight_range.get("end")
-            if not isinstance(start, dict) or not isinstance(end, dict):
-                msg = "Highlight ranges must define 'start' and 'end' coordinates."
-                raise TypeError(msg)
-            if self._later_than(start, end):
-                msg = "Highlight range 'end' must not precede 'start'."
-                raise ValueError(msg)
-
-        if "name" not in self.source or "path" not in self.source:
-            msg = "Source information must at least expose 'name' and 'path'."
-            raise ValueError(msg)
 
     def encode(self) -> dict[str, Any]:
         """Encode the 'highlightError' DAP event message as a dictionary."""
