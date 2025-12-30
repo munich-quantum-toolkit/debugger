@@ -463,7 +463,10 @@ class DAPServer:
         except RuntimeError:
             return None
         start_line, start_column = self.code_pos_to_coordinates(start_pos)
-        end_position_exclusive = min(len(self.source_code), end_pos + 1)
+        if end_pos < len(self.source_code) and self.source_code[end_pos] == "\n":
+            end_position_exclusive = end_pos
+        else:
+            end_position_exclusive = min(len(self.source_code), end_pos + 1)
         end_line, end_column = self.code_pos_to_coordinates(end_position_exclusive)
         snippet = self.source_code[start_pos : end_pos + 1].replace("\r", "")
         return {
