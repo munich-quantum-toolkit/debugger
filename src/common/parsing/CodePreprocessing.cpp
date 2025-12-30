@@ -26,6 +26,7 @@
 #include <iterator>
 #include <map>
 #include <memory>
+#include <ranges>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -39,8 +40,8 @@ bool isDigits(const std::string& text) {
   if (text.empty()) {
     return false;
   }
-  return std::all_of(text.begin(), text.end(),
-                     [](unsigned char c) { return std::isdigit(c) != 0; });
+  return std::ranges::all_of(
+      text, [](unsigned char c) { return std::isdigit(c) != 0; });
 }
 
 struct LineColumn {
