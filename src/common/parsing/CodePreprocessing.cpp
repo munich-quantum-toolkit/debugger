@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
+#include <exception>
 #include <iterator>
 #include <map>
 #include <memory>
@@ -97,6 +98,22 @@ std::string formatParseError(const std::string& code, size_t instructionStart,
          std::to_string(location.column) + ": " + detail;
 }
 
+std::string invalidTargetDetail(const std::string& target,
+                                const std::string& context) {
+  std::string detail = "Invalid target qubit ";
+  detail += target;
+  detail += context;
+  detail += ".";
+  return detail;
+}
+
+std::string invalidRegisterDetail(const std::string& trimmedLine) {
+  std::string detail = "Invalid register declaration ";
+  detail += trimmedLine;
+  detail += ".";
+  return detail;
+}
+
 void validateTargets(const std::string& code, size_t instructionStart,
                      const std::vector<std::string>& targets,
                      const std::map<std::string, size_t>& definedRegisters,
@@ -112,24 +129,24 @@ void validateTargets(const std::string& code, size_t instructionStart,
     }
     const auto close = target.find(']', open + 1);
     if (open == 0 || close == std::string::npos || close != target.size() - 1) {
-      throw ParsingError(formatParseError(
-          code, instructionStart,
-          "Invalid target qubit " + target + context + ".", target));
+      throw ParsingError(formatParseError(code, instructionStart,
+                                          invalidTargetDetail(target, context),
+                                          target));
     }
     const auto registerName = target.substr(0, open);
     const auto indexText = target.substr(open + 1, close - open - 1);
     if (!isDigits(indexText)) {
-      throw ParsingError(formatParseError(
-          code, instructionStart,
-          "Invalid target qubit " + target + context + ".", target));
+      throw ParsingError(formatParseError(code, instructionStart,
+                                          invalidTargetDetail(target, context),
+                                          target));
     }
     size_t registerIndex = 0;
     try {
       registerIndex = std::stoul(indexText);
     } catch (const std::exception&) {
-      throw ParsingError(formatParseError(
-          code, instructionStart,
-          "Invalid target qubit " + target + context + ".", target));
+      throw ParsingError(formatParseError(code, instructionStart,
+                                          invalidTargetDetail(target, context),
+                                          target));
     }
     if (std::ranges::find(shadowedRegisters, registerName) !=
         shadowedRegisters.end()) {
@@ -137,9 +154,9 @@ void validateTargets(const std::string& code, size_t instructionStart,
     }
     const auto found = definedRegisters.find(registerName);
     if (found == definedRegisters.end() || found->second <= registerIndex) {
-      throw ParsingError(formatParseError(
-          code, instructionStart,
-          "Invalid target qubit " + target + context + ".", target));
+      throw ParsingError(formatParseError(code, instructionStart,
+                                          invalidTargetDetail(target, context),
+                                          target));
     }
   }
 }
@@ -475,17 +492,15 @@ preprocessCode(const std::string& code, size_t startIndex,
       const auto& name = parts[0];
       const auto sizeText = parts.size() > 1 ? parts[1] : "";
       if (name.empty() || !isDigits(sizeText)) {
-        throw ParsingError(formatParseError(code, trueStart,
-                                            "Invalid register declaration " +
-                                                trimmedLine + "."));
+        throw ParsingError(formatParseError(
+            code, trueStart, invalidRegisterDetail(trimmedLine)));
       }
       size_t size = 0;
       try {
         size = std::stoul(sizeText);
       } catch (const std::exception&) {
-        throw ParsingError(formatParseError(code, trueStart,
-                                            "Invalid register declaration " +
-                                                trimmedLine + "."));
+        throw ParsingError(formatParseError(
+            code, trueStart, invalidRegisterDetail(trimmedLine)));
       }
       definedRegisters.insert({name, size});
     }

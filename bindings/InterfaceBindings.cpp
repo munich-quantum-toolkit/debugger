@@ -176,15 +176,15 @@ Args:
       .def(
           "load_code",
           [](SimulationState* self, const char* code) {
-            py::module io = py::module::import("io");
-            py::object string_io = io.attr("StringIO")();
+            const py::module io = py::module::import("io");
+            const py::object stringIo = io.attr("StringIO")();
             Result result = OK;
             {
-              py::scoped_ostream_redirect redirect(std::cerr, string_io);
+              const py::scoped_ostream_redirect redirect(std::cerr, stringIo);
               result = self->loadCode(self, code);
             }
             if (result != OK) {
-              auto message = string_io.attr("getvalue")().cast<std::string>();
+              auto message = stringIo.attr("getvalue")().cast<std::string>();
               if (message.empty()) {
                 message = "An error occurred while executing the operation";
               }
