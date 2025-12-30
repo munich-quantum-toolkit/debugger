@@ -1406,6 +1406,11 @@ Result ddsimSetBreakpoint(SimulationState* self, size_t desiredPosition,
   for (auto i = 0ULL; i < ddsim->instructionTypes.size(); i++) {
     const size_t start = ddsim->instructionStarts[i];
     const size_t end = ddsim->instructionEnds[i];
+    if (desiredPosition < start) {
+      *targetInstruction = i;
+      ddsim->breakpoints.insert(i);
+      return OK;
+    }
     if (desiredPosition >= start && desiredPosition <= end) {
       if (ddsim->functionDefinitions.contains(i)) {
         // Breakpoint may be located in a sub-gate of the gate definition.
