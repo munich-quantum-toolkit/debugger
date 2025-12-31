@@ -590,9 +590,22 @@ Result ddsimLoadCode(SimulationState* self, const char* code) {
   ddsim->callReturnStack.clear();
   ddsim->callSubstitutions.clear();
   ddsim->restoreCallReturnStack.clear();
+  ddsim->ready = false;
   ddsim->code = code;
   ddsim->variables.clear();
   ddsim->variableNames.clear();
+  ddsim->instructionTypes.clear();
+  ddsim->instructionStarts.clear();
+  ddsim->instructionEnds.clear();
+  ddsim->functionDefinitions.clear();
+  ddsim->assertionInstructions.clear();
+  ddsim->successorInstructions.clear();
+  ddsim->classicalRegisters.clear();
+  ddsim->qubitRegisters.clear();
+  ddsim->dataDependencies.clear();
+  ddsim->functionCallers.clear();
+  ddsim->targetQubits.clear();
+  ddsim->instructionObjects.clear();
 
   try {
     std::stringstream ss{preprocessAssertionCode(code, ddsim)};
@@ -1119,6 +1132,10 @@ Result ddsimStepBackward(SimulationState* self) {
 }
 
 Result ddsimRunAll(SimulationState* self, size_t* failedAssertions) {
+  auto* ddsim = toDDSimulationState(self);
+  if (!ddsim->ready) {
+    return ERROR;
+  }
   size_t errorCount = 0;
   while (!self->isFinished(self)) {
     const Result result = self->runSimulation(self);
@@ -1389,6 +1406,11 @@ Result ddsimSetBreakpoint(SimulationState* self, size_t desiredPosition,
   for (auto i = 0ULL; i < ddsim->instructionTypes.size(); i++) {
     const size_t start = ddsim->instructionStarts[i];
     const size_t end = ddsim->instructionEnds[i];
+    if (desiredPosition < start) {
+      *targetInstruction = i;
+      ddsim->breakpoints.insert(i);
+      return OK;
+    }
     if (desiredPosition >= start && desiredPosition <= end) {
       if (ddsim->functionDefinitions.contains(i)) {
         // Breakpoint may be located in a sub-gate of the gate definition.
