@@ -20,7 +20,13 @@ if TYPE_CHECKING:
 
 
 class HighlightError(DAPEvent):
-    """Represents the 'highlightError' custom DAP event."""
+    """Represents the 'highlightError' custom DAP event.
+
+    Attributes:
+        event_name (str): DAP event identifier emitted by this message.
+        highlights (list[dict[str, Any]]): Normalized highlight entries with ranges and metadata.
+        source (dict[str, Any]): Normalized DAP source information for the highlighted file.
+    """
 
     event_name = "highlightError"
 
@@ -39,7 +45,11 @@ class HighlightError(DAPEvent):
         super().__init__()
 
     def validate(self) -> None:
-        """Validate the 'highlightError' DAP event message after creation."""
+        """Validate the 'highlightError' DAP event message after creation.
+
+        Raises:
+            ValueError: If required highlight fields are missing or empty.
+        """
         if not self.highlights:
             msg = "At least one highlight entry is required to show the issue location."
             raise ValueError(msg)
@@ -50,14 +60,29 @@ class HighlightError(DAPEvent):
                 raise ValueError(msg)
 
     def encode(self) -> dict[str, Any]:
-        """Encode the 'highlightError' DAP event message as a dictionary."""
+        """Encode the 'highlightError' DAP event message as a dictionary.
+
+        Returns:
+            dict[str, Any]: The encoded DAP event payload.
+        """
         encoded = super().encode()
         encoded["body"] = {"highlights": self.highlights, "source": self.source}
         return encoded
 
     @staticmethod
     def _normalize_highlight(entry: Mapping[str, Any]) -> dict[str, Any]:
-        """Return a shallow copy of a highlight entry with guaranteed structure."""
+        """Return a shallow copy of a highlight entry with guaranteed structure.
+
+        Args:
+            entry (Mapping[str, Any]): Highlight metadata including a range mapping.
+
+        Returns:
+            dict[str, Any]: A normalized highlight entry suitable for serialization.
+
+        Raises:
+            TypeError: If the range mapping or its positions are not mappings.
+            ValueError: If required fields are missing or malformed.
+        """
         if "range" not in entry:
             msg = "A highlight entry must contain a 'range'."
             raise ValueError(msg)
@@ -85,7 +110,18 @@ class HighlightError(DAPEvent):
 
     @staticmethod
     def _normalize_position(position: Mapping[str, Any] | None) -> dict[str, int]:
-        """Normalize a position mapping, ensuring it includes a line and column."""
+        """Normalize a position mapping, ensuring it includes a line and column.
+
+        Args:
+            position (Mapping[str, Any] | None): The position mapping to normalize.
+
+        Returns:
+            dict[str, int]: A normalized position with integer line and column.
+
+        Raises:
+            TypeError: If the provided position is not a mapping.
+            ValueError: If required keys are missing.
+        """
         if not isinstance(position, Mapping):
             msg = "Highlight positions must be mappings with 'line' and 'column'."
             raise TypeError(msg)
@@ -102,7 +138,18 @@ class HighlightError(DAPEvent):
 
     @staticmethod
     def _normalize_source(source: Mapping[str, Any] | None) -> dict[str, Any]:
-        """Create a defensive copy of the provided DAP Source information."""
+        """Create a defensive copy of the provided DAP Source information.
+
+        Args:
+            source (Mapping[str, Any] | None): The source mapping to normalize.
+
+        Returns:
+            dict[str, Any]: Normalized source information with string fields.
+
+        Raises:
+            TypeError: If the source is not a mapping.
+            ValueError: If required keys are missing.
+        """
         if not isinstance(source, Mapping):
             msg = "Source information must be provided as a mapping."
             raise TypeError(msg)
@@ -116,7 +163,15 @@ class HighlightError(DAPEvent):
 
     @staticmethod
     def _later_than(start: Mapping[str, Any], end: Mapping[str, Any]) -> bool:
-        """Return True if 'end' describes a position before 'start'."""
+        """Return True if 'end' describes a position before 'start'.
+
+        Args:
+            start (Mapping[str, Any]): The start position mapping.
+            end (Mapping[str, Any]): The end position mapping.
+
+        Returns:
+            bool: True when the end position is before the start position.
+        """
         start_line = int(start.get("line", 0))
         start_column = int(start.get("column", 0))
         end_line = int(end.get("line", 0))
