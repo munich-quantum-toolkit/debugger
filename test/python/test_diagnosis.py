@@ -34,8 +34,8 @@ def load_instance(name: str) -> SimulationState:
         SimulationState: The generated simulation state.
     """
     state = create_ddsim_simulation_state()
-    with Path(f"test/python/resources/diagnosis/{name}.qasm").open(encoding=locale.getpreferredencoding(False)) as f:
-        state.load_code(f.read())
+    code = Path(f"test/python/resources/diagnosis/{name}.qasm").read_text(encoding=locale.getpreferredencoding(False))
+    state.load_code(code)
     return state
 
 
