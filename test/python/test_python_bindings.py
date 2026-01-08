@@ -32,11 +32,10 @@ SimulationInstance = tuple[mqt.debugger.SimulationState, int]
 def simulation_instance_ghz() -> Generator[SimulationInstance, None, None]:
     """Fixture for the GHZ state simulation instance."""
     simulation_state = mqt.debugger.create_ddsim_simulation_state()
-    with Path("test/python/resources/bindings/ghz-incorrect.qasm").open(
+    code = Path("test/python/resources/bindings/ghz-incorrect.qasm").read_text(
         encoding=locale.getpreferredencoding(False)
-    ) as f:
-        code = f.read()
-        simulation_state.load_code(code)
+    )
+    simulation_state.load_code(code)
     yield (simulation_state, 0)
     mqt.debugger.destroy_ddsim_simulation_state(simulation_state)
 
@@ -45,9 +44,8 @@ def simulation_instance_ghz() -> Generator[SimulationInstance, None, None]:
 def simulation_instance_jumps() -> Generator[SimulationInstance, None, None]:
     """Fixture for the Jumps simulation instance."""
     simulation_state = mqt.debugger.create_ddsim_simulation_state()
-    with Path("test/python/resources/bindings/jumps.qasm").open(encoding=locale.getpreferredencoding(False)) as f:
-        code = f.read()
-        simulation_state.load_code(code)
+    code = Path("test/python/resources/bindings/jumps.qasm").read_text(encoding=locale.getpreferredencoding(False))
+    simulation_state.load_code(code)
     yield (simulation_state, 1)
     mqt.debugger.destroy_ddsim_simulation_state(simulation_state)
 
@@ -56,9 +54,8 @@ def simulation_instance_jumps() -> Generator[SimulationInstance, None, None]:
 def simulation_instance_classical() -> Generator[SimulationInstance, None, None]:
     """Fixture for the Classical simulation instance."""
     simulation_state = mqt.debugger.create_ddsim_simulation_state()
-    with Path("test/python/resources/bindings/classical.qasm").open(encoding=locale.getpreferredencoding(False)) as f:
-        code = f.read()
-        simulation_state.load_code(code)
+    code = Path("test/python/resources/bindings/classical.qasm").read_text(encoding=locale.getpreferredencoding(False))
+    simulation_state.load_code(code)
     yield (simulation_state, 2)
     mqt.debugger.destroy_ddsim_simulation_state(simulation_state)
 
