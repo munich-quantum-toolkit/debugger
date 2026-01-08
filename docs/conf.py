@@ -50,7 +50,7 @@ release = version.split("+")[0]
 project = "MQT Debugger"
 author = "Chair for Design Automation, TUM & Munich Quantum Software Company"
 language = "en"
-project_copyright = "2023 - 2026 Chair for Design Automation, TUM & 2025 - 2026 Munich Quantum Software Company"
+project_copyright = "2024 - 2026 Chair for Design Automation, TUM & 2025 - 2026 Munich Quantum Software Company"
 
 master_doc = "index"
 
