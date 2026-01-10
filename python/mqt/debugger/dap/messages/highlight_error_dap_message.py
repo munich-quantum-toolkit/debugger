@@ -33,12 +33,12 @@ class HighlightError(DAPEvent):
     highlights: list[dict[str, Any]]
     source: dict[str, Any]
 
-    def __init__(self, highlights: Sequence[Mapping[str, Any]], source: Mapping[str, Any] | None) -> None:
+    def __init__(self, highlights: Sequence[Mapping[str, Any]], source: Mapping[str, Any]) -> None:
         """Create a new 'highlightError' DAP event message.
 
         Args:
             highlights (Sequence[Mapping[str, Any]]): Highlight entries describing the problematic ranges.
-            source (Mapping[str, Any] | None): Information about the current source file.
+            source (Mapping[str, Any]): Information about the current source file.
         """
         self.highlights = [self._normalize_highlight(entry) for entry in highlights]
         self.source = self._normalize_source(source)
@@ -93,7 +93,7 @@ class HighlightError(DAPEvent):
 
         start = HighlightError._normalize_position(highlight_range.get("start"))
         end = HighlightError._normalize_position(highlight_range.get("end"))
-        if HighlightError._later_than(start, end):
+        if HighlightError._end_before_start(start, end):
             msg = "Highlight range 'end' must be after 'start'."
             raise ValueError(msg)
 
@@ -162,7 +162,7 @@ class HighlightError(DAPEvent):
         return normalized
 
     @staticmethod
-    def _later_than(start: Mapping[str, Any], end: Mapping[str, Any]) -> bool:
+    def _end_before_start(start: Mapping[str, Any], end: Mapping[str, Any]) -> bool:
         """Return True if 'end' describes a position before 'start'.
 
         Args:
