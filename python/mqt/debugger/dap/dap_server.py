@@ -354,7 +354,7 @@ class DAPServer:
             connection,
             "stderr",
         )
-        highlight_entries = self.collect_highlight_entries(current_instruction)
+        highlight_entries = self.collect_highlight_entries(current_instruction, error_causes)
         if highlight_entries:
             highlight_event = mqt.debugger.dap.messages.HighlightError(highlight_entries, self.source_file)
             send_message(json.dumps(highlight_event.encode()), connection)
@@ -428,13 +428,18 @@ class DAPServer:
             else ""
         )
 
-    def collect_highlight_entries(self, failing_instruction: int) -> list[dict[str, Any]]:
+    def collect_highlight_entries(
+        self,
+        failing_instruction: int,
+        error_causes: list[mqt.debugger.ErrorCause] | None = None,
+    ) -> list[dict[str, Any]]:
         """Collect highlight entries for the current assertion failure."""
         highlights: list[dict[str, Any]] = []
         if getattr(self, "source_code", ""):
             try:
-                diagnostics = self.simulation_state.get_diagnostics()
-                error_causes = diagnostics.potential_error_causes()
+                if error_causes is None:
+                    diagnostics = self.simulation_state.get_diagnostics()
+                    error_causes = diagnostics.potential_error_causes()
             except RuntimeError:
                 error_causes = []
 

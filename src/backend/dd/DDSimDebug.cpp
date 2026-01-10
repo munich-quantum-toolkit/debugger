@@ -1151,9 +1151,6 @@ Result ddsimStepBackward(SimulationState* self) {
 
 Result ddsimRunAll(SimulationState* self, size_t* failedAssertions) {
   auto* ddsim = toDDSimulationState(self);
-  if (!ddsim->ready) {
-    return ERROR;
-  }
   size_t errorCount = 0;
   while (!self->isFinished(self)) {
     const Result result = self->runSimulation(self);
