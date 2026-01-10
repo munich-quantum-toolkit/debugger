@@ -23,10 +23,8 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
-#include <iostream>
 #include <pybind11/cast.h>
 #include <pybind11/detail/common.h>
-#include <pybind11/iostream.h>
 #include <pybind11/native_enum.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/pytypes.h>
@@ -176,15 +174,12 @@ Args:
       .def(
           "load_code",
           [](SimulationState* self, const char* code) {
-            const py::module io = py::module::import("io");
-            const py::object stringIo = io.attr("StringIO")();
-            Result result = OK;
-            {
-              const py::scoped_ostream_redirect redirect(std::cerr, stringIo);
-              result = self->loadCode(self, code);
-            }
+            const Result result = self->loadCode(self, code);
             if (result != OK) {
-              auto message = stringIo.attr("getvalue")().cast<std::string>();
+              const char* messagePtr = self->getLastErrorMessage
+                                           ? self->getLastErrorMessage(self)
+                                           : nullptr;
+              std::string message = messagePtr ? messagePtr : "";
               if (message.empty()) {
                 message = "An error occurred while executing the operation";
               }

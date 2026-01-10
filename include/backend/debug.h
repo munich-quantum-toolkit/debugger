@@ -55,6 +55,17 @@ struct SimulationStateStruct {
   Result (*loadCode)(SimulationState* self, const char* code);
 
   /**
+   * @brief Gets the last error message from the interface.
+   *
+   * The returned pointer is owned by the implementation and remains valid
+   * until the next interface call that modifies the error state.
+   *
+   * @param self The instance to query.
+   * @return A null-terminated error message, or nullptr if none is available.
+   */
+  const char* (*getLastErrorMessage)(SimulationState* self);
+
+  /**
    * @brief Steps the simulation forward by one instruction.
    * @param self The instance to step forward.
    * @return The result of the operation.

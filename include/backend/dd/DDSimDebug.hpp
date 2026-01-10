@@ -120,6 +120,10 @@ struct DDSimulationState {
    */
   std::string processedCode;
   /**
+   * @brief The last error message produced by the interface.
+   */
+  std::string lastErrorMessage;
+  /**
    * @brief Indicates whether the debugger is ready to start simulation.
    */
   bool ready;

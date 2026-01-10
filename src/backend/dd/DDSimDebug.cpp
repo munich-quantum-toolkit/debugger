@@ -75,6 +75,14 @@ DDSimulationState* toDDSimulationState(SimulationState* state) {
   // NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast)
 }
 
+const char* ddsimGetLastErrorMessage(SimulationState* self) {
+  const auto* ddsim = toDDSimulationState(self);
+  if (ddsim->lastErrorMessage.empty()) {
+    return nullptr;
+  }
+  return ddsim->lastErrorMessage.c_str();
+}
+
 /**
  * @brief Generate a random number between 0 and 1.
  *
@@ -513,6 +521,7 @@ Result createDDSimulationState(DDSimulationState* self) {
   self->interface.init = ddsimInit;
 
   self->interface.loadCode = ddsimLoadCode;
+  self->interface.getLastErrorMessage = ddsimGetLastErrorMessage;
   self->interface.stepForward = ddsimStepForward;
   self->interface.stepBackward = ddsimStepBackward;
   self->interface.stepOverForward = ddsimStepOverForward;
@@ -572,6 +581,7 @@ Result ddsimInit(SimulationState* self) {
   ddsim->breakpoints.clear();
   ddsim->lastFailedAssertion = -1ULL;
   ddsim->lastMetBreakpoint = -1ULL;
+  ddsim->lastErrorMessage.clear();
 
   destroyDDDiagnostics(&ddsim->diagnostics);
   createDDDiagnostics(&ddsim->diagnostics, ddsim);
@@ -606,6 +616,7 @@ Result ddsimLoadCode(SimulationState* self, const char* code) {
   ddsim->functionCallers.clear();
   ddsim->targetQubits.clear();
   ddsim->instructionObjects.clear();
+  ddsim->lastErrorMessage.clear();
 
   try {
     std::stringstream ss{preprocessAssertionCode(code, ddsim)};
@@ -613,7 +624,14 @@ Result ddsimLoadCode(SimulationState* self, const char* code) {
     ddsim->qc = std::make_unique<qc::QuantumComputation>(imported);
     qc::CircuitOptimizer::flattenOperations(*ddsim->qc, true);
   } catch (const std::exception& e) {
-    std::cerr << e.what() << "\n";
+    ddsim->lastErrorMessage = e.what();
+    if (ddsim->lastErrorMessage.empty()) {
+      ddsim->lastErrorMessage =
+          "An error occurred while executing the operation";
+    }
+    return ERROR;
+  } catch (...) {
+    ddsim->lastErrorMessage = "An error occurred while executing the operation";
     return ERROR;
   }
 
