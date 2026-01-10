@@ -644,21 +644,3 @@ class DAPServer:
             self.source_file,
         )
         send_message(json.dumps(event.encode()), connection)
-
-    def send_state(self, connection: socket.socket) -> None:
-        """Send the state of the current execution to the client.
-
-        Args:
-            connection (socket.socket): The client socket.
-        """
-        output_lines = []
-        if self.simulation_state.did_assertion_fail():
-            output_lines.append("Assertion failed")
-        if self.simulation_state.was_breakpoint_hit():
-            output_lines.append("Breakpoint hit")
-        if self.simulation_state.is_finished():
-            output_lines.append("Finished")
-        if not output_lines:
-            output_lines.append("Running")
-        for line_text in output_lines:
-            self.send_message_simple(line_text, None, None, 0, 0, connection)
