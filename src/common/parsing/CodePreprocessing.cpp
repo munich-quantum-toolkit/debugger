@@ -35,6 +35,11 @@ namespace mqt::debugger {
 
 namespace {
 
+/**
+ * @brief Check whether a string is non-empty and contains only digits.
+ * @param text The string to validate.
+ * @return True if the string is non-empty and all characters are digits.
+ */
 bool isDigits(const std::string& text) {
   if (text.empty()) {
     return false;
@@ -48,6 +53,12 @@ struct LineColumn {
   size_t column = 1;
 };
 
+/**
+ * @brief Compute the 1-based line and column for a given character offset.
+ * @param code The source code to inspect.
+ * @param offset The zero-based character offset in the source code.
+ * @return The line and column of the offset in the source code.
+ */
 LineColumn lineColumnForOffset(const std::string& code, size_t offset) {
   LineColumn location;
   const auto lineStartPos = code.rfind('\n', offset);
@@ -64,6 +75,13 @@ LineColumn lineColumnForOffset(const std::string& code, size_t offset) {
   return location;
 }
 
+/**
+ * @brief Compute the 1-based line and column for a target within a line.
+ * @param code The source code to inspect.
+ * @param instructionStart The zero-based offset of the instruction start.
+ * @param target The target token to locate on the line.
+ * @return The line and column of the target, or the first non-space column.
+ */
 LineColumn lineColumnForTarget(const std::string& code, size_t instructionStart,
                                const std::string& target) {
   LineColumn location = lineColumnForOffset(code, instructionStart);
@@ -90,6 +108,14 @@ LineColumn lineColumnForTarget(const std::string& code, size_t instructionStart,
   return location;
 }
 
+/**
+ * @brief Format a parse error with line/column location information.
+ * @param code The source code to inspect.
+ * @param instructionStart The zero-based offset of the instruction start.
+ * @param detail The error detail text.
+ * @param target Optional target token to locate more precisely.
+ * @return The formatted error string.
+ */
 std::string formatParseError(const std::string& code, size_t instructionStart,
                              const std::string& detail,
                              const std::string& target = "") {
@@ -98,6 +124,12 @@ std::string formatParseError(const std::string& code, size_t instructionStart,
          std::to_string(location.column) + ": " + detail;
 }
 
+/**
+ * @brief Build an error detail string for an invalid target.
+ * @param target The invalid target token.
+ * @param context Additional context to append.
+ * @return The formatted detail string.
+ */
 std::string invalidTargetDetail(const std::string& target,
                                 const std::string& context) {
   std::string detail = "Invalid target qubit ";
@@ -107,6 +139,11 @@ std::string invalidTargetDetail(const std::string& target,
   return detail;
 }
 
+/**
+ * @brief Build an error detail string for an invalid register declaration.
+ * @param trimmedLine The register declaration line.
+ * @return The formatted detail string.
+ */
 std::string invalidRegisterDetail(const std::string& trimmedLine) {
   std::string detail = "Invalid register declaration ";
   detail += trimmedLine;
@@ -114,6 +151,15 @@ std::string invalidRegisterDetail(const std::string& trimmedLine) {
   return detail;
 }
 
+/**
+ * @brief Validate target references against known registers and indices.
+ * @param code The source code to inspect.
+ * @param instructionStart The zero-based offset of the instruction start.
+ * @param targets The target tokens to validate.
+ * @param definedRegisters The registers defined in the current scope.
+ * @param shadowedRegisters The shadowed register names in the current scope.
+ * @param context Additional context to append to error messages.
+ */
 void validateTargets(const std::string& code, size_t instructionStart,
                      const std::vector<std::string>& targets,
                      const std::map<std::string, size_t>& definedRegisters,
