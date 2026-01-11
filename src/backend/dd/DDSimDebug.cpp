@@ -25,7 +25,6 @@
 #include "common/parsing/AssertionParsing.hpp"
 #include "common/parsing/AssertionTools.hpp"
 #include "common/parsing/CodePreprocessing.hpp"
-#include "common/parsing/ParsingError.hpp"
 #include "common/parsing/Utils.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/Operations.hpp"
@@ -82,13 +81,6 @@ const char* ddsimGetLastErrorMessage(SimulationState* self) {
     return nullptr;
   }
   return ddsim->lastErrorMessage.c_str();
-}
-
-void clearLastError(DDSimulationState* ddsim) {
-  clearLastError(ddsim);
-  ddsim->lastErrorDetail.clear();
-  ddsim->lastErrorLine = 0;
-  ddsim->lastErrorColumn = 0;
 }
 
 /**
@@ -529,7 +521,6 @@ Result createDDSimulationState(DDSimulationState* self) {
   self->interface.init = ddsimInit;
 
   self->interface.loadCode = ddsimLoadCode;
-  self->interface.loadCodeWithResult = ddsimLoadCodeWithResult;
   self->interface.getLastErrorMessage = ddsimGetLastErrorMessage;
   self->interface.stepForward = ddsimStepForward;
   self->interface.stepBackward = ddsimStepBackward;
@@ -602,7 +593,8 @@ Result ddsimInit(SimulationState* self) {
   return OK;
 }
 
-Result ddsimLoadCodeInternal(DDSimulationState* ddsim, const char* code) {
+Result ddsimLoadCode(SimulationState* self, const char* code) {
+  auto* ddsim = toDDSimulationState(self);
   ddsim->currentInstruction = 0;
   ddsim->previousInstructionStack.clear();
   ddsim->callReturnStack.clear();
@@ -624,25 +616,13 @@ Result ddsimLoadCodeInternal(DDSimulationState* ddsim, const char* code) {
   ddsim->functionCallers.clear();
   ddsim->targetQubits.clear();
   ddsim->instructionObjects.clear();
-  clearLastError(ddsim);
+  ddsim->lastErrorMessage.clear();
 
   try {
     std::stringstream ss{preprocessAssertionCode(code, ddsim)};
     const auto imported = qasm3::Importer::import(ss);
     ddsim->qc = std::make_unique<qc::QuantumComputation>(imported);
     qc::CircuitOptimizer::flattenOperations(*ddsim->qc, true);
-  } catch (const ParsingError& e) {
-    ddsim->lastErrorMessage = e.what();
-    if (const auto* location = e.location()) {
-      ddsim->lastErrorLine = location->line;
-      ddsim->lastErrorColumn = location->column;
-      ddsim->lastErrorDetail = location->detail;
-    }
-    if (ddsim->lastErrorMessage.empty()) {
-      ddsim->lastErrorMessage =
-          "An error occurred while executing the operation";
-    }
-    return ERROR;
   } catch (const std::exception& e) {
     ddsim->lastErrorMessage = e.what();
     if (ddsim->lastErrorMessage.empty()) {
@@ -665,23 +645,6 @@ Result ddsimLoadCodeInternal(DDSimulationState* ddsim, const char* code) {
   ddsim->ready = true;
 
   return OK;
-}
-
-Result ddsimLoadCode(SimulationState* self, const char* code) {
-  auto* ddsim = toDDSimulationState(self);
-  return ddsimLoadCodeInternal(ddsim, code);
-}
-
-LoadResult ddsimLoadCodeWithResult(SimulationState* self, const char* code) {
-  auto* ddsim = toDDSimulationState(self);
-  const Result result = ddsimLoadCodeInternal(ddsim, code);
-  const char* message = ddsim->lastErrorMessage.empty()
-                            ? nullptr
-                            : ddsim->lastErrorMessage.c_str();
-  const char* detail =
-      ddsim->lastErrorDetail.empty() ? nullptr : ddsim->lastErrorDetail.c_str();
-  return LoadResult{result, ddsim->lastErrorLine, ddsim->lastErrorColumn,
-                    detail, message};
 }
 
 Result ddsimChangeClassicalVariableValue(SimulationState* self,
