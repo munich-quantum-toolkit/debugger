@@ -1,5 +1,5 @@
-# Copyright (c) 2024 - 2025 Chair for Design Automation, TUM
-# Copyright (c) 2025 Munich Quantum Software Company GmbH
+# Copyright (c) 2024 - 2026 Chair for Design Automation, TUM
+# Copyright (c) 2025 - 2026 Munich Quantum Software Company GmbH
 # All rights reserved.
 #
 # SPDX-License-Identifier: MIT
@@ -84,10 +84,10 @@ def load_instance(name: str) -> tuple[SimulationState, ExpectedSolution]:
         tuple[SimulationState, ExpectedSolution]: The simulation state and the expected solution.
     """
     state = create_ddsim_simulation_state()
-    with Path(f"test/python/resources/end-to-end/{name}.qasm").open(encoding=locale.getpreferredencoding(False)) as f:
-        state.load_code(f.read())
-    with Path(f"test/python/resources/end-to-end/{name}.out").open(encoding=locale.getpreferredencoding(False)) as f:
-        solution = parse_solution(f.read())
+    code = Path(f"test/python/resources/end-to-end/{name}.qasm").read_text(encoding=locale.getpreferredencoding(False))
+    state.load_code(code)
+    text = Path(f"test/python/resources/end-to-end/{name}.out").read_text(encoding=locale.getpreferredencoding(False))
+    solution = parse_solution(text)
     return (state, solution)
 
 

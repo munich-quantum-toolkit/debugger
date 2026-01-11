@@ -1,5 +1,5 @@
-# Copyright (c) 2024 - 2025 Chair for Design Automation, TUM
-# Copyright (c) 2025 Munich Quantum Software Company GmbH
+# Copyright (c) 2024 - 2026 Chair for Design Automation, TUM
+# Copyright (c) 2025 - 2026 Munich Quantum Software Company GmbH
 # All rights reserved.
 #
 # SPDX-License-Identifier: MIT
@@ -185,8 +185,6 @@ def estimate_required_shots_from_path(
     Returns:
         int: The estimated number of shots required for the program.
     """
-    if isinstance(compiled_program, str):
-        compiled_program = Path(compiled_program)
-    with compiled_program.open("r") as f:
-        program = f.read()
-        return estimate_required_shots(program, calibration, p_value, num_trials, accuracy)
+    compiled_program = Path(compiled_program)
+    program = compiled_program.read_text()
+    return estimate_required_shots(program, calibration, p_value, num_trials, accuracy)
