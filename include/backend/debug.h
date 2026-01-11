@@ -38,6 +38,28 @@ extern "C" {
  */
 typedef struct SimulationStateStruct SimulationState;
 
+/**
+ * @brief Represents the result of loading code into the simulation state.
+ */
+typedef struct {
+  /**
+   * @brief True if the code was loaded successfully.
+   */
+  bool success;
+  /**
+   * @brief The 1-based line of the error location, or 0 if unavailable.
+   */
+  size_t line;
+  /**
+   * @brief The 1-based column of the error location, or 0 if unavailable.
+   */
+  size_t column;
+  /**
+   * @brief The error message, or an empty string if none is available.
+   */
+  const char* message;
+} LoadResult;
+
 struct SimulationStateStruct {
   /**
    * @brief Initializes the simulation state.
@@ -53,6 +75,15 @@ struct SimulationStateStruct {
    * @return The result of the operation.
    */
   Result (*loadCode)(SimulationState* self, const char* code);
+
+  /**
+   * @brief Loads the given code into the simulation state and returns detailed
+   * diagnostics.
+   * @param self The instance to load the code into.
+   * @param code The code to load.
+   * @return The load result containing diagnostics.
+   */
+  LoadResult (*loadCodeWithResult)(SimulationState* self, const char* code);
 
   /**
    * @brief Gets the last error message from the interface.

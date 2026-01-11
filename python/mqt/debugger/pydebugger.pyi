@@ -95,6 +95,21 @@ class CompilationSettings:
             slice_index (int, optional): The index of the slice that should be compiled (defaults to 0).
         """
 
+class LoadResult:
+    """Represents the result of loading code into the simulator."""
+
+    success: bool
+    """True if the code was loaded successfully."""
+    line: int
+    """The 1-based line of the error location, or 0 if unknown."""
+    column: int
+    """The 1-based column of the error location, or 0 if unknown."""
+    message: str
+    """The error message, or an empty string if none is available."""
+
+    def __init__(self) -> None:
+        """Creates a new `LoadResult` instance."""
+
 class Statevector:
     """Represents a state vector."""
 
@@ -132,6 +147,16 @@ class SimulationState:
 
         Args:
             code (str): The code to load.
+        """
+
+    def load_code_with_result(self, code: str) -> LoadResult:
+        """Loads the given code into the simulation state and returns diagnostics.
+
+        Args:
+            code (str): The code to load.
+
+        Returns:
+            LoadResult: The load result containing diagnostics.
         """
 
     def step_forward(self) -> None:
