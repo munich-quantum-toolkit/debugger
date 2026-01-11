@@ -93,7 +93,7 @@ class HighlightError(DAPEvent):
 
         start = HighlightError._normalize_position(highlight_range.get("start"))
         end = HighlightError._normalize_position(highlight_range.get("end"))
-        if HighlightError._end_before_start(start, end):
+        if HighlightError._start_comes_after_end(start, end):
             msg = "Highlight range 'end' must be after 'start'."
             raise ValueError(msg)
 
@@ -162,15 +162,15 @@ class HighlightError(DAPEvent):
         return normalized
 
     @staticmethod
-    def _end_before_start(start: Mapping[str, Any], end: Mapping[str, Any]) -> bool:
-        """Return True if 'end' describes a position before 'start'.
+    def _start_comes_after_end(start: Mapping[str, Any], end: Mapping[str, Any]) -> bool:
+        """Return True if 'start' describes a position after 'end'.
 
         Args:
             start (Mapping[str, Any]): The start position mapping.
             end (Mapping[str, Any]): The end position mapping.
 
         Returns:
-            bool: True when the end position is before the start position.
+            bool: True when the start position is after the end position.
         """
         start_line = int(start.get("line", 0))
         start_column = int(start.get("column", 0))
