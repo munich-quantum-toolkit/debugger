@@ -67,14 +67,13 @@ class RestartDAPMessage(DAPMessage):
         program_path = Path(self.program)
         server.source_file = {"name": program_path.name, "path": self.program}
         parsed_successfully = True
-        with program_path.open("r", encoding=locale.getpreferredencoding(False)) as f:
-            code = f.read()
-            server.source_code = code
-            try:
-                server.simulation_state.load_code(code)
-            except RuntimeError as exc:
-                parsed_successfully = False
-                server.queue_parse_error(str(exc))
+        code = program_path.read_text(encoding=locale.getpreferredencoding(False))
+        server.source_code = code
+        try:
+            server.simulation_state.load_code(code)
+        except RuntimeError as exc:
+            parsed_successfully = False
+            server.queue_parse_error(str(exc))
         if parsed_successfully and not self.stop_on_entry:
             server.simulation_state.run_simulation()
         if not parsed_successfully:
