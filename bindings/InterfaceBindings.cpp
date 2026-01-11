@@ -166,23 +166,6 @@ Args:
       .doc() =
       "The settings that should be used to compile an assertion program.";
 
-  py::class_<LoadResult>(m, "LoadResult")
-      .def(py::init<>(), "Creates a new `LoadResult` instance.")
-      .def_readonly("success", &LoadResult::success,
-                    "True if the code was loaded successfully.")
-      .def_readonly("line", &LoadResult::line,
-                    "The 1-based line of the error location, or 0 if unknown.")
-      .def_readonly(
-          "column", &LoadResult::column,
-          "The 1-based column of the error location, or 0 if unknown.")
-      .def_property_readonly(
-          "message",
-          [](const LoadResult& self) {
-            return std::string(self.message ? self.message : "");
-          },
-          "The error message, or an empty string if none is available.")
-      .doc() = "Represents the result of loading code into the simulator.";
-
   py::class_<SimulationState>(m, "SimulationState")
       .def(py::init<>(), "Creates a new `SimulationState` instance.")
       .def(
@@ -207,22 +190,6 @@ Args:
 
 Args:
     code (str): The code to load.)")
-      .def(
-          "load_code_with_result",
-          [](SimulationState* self, const char* code) {
-            if (self->loadCodeWithResult == nullptr) {
-              throw std::runtime_error(
-                  "load_code_with_result is not available");
-            }
-            return self->loadCodeWithResult(self, code);
-          },
-          R"(Loads the given code into the simulation state and returns diagnostics.
-
-Args:
-    code (str): The code to load.
-
-Returns:
-    LoadResult: The load result containing diagnostics.)")
       .def(
           "step_forward",
           [](SimulationState* self) { checkOrThrow(self->stepForward(self)); },

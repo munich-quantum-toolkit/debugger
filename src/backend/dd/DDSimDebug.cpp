@@ -34,7 +34,6 @@
 #include "ir/Register.hpp"
 #include "ir/operations/IfElseOperation.hpp"
 #include "ir/operations/OpType.hpp"
-#include "qasm3/Exception.hpp"
 #include "qasm3/Importer.hpp"
 
 #include <Eigen/Dense>
@@ -522,7 +521,6 @@ Result createDDSimulationState(DDSimulationState* self) {
   self->interface.init = ddsimInit;
 
   self->interface.loadCode = ddsimLoadCode;
-  self->interface.loadCodeWithResult = ddsimLoadCodeWithResult;
   self->interface.getLastErrorMessage = ddsimGetLastErrorMessage;
   self->interface.stepForward = ddsimStepForward;
   self->interface.stepBackward = ddsimStepBackward;
@@ -584,8 +582,6 @@ Result ddsimInit(SimulationState* self) {
   ddsim->lastFailedAssertion = -1ULL;
   ddsim->lastMetBreakpoint = -1ULL;
   ddsim->lastErrorMessage.clear();
-  ddsim->lastErrorLine = 0;
-  ddsim->lastErrorColumn = 0;
 
   destroyDDDiagnostics(&ddsim->diagnostics);
   createDDDiagnostics(&ddsim->diagnostics, ddsim);
@@ -621,52 +617,21 @@ Result ddsimLoadCode(SimulationState* self, const char* code) {
   ddsim->targetQubits.clear();
   ddsim->instructionObjects.clear();
   ddsim->lastErrorMessage.clear();
-  ddsim->lastErrorLine = 0;
-  ddsim->lastErrorColumn = 0;
 
   try {
     std::stringstream ss{preprocessAssertionCode(code, ddsim)};
     const auto imported = qasm3::Importer::import(ss);
     ddsim->qc = std::make_unique<qc::QuantumComputation>(imported);
     qc::CircuitOptimizer::flattenOperations(*ddsim->qc, true);
-  } catch (const qasm3::CompilerError& e) {
-    if (e.message.empty()) {
-      ddsim->lastErrorMessage =
-          "An error occurred while executing the operation";
-    } else {
-      ddsim->lastErrorMessage = e.message;
-    }
-    if (e.debugInfo != nullptr) {
-      ddsim->lastErrorLine = e.debugInfo->line;
-      ddsim->lastErrorColumn = e.debugInfo->column;
-    } else {
-      ddsim->lastErrorLine = 1;
-      ddsim->lastErrorColumn = 1;
-    }
-    return ERROR;
-  } catch (const qasm3::ConstEvalError& e) {
-    ddsim->lastErrorMessage = e.what();
-    ddsim->lastErrorLine = 1;
-    ddsim->lastErrorColumn = 1;
-    return ERROR;
-  } catch (const qasm3::TypeCheckError& e) {
-    ddsim->lastErrorMessage = e.what();
-    ddsim->lastErrorLine = 1;
-    ddsim->lastErrorColumn = 1;
-    return ERROR;
   } catch (const std::exception& e) {
     ddsim->lastErrorMessage = e.what();
     if (ddsim->lastErrorMessage.empty()) {
       ddsim->lastErrorMessage =
           "An error occurred while executing the operation";
     }
-    ddsim->lastErrorLine = 1;
-    ddsim->lastErrorColumn = 1;
     return ERROR;
   } catch (...) {
     ddsim->lastErrorMessage = "An error occurred while executing the operation";
-    ddsim->lastErrorLine = 1;
-    ddsim->lastErrorColumn = 1;
     return ERROR;
   }
 
@@ -680,18 +645,6 @@ Result ddsimLoadCode(SimulationState* self, const char* code) {
   ddsim->ready = true;
 
   return OK;
-}
-
-LoadResult ddsimLoadCodeWithResult(SimulationState* self, const char* code) {
-  const auto result = ddsimLoadCode(self, code);
-  const auto* ddsim = toDDSimulationState(self);
-  LoadResult loadResult{};
-  loadResult.success = (result == OK);
-  loadResult.line = ddsim->lastErrorLine;
-  loadResult.column = ddsim->lastErrorColumn;
-  loadResult.message =
-      ddsim->lastErrorMessage.empty() ? "" : ddsim->lastErrorMessage.c_str();
-  return loadResult;
 }
 
 Result ddsimChangeClassicalVariableValue(SimulationState* self,
