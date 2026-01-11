@@ -124,6 +124,18 @@ struct DDSimulationState {
    */
   std::string lastErrorMessage;
   /**
+   * @brief The last error detail produced by the interface.
+   */
+  std::string lastErrorDetail;
+  /**
+   * @brief The 1-based line of the last error, or 0 if unavailable.
+   */
+  size_t lastErrorLine = 0;
+  /**
+   * @brief The 1-based column of the last error, or 0 if unavailable.
+   */
+  size_t lastErrorColumn = 0;
+  /**
    * @brief Indicates whether the debugger is ready to start simulation.
    */
   bool ready;
@@ -284,6 +296,14 @@ Result ddsimInit(SimulationState* self);
  * @return The result of the operation.
  */
 Result ddsimLoadCode(SimulationState* self, const char* code);
+
+/**
+ * @brief Loads the given code into the simulation state and returns details.
+ * @param self The instance to load the code into.
+ * @param code The code to load.
+ * @return The structured load result.
+ */
+LoadResult ddsimLoadCodeWithResult(SimulationState* self, const char* code);
 /**
  * @brief Steps the simulation forward by one instruction.
  * @param self The instance to step forward.

@@ -109,19 +109,18 @@ LineColumn lineColumnForTarget(const std::string& code, size_t instructionStart,
 }
 
 /**
- * @brief Format a parse error with line/column location information.
+ * @brief Build a ParsingError with line/column location information.
  * @param code The source code to inspect.
  * @param instructionStart The zero-based offset of the instruction start.
  * @param detail The error detail text.
  * @param target Optional target token to locate more precisely.
- * @return The formatted error string.
+ * @return A ParsingError containing the location details.
  */
-std::string formatParseError(const std::string& code, size_t instructionStart,
+ParsingError buildParseError(const std::string& code, size_t instructionStart,
                              const std::string& detail,
                              const std::string& target = "") {
   const auto location = lineColumnForTarget(code, instructionStart, target);
-  return "<input>:" + std::to_string(location.line) + ":" +
-         std::to_string(location.column) + ": " + detail;
+  return ParsingError(location.line, location.column, detail);
 }
 
 /**
@@ -175,24 +174,21 @@ void validateTargets(const std::string& code, size_t instructionStart,
     }
     const auto close = target.find(']', open + 1);
     if (open == 0 || close == std::string::npos || close != target.size() - 1) {
-      throw ParsingError(formatParseError(code, instructionStart,
-                                          invalidTargetDetail(target, context),
-                                          target));
+      throw buildParseError(code, instructionStart,
+                            invalidTargetDetail(target, context), target);
     }
     const auto registerName = target.substr(0, open);
     const auto indexText = target.substr(open + 1, close - open - 1);
     if (!isDigits(indexText)) {
-      throw ParsingError(formatParseError(code, instructionStart,
-                                          invalidTargetDetail(target, context),
-                                          target));
+      throw buildParseError(code, instructionStart,
+                            invalidTargetDetail(target, context), target);
     }
     size_t registerIndex = 0;
     try {
       registerIndex = std::stoul(indexText);
     } catch (const std::exception&) {
-      throw ParsingError(formatParseError(code, instructionStart,
-                                          invalidTargetDetail(target, context),
-                                          target));
+      throw buildParseError(code, instructionStart,
+                            invalidTargetDetail(target, context), target);
     }
     if (std::ranges::find(shadowedRegisters, registerName) !=
         shadowedRegisters.end()) {
@@ -200,9 +196,8 @@ void validateTargets(const std::string& code, size_t instructionStart,
     }
     const auto found = definedRegisters.find(registerName);
     if (found == definedRegisters.end() || found->second <= registerIndex) {
-      throw ParsingError(formatParseError(code, instructionStart,
-                                          invalidTargetDetail(target, context),
-                                          target));
+      throw buildParseError(code, instructionStart,
+                            invalidTargetDetail(target, context), target);
     }
   }
 }
@@ -538,15 +533,15 @@ preprocessCode(const std::string& code, size_t startIndex,
       const auto& name = parts[0];
       const auto sizeText = parts.size() > 1 ? parts[1] : "";
       if (name.empty() || !isDigits(sizeText)) {
-        throw ParsingError(formatParseError(
-            code, trueStart, invalidRegisterDetail(trimmedLine)));
+        throw buildParseError(code, trueStart,
+                              invalidRegisterDetail(trimmedLine));
       }
       size_t size = 0;
       try {
         size = std::stoul(sizeText);
       } catch (const std::exception&) {
-        throw ParsingError(formatParseError(
-            code, trueStart, invalidRegisterDetail(trimmedLine)));
+        throw buildParseError(code, trueStart,
+                              invalidRegisterDetail(trimmedLine));
       }
       definedRegisters.insert({name, size});
     }

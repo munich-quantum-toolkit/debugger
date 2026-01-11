@@ -22,6 +22,14 @@ class VariableType(enum.Enum):
     VarFloat = 2
     """A floating-point variable."""
 
+class Result(enum.Enum):
+    """Represents the result of an operation."""
+
+    OK = 0
+    """Indicates that the operation was successful."""
+    ERROR = 1
+    """Indicates that an error occurred."""
+
 class ErrorCauseType(enum.Enum):
     """Represents the type of a potential error cause."""
 
@@ -95,6 +103,20 @@ class CompilationSettings:
             slice_index (int, optional): The index of the slice that should be compiled (defaults to 0).
         """
 
+class LoadResult:
+    """Represents the structured result of a load operation."""
+
+    result: Result
+    """The result of the load operation."""
+    line: int
+    """The 1-based line of the error location, or 0 if unavailable."""
+    column: int
+    """The 1-based column of the error location, or 0 if unavailable."""
+    detail: str | None
+    """The error detail text, or None if unavailable."""
+    message: str | None
+    """The full error message, or None if unavailable."""
+
 class Statevector:
     """Represents a state vector."""
 
@@ -132,6 +154,16 @@ class SimulationState:
 
         Args:
             code (str): The code to load.
+        """
+
+    def load_code_with_result(self, code: str) -> LoadResult:
+        """Loads the given code into the simulation state and returns details.
+
+        Args:
+            code (str): The code to load.
+
+        Returns:
+            LoadResult: The structured load result.
         """
 
     def step_forward(self) -> None:

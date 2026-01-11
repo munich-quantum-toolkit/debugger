@@ -74,6 +74,14 @@ void bindFramework(py::module& m) {
       .export_values()
       .finalize();
 
+  // Bind the Result enum
+  py::native_enum<Result>(m, "Result", "enum.Enum",
+                          "The result of an operation.")
+      .value("OK", OK, "Indicates that the operation was successful.")
+      .value("ERROR", ERROR, "Indicates that an error occurred.")
+      .export_values()
+      .finalize();
+
   // Bind the VariableValue union
   py::class_<VariableValue>(m, "VariableValue")
       .def(py::init<>())
@@ -166,6 +174,35 @@ Args:
       .doc() =
       "The settings that should be used to compile an assertion program.";
 
+  py::class_<LoadResult>(m, "LoadResult")
+      .def_readonly("result", &LoadResult::result,
+                    "The result of the load operation.")
+      .def_readonly(
+          "line", &LoadResult::line,
+          "The 1-based line of the error location, or 0 if unavailable.")
+      .def_readonly(
+          "column", &LoadResult::column,
+          "The 1-based column of the error location, or 0 if unavailable.")
+      .def_property_readonly(
+          "detail",
+          [](const LoadResult& result) -> py::object {
+            if (result.detail == nullptr) {
+              return py::none();
+            }
+            return py::str(result.detail);
+          },
+          "The error detail text, or None if unavailable.")
+      .def_property_readonly(
+          "message",
+          [](const LoadResult& result) -> py::object {
+            if (result.message == nullptr) {
+              return py::none();
+            }
+            return py::str(result.message);
+          },
+          "The full error message, or None if unavailable.")
+      .doc() = "Represents the structured result of a load operation.";
+
   py::class_<SimulationState>(m, "SimulationState")
       .def(py::init<>(), "Creates a new `SimulationState` instance.")
       .def(
@@ -190,6 +227,18 @@ Args:
 
 Args:
     code (str): The code to load.)")
+      .def(
+          "load_code_with_result",
+          [](SimulationState* self, const char* code) {
+            return self->loadCodeWithResult(self, code);
+          },
+          R"(Loads the given code into the simulation state and returns details.
+
+Args:
+    code (str): The code to load.
+
+Returns:
+    LoadResult: The structured load result.)")
       .def(
           "step_forward",
           [](SimulationState* self) { checkOrThrow(self->stepForward(self)); },

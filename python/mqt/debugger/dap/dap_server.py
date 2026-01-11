@@ -11,7 +11,6 @@
 from __future__ import annotations
 
 import json
-import re
 import socket
 import sys
 from typing import TYPE_CHECKING, Any
@@ -501,26 +500,14 @@ class DAPServer:
             return mqt.debugger.dap.messages.HighlightReason.CONTROL_ALWAYS_ZERO
         return mqt.debugger.dap.messages.HighlightReason.UNKNOWN
 
-    def queue_parse_error(self, error_message: str) -> None:
+    def queue_parse_error_result(self, load_result: mqt.debugger.LoadResult) -> None:
         """Store highlight data for a parse error to be emitted later."""
-        line, column, detail = self._parse_error_location(error_message)
+        line = load_result.line or 1
+        column = load_result.column or 1
+        detail = load_result.detail or load_result.message or "Failed to parse program."
         entry = self._build_parse_error_highlight(line, column, detail)
         if entry is not None:
             self.pending_highlights = [entry]
-
-    @staticmethod
-    def _parse_error_location(error_message: str) -> tuple[int, int, str]:
-        """Parse a compiler error string and extract the source location."""
-        match = re.match(r"<input>:(\d+):(\d+):\s*(.*)", error_message.strip())
-        if match:
-            line = int(match.group(1))
-            column = int(match.group(2))
-            detail = match.group(3).strip()
-        else:
-            line = 1
-            column = 1
-            detail = error_message.strip()
-        return (line, column, detail)
 
     def _build_parse_error_highlight(self, line: int, column: int, detail: str) -> dict[str, Any] | None:
         """Create a highlight entry for a parse error."""
