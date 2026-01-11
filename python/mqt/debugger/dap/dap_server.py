@@ -453,7 +453,7 @@ class DAPServer:
         if not highlights:
             entry = self._build_highlight_entry(
                 failing_instruction,
-                "assertionFailed",
+                mqt.debugger.dap.messages.HighlightReason.ASSERTION_FAILED,
                 "Assertion failed at this instruction.",
             )
             if entry is not None:
@@ -461,7 +461,12 @@ class DAPServer:
 
         return highlights
 
-    def _build_highlight_entry(self, instruction: int, reason: str, message: str) -> dict[str, Any] | None:
+    def _build_highlight_entry(
+        self,
+        instruction: int,
+        reason: mqt.debugger.dap.messages.HighlightReason,
+        message: str,
+    ) -> dict[str, Any] | None:
         """Create a highlight entry for a specific instruction."""
         try:
             start_pos, end_pos = self.simulation_state.get_instruction_position(instruction)
@@ -486,13 +491,15 @@ class DAPServer:
         }
 
     @staticmethod
-    def _format_highlight_reason(cause_type: mqt.debugger.ErrorCauseType | None) -> str:
+    def _format_highlight_reason(
+        cause_type: mqt.debugger.ErrorCauseType | None,
+    ) -> mqt.debugger.dap.messages.HighlightReason:
         """Return a short identifier for the highlight reason."""
         if cause_type == mqt.debugger.ErrorCauseType.MissingInteraction:
-            return "missingInteraction"
+            return mqt.debugger.dap.messages.HighlightReason.MISSING_INTERACTION
         if cause_type == mqt.debugger.ErrorCauseType.ControlAlwaysZero:
-            return "controlAlwaysZero"
-        return "unknown"
+            return mqt.debugger.dap.messages.HighlightReason.CONTROL_ALWAYS_ZERO
+        return mqt.debugger.dap.messages.HighlightReason.UNKNOWN
 
     def queue_parse_error(self, error_message: str) -> None:
         """Store highlight data for a parse error to be emitted later."""
@@ -546,7 +553,7 @@ class DAPServer:
                 "start": {"line": line, "column": column},
                 "end": {"line": line, "column": end_column if end_column > 0 else column},
             },
-            "reason": "parseError",
+            "reason": mqt.debugger.dap.messages.HighlightReason.PARSE_ERROR,
             "code": snippet,
             "message": detail,
         }

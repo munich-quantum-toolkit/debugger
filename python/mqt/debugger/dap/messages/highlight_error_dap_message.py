@@ -10,10 +10,22 @@
 
 from __future__ import annotations
 
+import enum
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 from .dap_event import DAPEvent
+
+
+class HighlightReason(enum.Enum):
+    """Represents the reason for highlighting a range."""
+
+    MISSING_INTERACTION = "missingInteraction"
+    CONTROL_ALWAYS_ZERO = "controlAlwaysZero"
+    ASSERTION_FAILED = "assertionFailed"
+    PARSE_ERROR = "parseError"
+    UNKNOWN = "unknown"
+
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -99,7 +111,11 @@ class HighlightError(DAPEvent):
 
         normalized = dict(entry)
         normalized["instruction"] = int(normalized.get("instruction", -1))
-        normalized["reason"] = str(normalized.get("reason", "unknown"))
+        reason = normalized.get("reason", HighlightReason.UNKNOWN)
+        if isinstance(reason, HighlightReason):
+            normalized["reason"] = reason.value
+        else:
+            normalized["reason"] = str(reason)
         normalized["code"] = str(normalized.get("code", ""))
         normalized["message"] = str(normalized.get("message", "")).strip()
         normalized["range"] = {
