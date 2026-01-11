@@ -147,10 +147,11 @@ def _get_quantum_state_variables(server: DAPServer, start: int, count: int, filt
         ]
     result = []
     num_q = server.simulation_state.get_num_qubits()
-    start = 0
-    count = 10
-    num_variables = 2**num_q if count == 0 else count
-    for i in range(start, start + num_variables):
+    total_states = 2**num_q
+    start_index = max(0, min(start, total_states))
+    requested_count = total_states - start_index if count == 0 else count
+    end_index = min(start_index + requested_count, total_states)
+    for i in range(start_index, end_index):
         bitstring = format(i, f"0{num_q}b")
         result.append({
             "name": f"|{bitstring}>",
