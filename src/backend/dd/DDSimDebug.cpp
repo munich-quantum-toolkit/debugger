@@ -75,6 +75,48 @@ DDSimulationState* toDDSimulationState(SimulationState* state) {
   // NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast)
 }
 
+struct ParsedLoadError {
+  size_t line;
+  size_t column;
+  std::string detail;
+};
+
+ParsedLoadError parseLoadErrorMessage(const std::string& message) {
+  const std::string trimmed = trim(message);
+  const std::string prefix = "<input>:";
+  if (!trimmed.starts_with(prefix)) {
+    return {0, 0, trimmed};
+  }
+
+  const size_t lineStart = prefix.size();
+  const size_t lineEnd = trimmed.find(':', lineStart);
+  if (lineEnd == std::string::npos) {
+    return {0, 0, trimmed};
+  }
+  const size_t columnEnd = trimmed.find(':', lineEnd + 1);
+  if (columnEnd == std::string::npos) {
+    return {0, 0, trimmed};
+  }
+
+  const std::string lineStr = trimmed.substr(lineStart, lineEnd - lineStart);
+  const std::string columnStr =
+      trimmed.substr(lineEnd + 1, columnEnd - lineEnd - 1);
+  auto isDigit = [](unsigned char c) { return std::isdigit(c) != 0; };
+  if (lineStr.empty() || columnStr.empty() ||
+      !std::ranges::all_of(lineStr, isDigit) ||
+      !std::ranges::all_of(columnStr, isDigit)) {
+    return {0, 0, trimmed};
+  }
+
+  const size_t line = std::stoul(lineStr);
+  const size_t column = std::stoul(columnStr);
+  std::string detail = trim(trimmed.substr(columnEnd + 1));
+  if (detail.empty()) {
+    detail = trimmed;
+  }
+  return {line, column, detail};
+}
+
 const char* ddsimGetLastErrorMessage(SimulationState* self) {
   const auto* ddsim = toDDSimulationState(self);
   if (ddsim->lastErrorMessage.empty()) {
@@ -521,6 +563,7 @@ Result createDDSimulationState(DDSimulationState* self) {
   self->interface.init = ddsimInit;
 
   self->interface.loadCode = ddsimLoadCode;
+  self->interface.loadCodeWithResult = ddsimLoadCodeWithResult;
   self->interface.getLastErrorMessage = ddsimGetLastErrorMessage;
   self->interface.stepForward = ddsimStepForward;
   self->interface.stepBackward = ddsimStepBackward;
@@ -582,6 +625,8 @@ Result ddsimInit(SimulationState* self) {
   ddsim->lastFailedAssertion = -1ULL;
   ddsim->lastMetBreakpoint = -1ULL;
   ddsim->lastErrorMessage.clear();
+  ddsim->lastLoadErrorDetail.clear();
+  ddsim->lastLoadResult = {OK, 0, 0, nullptr};
 
   destroyDDDiagnostics(&ddsim->diagnostics);
   createDDDiagnostics(&ddsim->diagnostics, ddsim);
@@ -617,6 +662,8 @@ Result ddsimLoadCode(SimulationState* self, const char* code) {
   ddsim->targetQubits.clear();
   ddsim->instructionObjects.clear();
   ddsim->lastErrorMessage.clear();
+  ddsim->lastLoadErrorDetail.clear();
+  ddsim->lastLoadResult = {OK, 0, 0, nullptr};
 
   try {
     std::stringstream ss{preprocessAssertionCode(code, ddsim)};
@@ -629,9 +676,17 @@ Result ddsimLoadCode(SimulationState* self, const char* code) {
       ddsim->lastErrorMessage =
           "An error occurred while executing the operation";
     }
+    const auto parsed = parseLoadErrorMessage(ddsim->lastErrorMessage);
+    ddsim->lastLoadErrorDetail = parsed.detail;
+    ddsim->lastLoadResult = {ERROR, parsed.line, parsed.column,
+                             ddsim->lastLoadErrorDetail.empty()
+                                 ? nullptr
+                                 : ddsim->lastLoadErrorDetail.c_str()};
     return ERROR;
   } catch (...) {
     ddsim->lastErrorMessage = "An error occurred while executing the operation";
+    ddsim->lastLoadErrorDetail = ddsim->lastErrorMessage;
+    ddsim->lastLoadResult = {ERROR, 0, 0, ddsim->lastLoadErrorDetail.c_str()};
     return ERROR;
   }
 
@@ -643,8 +698,15 @@ Result ddsimLoadCode(SimulationState* self, const char* code) {
   resetSimulationState(ddsim);
 
   ddsim->ready = true;
+  ddsim->lastLoadResult = {OK, 0, 0, nullptr};
 
   return OK;
+}
+
+LoadResult ddsimLoadCodeWithResult(SimulationState* self, const char* code) {
+  ddsimLoadCode(self, code);
+  auto* ddsim = toDDSimulationState(self);
+  return ddsim->lastLoadResult;
 }
 
 Result ddsimChangeClassicalVariableValue(SimulationState* self,

@@ -43,6 +43,28 @@ typedef enum {
 } Result;
 
 /**
+ * @brief The result of a code loading operation.
+ */
+typedef struct {
+  /**
+   * @brief Indicates whether the load was successful.
+   */
+  Result status;
+  /**
+   * @brief The line number of the error location, or 0 if unknown.
+   */
+  size_t line;
+  /**
+   * @brief The column number of the error location, or 0 if unknown.
+   */
+  size_t column;
+  /**
+   * @brief A human-readable error message, or nullptr if none is available.
+   */
+  const char* message;
+} LoadResult;
+
+/**
  * @brief The type of classical variables.
  *
  * Supports Bool, Int, and Float.

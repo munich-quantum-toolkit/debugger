@@ -15,6 +15,8 @@ import locale
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import mqt.debugger
+
 from .dap_message import DAPMessage
 
 if TYPE_CHECKING:
@@ -69,11 +71,13 @@ class RestartDAPMessage(DAPMessage):
         parsed_successfully = True
         code = program_path.read_text(encoding=locale.getpreferredencoding(False))
         server.source_code = code
-        try:
-            server.simulation_state.load_code(code)
-        except RuntimeError as exc:
+        load_result = server.simulation_state.load_code_with_result(code)
+        if load_result.status != mqt.debugger.Result.OK:
             parsed_successfully = False
-            server.queue_parse_error(str(exc))
+            line = load_result.line if load_result.line > 0 else None
+            column = load_result.column if load_result.column > 0 else None
+            message = load_result.message or ""
+            server.queue_parse_error(message, line, column)
         if parsed_successfully and not self.stop_on_entry:
             server.simulation_state.run_simulation()
         if not parsed_successfully:

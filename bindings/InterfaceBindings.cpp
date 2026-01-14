@@ -65,6 +65,14 @@ struct StatevectorCPP {
 };
 
 void bindFramework(py::module& m) {
+  // Bind the Result enum
+  py::native_enum<Result>(m, "Result", "enum.Enum",
+                          "Represents the result of an operation.")
+      .value("OK", OK, "Indicates that the operation was successful.")
+      .value("ERROR", ERROR, "Indicates that an error occurred.")
+      .export_values()
+      .finalize();
+
   // Bind the VariableType enum
   py::native_enum<VariableType>(m, "VariableType", "enum.Enum",
                                 "The type of a classical variable.")
@@ -166,6 +174,20 @@ Args:
       .doc() =
       "The settings that should be used to compile an assertion program.";
 
+  py::class_<LoadResult>(m, "LoadResult")
+      .def(py::init<>(), "Creates a new `LoadResult` instance.")
+      .def_readwrite("status", &LoadResult::status,
+                     "The result status of the load operation.")
+      .def_readwrite("line", &LoadResult::line,
+                     "The line number of the error location, or 0 if unknown.")
+      .def_readwrite(
+          "column", &LoadResult::column,
+          "The column number of the error location, or 0 if unknown.")
+      .def_readwrite(
+          "message", &LoadResult::message,
+          "A human-readable error message, or None if none is available.")
+      .doc() = "Represents the result of loading code.";
+
   py::class_<SimulationState>(m, "SimulationState")
       .def(py::init<>(), "Creates a new `SimulationState` instance.")
       .def(
@@ -190,6 +212,29 @@ Args:
 
 Args:
     code (str): The code to load.)")
+      .def(
+          "load_code_with_result",
+          [](SimulationState* self, const char* code) {
+            if (self->loadCodeWithResult != nullptr) {
+              return self->loadCodeWithResult(self, code);
+            }
+            LoadResult result{OK, 0, 0, nullptr};
+            const Result status = self->loadCode(self, code);
+            result.status = status;
+            if (status != OK) {
+              result.message = self->getLastErrorMessage
+                                   ? self->getLastErrorMessage(self)
+                                   : nullptr;
+            }
+            return result;
+          },
+          R"(Loads the given code and returns details about any errors.
+
+Args:
+    code (str): The code to load.
+
+Returns:
+    LoadResult: The result of the load operation.)")
       .def(
           "step_forward",
           [](SimulationState* self) { checkOrThrow(self->stepForward(self)); },

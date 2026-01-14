@@ -501,9 +501,19 @@ class DAPServer:
             return mqt.debugger.dap.messages.HighlightReason.CONTROL_ALWAYS_ZERO
         return mqt.debugger.dap.messages.HighlightReason.UNKNOWN
 
-    def queue_parse_error(self, error_message: str) -> None:
+    def queue_parse_error(
+        self,
+        error_message: str,
+        line: int | None = None,
+        column: int | None = None,
+    ) -> None:
         """Store highlight data for a parse error to be emitted later."""
-        line, column, detail = self._parse_error_location(error_message)
+        if line is None or column is None:
+            line, column, detail = self._parse_error_location(error_message)
+        else:
+            detail = error_message.strip()
+            if not detail:
+                detail = "An error occurred while parsing the code."
         entry = self._build_parse_error_highlight(line, column, detail)
         if entry is not None:
             self.pending_highlights = [entry]
