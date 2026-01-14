@@ -626,7 +626,8 @@ Result ddsimInit(SimulationState* self) {
   ddsim->lastMetBreakpoint = -1ULL;
   ddsim->lastErrorMessage.clear();
   ddsim->lastLoadErrorDetail.clear();
-  ddsim->lastLoadResult = {OK, 0, 0, nullptr};
+  ddsim->lastLoadResult = {
+      .status = OK, .line = 0, .column = 0, .message = nullptr};
 
   destroyDDDiagnostics(&ddsim->diagnostics);
   createDDDiagnostics(&ddsim->diagnostics, ddsim);
@@ -663,7 +664,8 @@ Result ddsimLoadCode(SimulationState* self, const char* code) {
   ddsim->instructionObjects.clear();
   ddsim->lastErrorMessage.clear();
   ddsim->lastLoadErrorDetail.clear();
-  ddsim->lastLoadResult = {OK, 0, 0, nullptr};
+  ddsim->lastLoadResult = {
+      .status = OK, .line = 0, .column = 0, .message = nullptr};
 
   try {
     std::stringstream ss{preprocessAssertionCode(code, ddsim)};
@@ -678,15 +680,21 @@ Result ddsimLoadCode(SimulationState* self, const char* code) {
     }
     const auto parsed = parseLoadErrorMessage(ddsim->lastErrorMessage);
     ddsim->lastLoadErrorDetail = parsed.detail;
-    ddsim->lastLoadResult = {ERROR, parsed.line, parsed.column,
-                             ddsim->lastLoadErrorDetail.empty()
-                                 ? nullptr
-                                 : ddsim->lastLoadErrorDetail.c_str()};
+    ddsim->lastLoadResult = {
+        .status = ERROR,
+        .line = parsed.line,
+        .column = parsed.column,
+        .message = ddsim->lastLoadErrorDetail.empty()
+                       ? nullptr
+                       : ddsim->lastLoadErrorDetail.c_str()};
     return ERROR;
   } catch (...) {
     ddsim->lastErrorMessage = "An error occurred while executing the operation";
     ddsim->lastLoadErrorDetail = ddsim->lastErrorMessage;
-    ddsim->lastLoadResult = {ERROR, 0, 0, ddsim->lastLoadErrorDetail.c_str()};
+    ddsim->lastLoadResult = {.status = ERROR,
+                             .line = 0,
+                             .column = 0,
+                             .message = ddsim->lastLoadErrorDetail.c_str()};
     return ERROR;
   }
 
@@ -698,7 +706,8 @@ Result ddsimLoadCode(SimulationState* self, const char* code) {
   resetSimulationState(ddsim);
 
   ddsim->ready = true;
-  ddsim->lastLoadResult = {OK, 0, 0, nullptr};
+  ddsim->lastLoadResult = {
+      .status = OK, .line = 0, .column = 0, .message = nullptr};
 
   return OK;
 }
@@ -1212,7 +1221,6 @@ Result ddsimStepBackward(SimulationState* self) {
 }
 
 Result ddsimRunAll(SimulationState* self, size_t* failedAssertions) {
-  auto* ddsim = toDDSimulationState(self);
   size_t errorCount = 0;
   while (!self->isFinished(self)) {
     const Result result = self->runSimulation(self);
