@@ -92,17 +92,13 @@ Only one of these fields has a valid value at a time, based on the variable's `V
 
   // Bind the Complex struct
   nb::class_<Complex>(m, "Complex")
-      .def(nb::init<>(), R"(Initializes a new complex number.
-
-Args:
-   real: The real part of the complex number. Defaults to 0.0.
-   imaginary: The imaginary part of the complex number. Defaults to 0.0.)")
+      .def(nb::init<>(), R"(Initializes a new complex number.)")
       .def(nb::init<double, double>(), "real"_a = 0.0, "imaginary"_a = 0.0,
            R"(Initializes a new complex number.
 
 Args:
-   real: The real part of the complex number. Defaults to 0.0.
-   imaginary: The imaginary part of the complex number. Defaults to 0.0.)")
+    real: The real part of the complex number. Defaults to 0.0.
+    imaginary: The imaginary part of the complex number. Defaults to 0.0.)")
       .def_rw("real", &Complex::real, "The real part of the complex number.")
       .def_rw("imaginary", &Complex::imaginary,
               "The imaginary part of the complex number.")
@@ -115,7 +111,7 @@ Args:
           R"(Returns a string representation of the complex number.
 
 Returns:
-   The string representation of the complex number.
+    The string representation of the complex number.
 )")
       .def(
           "__repr__",
@@ -149,8 +145,8 @@ Contains one element for each of the `num_states` states in the state vector.)")
            R"(Initializes a new set of compilation settings.
 
 Args:
-   opt: The optimization level that should be used.
-   slice_index: The index of the slice that should be compiled (defaults to 0).)")
+    opt: The optimization level that should be used.
+    slice_index: The index of the slice that should be compiled (defaults to 0).)")
       .def_rw(
           "opt", &CompilationSettings ::opt,
           "The optimization level that should be used. Exact meaning depends "
@@ -522,9 +518,6 @@ Returns:
           },
           R"(Gets the full state vector of the simulation at the current time.
 
-The state vector is expected to be initialized with the correct number of
-qubits and allocated space for the amplitudes before calling this method.
-
 Returns:
     The full state vector of the current simulation state.)")
       .def(
@@ -544,9 +537,6 @@ Returns:
           },
           "qubits"_a,
           R"(Gets a sub-state of the state vector of the simulation at the current time.
-
-The state vector is expected to be initialized with the correct number of
-qubits and allocated space for the amplitudes before calling this method.
 
 This method also supports the re-ordering of qubits, but does not allow
 qubits to be repeated.
@@ -684,14 +674,14 @@ void bindDiagnostics(nb::module_& m) {
           R"(Get the number of qubits in the system.
 
 Returns:
-   The number of qubits in the system.)")
+    The number of qubits in the system.)")
       .def(
           "get_instruction_count",
           [](Diagnostics* self) { return self->getInstructionCount(self); },
           R"(Get the number of instructions in the code.
 
 Returns:
-   The number of instructions in the code.)")
+    The number of instructions in the code.)")
       .def(
           "get_data_dependencies",
           [](Diagnostics* self, size_t instruction, bool includeCallers) {
@@ -709,7 +699,7 @@ Returns:
             }
             return result;
           },
-          nb::arg("instruction"), nb::arg("include_callers") = false,
+          "instruction"_a, "include_callers"_a = false,
           R"(Extract all data dependencies for a given instruction.
 
 If the instruction is inside a custom gate definition, the data
@@ -725,8 +715,8 @@ This method can be performed without running the program, as it is a static
 analysis method.
 
 Args:
-   instruction: The instruction to extract the data dependencies for.
-   include_callers: True, if the data dependencies should include all possible callers of the containing custom gate. Defaults to False.
+    instruction: The instruction to extract the data dependencies for.
+    include_callers: True, if the data dependencies should include all possible callers of the containing custom gate. Defaults to False.
 
 Returns:
     A list of instruction indices that are data dependencies of the given instruction.)")
@@ -760,11 +750,11 @@ This method can be performed without running the program, as it is a static
 analysis method.
 
 Args:
-   before_instruction: The instruction to extract the interactions up to (excluding).
-   qubit: The qubit to extract the interactions for.
+    before_instruction: The instruction to extract the interactions up to (excluding).
+    qubit: The qubit to extract the interactions for.
 
 Returns:
-   A list of qubit indices that interact with the given qubit up to the target instruction.)")
+    A list of qubit indices that interact with the given qubit up to the target instruction.)")
       .def(
           "get_zero_control_instructions",
           [](Diagnostics* self) {
