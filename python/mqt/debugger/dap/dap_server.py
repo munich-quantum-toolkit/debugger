@@ -11,7 +11,6 @@
 from __future__ import annotations
 
 import json
-import re
 import socket
 import sys
 from typing import TYPE_CHECKING, Any
@@ -508,29 +507,15 @@ class DAPServer:
         column: int | None = None,
     ) -> None:
         """Store highlight data for a parse error to be emitted later."""
+        detail = error_message.strip()
+        if not detail:
+            detail = "An error occurred while parsing the code."
         if line is None or column is None:
-            line, column, detail = self._parse_error_location(error_message)
-        else:
-            detail = error_message.strip()
-            if not detail:
-                detail = "An error occurred while parsing the code."
+            line = 1
+            column = 1
         entry = self._build_parse_error_highlight(line, column, detail)
         if entry is not None:
             self.pending_highlights = [entry]
-
-    @staticmethod
-    def _parse_error_location(error_message: str) -> tuple[int, int, str]:
-        """Parse a compiler error string and extract the source location."""
-        match = re.match(r"<input>:(\d+):(\d+):\s*(.*)", error_message.strip())
-        if match:
-            line = int(match.group(1))
-            column = int(match.group(2))
-            detail = match.group(3).strip()
-        else:
-            line = 1
-            column = 1
-            detail = error_message.strip()
-        return (line, column, detail)
 
     def _build_parse_error_highlight(self, line: int, column: int, detail: str) -> dict[str, Any] | None:
         """Create a highlight entry for a parse error."""
