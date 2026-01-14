@@ -302,7 +302,7 @@ class CompilationSettings:
 class SimulationState:
     """Represents the state of a quantum simulation for debugging.
 
-    "This is the main class of the `mqt-debugger` library, allowing developers to step through the code and inspect the state of the simulation.
+    This is the main class of the `mqt-debugger` library, allowing developers to step through the code and inspect the state of the simulation.
     """
 
     def __init__(self) -> None:

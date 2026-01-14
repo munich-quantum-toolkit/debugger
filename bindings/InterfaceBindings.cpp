@@ -60,6 +60,7 @@ struct StatevectorCPP {
   std::vector<Complex> amplitudes;
 };
 
+// NOLINTNEXTLINE(misc-use-internal-linkage)
 void bindFramework(nb::module_& m) {
   // Bind the VariableType enum
   nb::enum_<VariableType>(m, "VariableType",
@@ -646,9 +647,10 @@ Returns:
     The compiled code.)")
       .doc() = R"(Represents the state of a quantum simulation for debugging.
 
-"This is the main class of the `mqt-debugger` library, allowing developers to step through the code and inspect the state of the simulation.)";
+This is the main class of the `mqt-debugger` library, allowing developers to step through the code and inspect the state of the simulation.)";
 }
 
+// NOLINTNEXTLINE(misc-use-internal-linkage)
 void bindDiagnostics(nb::module_& m) {
   // Bind the ErrorCauseType enum
   nb::enum_<ErrorCauseType>(m, "ErrorCauseType",

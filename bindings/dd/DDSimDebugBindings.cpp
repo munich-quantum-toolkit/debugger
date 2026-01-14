@@ -24,8 +24,8 @@ namespace nb = nanobind;
 using namespace nb::literals;
 using namespace mqt::debugger;
 
+// NOLINTNEXTLINE(misc-use-internal-linkage)
 void bindBackend(nb::module_& m) {
-
   m.def(
       "create_ddsim_simulation_state",
       []() {
