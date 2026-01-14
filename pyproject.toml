@@ -79,6 +79,10 @@ wheel.install-dir = "mqt/debugger"
 # Explicitly set the package directory
 wheel.packages = ["python/mqt"]
 
+# Enable Stable ABI builds for CPython 3.12+
+wheel.py-api = "cp312"
+
+# Set required Ninja version
 ninja.version = ">=1.10"
 
 # Setuptools-style build caching in a local directory
@@ -291,7 +295,6 @@ test-skip = [
   "cp*-win_arm64", # no numpy, qiskit, ... wheels
 ]
 
-
 [tool.cibuildwheel.linux]
 environment = { DEPLOY = "ON" }
 
@@ -301,6 +304,11 @@ environment = { MACOSX_DEPLOYMENT_TARGET = "11.0" }
 [tool.cibuildwheel.windows]
 before-build = "uv pip install delvewheel>=1.11.2"
 repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel} --namespace-pkg mqt --ignore-existing"
+
+[[tool.cibuildwheel.overrides]]
+select = "cp312-*"
+inherit.repair-wheel-command = "append"
+repair-wheel-command = "uvx abi3audit --strict --report {wheel}"
 
 
 [dependency-groups]
