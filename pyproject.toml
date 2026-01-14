@@ -8,7 +8,7 @@
 
 [build-system]
 requires = [
-  "pybind11>=3.0.1",
+  "nanobind>=2.10.2",
   "setuptools-scm>=9.2.2",
   "scikit-build-core>=0.11.6",
 ]
@@ -305,7 +305,7 @@ repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel} --namespace-pkg 
 
 [dependency-groups]
 build = [
-    "pybind11>=3.0.1",
+    "nanobind>=2.10.2",
     "setuptools-scm>=9.2.2",
     "scikit-build-core>=0.11.6",
 ]

@@ -15,16 +15,17 @@
  * Central file for defining the Python bindings for the framework.
  */
 
-#include "python/InterfaceBindings.hpp"
-#include "python/dd/DDSimDebugBindings.hpp"
+#include <nanobind/nanobind.h>
 
-#include <pybind11/detail/common.h>
-#include <pybind11/pybind11.h>
+namespace nb = nanobind;
+using namespace nb::literals;
 
-namespace py = pybind11;
-using namespace pybind11::literals;
+// forward declarations
+void bindFramework(nb::module_& m);
+void bindDiagnostics(nb::module_& m);
+void bindBackend(nb::module_& m);
 
-PYBIND11_MODULE(MQT_DEBUGGER_MODULE_NAME, m, py::mod_gil_not_used()) {
+NB_MODULE(MQT_DEBUGGER_MODULE_NAME, m) {
   bindDiagnostics(m);
   bindFramework(m);
   bindBackend(m);

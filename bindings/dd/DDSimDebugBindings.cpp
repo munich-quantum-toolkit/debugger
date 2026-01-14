@@ -16,15 +16,15 @@
  * Diagnostics states.
  */
 
-#include "python/dd/DDSimDebugBindings.hpp"
-
 #include "backend/dd/DDSimDebug.hpp"
 #include "backend/debug.h"
-#include "pybind11/pybind11.h"
+#include "nanobind/nanobind.h"
 
+namespace nb = nanobind;
+using namespace nb::literals;
 using namespace mqt::debugger;
 
-void bindBackend(pybind11::module& m) {
+void bindBackend(nb::module_& m) {
 
   m.def(
       "create_ddsim_simulation_state",
@@ -37,17 +37,16 @@ void bindBackend(pybind11::module& m) {
       R"(Creates a new `SimulationState` instance using the DD backend for simulation and the OpenQASM language as input format.
 
 Returns:
-    SimulationState: The created simulation state.)");
+    The created simulation state.)");
 
   m.def(
       "destroy_ddsim_simulation_state",
       [](SimulationState* state) {
-        // NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
         destroyDDSimulationState(reinterpret_cast<DDSimulationState*>(state));
-        // NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast)
       },
       R"(Delete a given DD-based `SimulationState` instance and free up resources.
 
 Args:
-    state (SimulationState): The simulation state to delete.)");
+    The simulation state to delete.)");
 }
