@@ -57,3 +57,6 @@ class DAPMessage(ABC):
             "success": True,
             "command": self.message_type_name,
         }
+
+
+Request = DAPMessage

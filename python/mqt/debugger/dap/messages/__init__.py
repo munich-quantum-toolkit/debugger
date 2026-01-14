@@ -16,7 +16,7 @@ from .change_bit_dap_message import BitChangeDAPMessage
 from .configuration_done_dap_message import ConfigurationDoneDAPMessage
 from .continue_dap_message import ContinueDAPMessage
 from .dap_event import DAPEvent
-from .dap_message import DAPMessage
+from .dap_message import DAPMessage, Request
 from .disconnect_dap_message import DisconnectDAPMessage
 from .exception_info_message import ExceptionInfoDAPMessage
 from .exited_dap_event import ExitedDAPEvent
@@ -42,8 +42,6 @@ from .terminate_dap_message import TerminateDAPMessage
 from .terminated_dap_event import TerminatedDAPEvent
 from .threads_dap_message import ThreadsDAPMessage
 from .variables_dap_message import VariablesDAPMessage
-
-Request = DAPMessage
 
 __all__ = [
     "AmplitudeChangeDAPMessage",
