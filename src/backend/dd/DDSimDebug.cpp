@@ -680,13 +680,13 @@ Result ddsimLoadCode(SimulationState* self, const char* code) {
     }
     const auto parsed = parseLoadErrorMessage(ddsim->lastErrorMessage);
     ddsim->lastLoadErrorDetail = parsed.detail;
-    ddsim->lastLoadResult = {
-        .status = ERROR,
-        .line = parsed.line,
-        .column = parsed.column,
-        .message = ddsim->lastLoadErrorDetail.empty()
-                       ? nullptr
-                       : ddsim->lastLoadErrorDetail.c_str()};
+    ddsim->lastLoadResult = {.status = ERROR,
+                             .line = parsed.line,
+                             .column = parsed.column,
+                             .message =
+                                 ddsim->lastLoadErrorDetail.empty()
+                                     ? nullptr
+                                     : ddsim->lastLoadErrorDetail.c_str()};
     return ERROR;
   } catch (...) {
     ddsim->lastErrorMessage = "An error occurred while executing the operation";
