@@ -45,8 +45,9 @@ Returns:
         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
         destroyDDSimulationState(reinterpret_cast<DDSimulationState*>(state));
       },
+      "state"_a,
       R"(Delete a given DD-based `SimulationState` instance and free up resources.
 
 Args:
-    The simulation state to delete.)");
+    state: The simulation state to delete.)");
 }

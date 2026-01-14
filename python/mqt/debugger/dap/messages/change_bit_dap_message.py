@@ -133,7 +133,7 @@ class BitChangeDAPMessage(DAPMessage):
             msg = f"The variable '{name}' is not a classical bit."
             raise ValueError(msg) from exc
 
-        if variable.type != mqt.debugger.VariableType.VarBool:
+        if variable.type_ != mqt.debugger.VariableType.VarBool:
             msg = "Only boolean classical variables can be changed."
             raise ValueError(msg)
 

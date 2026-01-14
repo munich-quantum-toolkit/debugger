@@ -85,7 +85,7 @@ Only one of these fields has a valid value at a time, based on the variable's `V
   nb::class_<Variable>(m, "Variable")
       .def(nb::init<>(), "Creates a new `Variable` instance.")
       .def_rw("name", &Variable::name, "The name of the variable.")
-      .def_rw("type", &Variable::type, "The type of the variable.")
+      .def_rw("type_", &Variable::type, "The type of the variable.")
       .def_rw("value", &Variable::value, "The value of the variable.")
       .doc() = "Represents a classical variable.";
 
@@ -96,7 +96,8 @@ Only one of these fields has a valid value at a time, based on the variable's `V
 Args:
    real: The real part of the complex number. Defaults to 0.0.
    imaginary: The imaginary part of the complex number. Defaults to 0.0.)")
-      .def(nb::init<double, double>(), R"(Initializes a new complex number.
+      .def(nb::init<double, double>(), "real"_a = 0.0, "imaginary"_a = 0.0,
+           R"(Initializes a new complex number.
 
 Args:
    real: The real part of the complex number. Defaults to 0.0.
@@ -143,8 +144,7 @@ Contains one element for each of the `num_states` states in the state vector.)")
       .doc() = "Represents a state vector.";
 
   nb::class_<CompilationSettings>(m, "CompilationSettings")
-      .def(nb::init<uint8_t, size_t>(), nb::arg("opt"),
-           nb::arg("slice_index") = 0,
+      .def(nb::init<uint8_t, size_t>(), "opt"_a, "slice_index"_a = 0,
            R"(Initializes a new set of compilation settings.
 
 Args:
@@ -169,10 +169,11 @@ Args:
           [](SimulationState* self, const char* code) {
             checkOrThrow(self->loadCode(self, code));
           },
+          "code"_a,
           R"(Loads the given code into the simulation state.
 
 Args:
-    code (str): The code to load.)")
+    code: The code to load.)")
       .def(
           "step_forward",
           [](SimulationState* self) { checkOrThrow(self->stepForward(self)); },
@@ -297,11 +298,12 @@ Returns:
             checkOrThrow(self->changeClassicalVariableValue(
                 self, variableName.c_str(), &value));
           },
+          "variable_name"_a, "new_value"_a,
           R"(Updates the value of a classical variable.
 
 Args:
-    variableName: The name of the classical variable to update.
-    newValue: The desired value.)")
+    variable_name: The name of the classical variable to update.
+    new_value: The desired value.)")
       .def(
           "change_amplitude_value",
           [](SimulationState* self, const std::string& basisState,
@@ -309,6 +311,7 @@ Args:
             checkOrThrow(
                 self->changeAmplitudeValue(self, basisState.c_str(), &value));
           },
+          "basis_state"_a, "value"_a,
           R"(Updates the amplitude of a given computational basis state.
 
 The basis state is provided as a bitstring whose length matches the
@@ -317,7 +320,7 @@ remaining amplitudes so that the state vector stays normalized and to
 reject invalid bitstrings or amplitudes that violate normalization.
 
 Args:
-    basisState: The bitstring identifying the basis state to update.
+    basis_state: The bitstring identifying the basis state to update.
     value: The desired complex amplitude.)")
       .def(
           "is_finished",
@@ -373,6 +376,7 @@ Returns:
                 self->getInstructionPosition(self, instruction, &start, &end));
             return std::make_pair(start, end);
           },
+          "instruction"_a,
           R"(Gets the position of the given instruction in the code.
 
 Start and end positions are inclusive and white-spaces are ignored.
@@ -396,6 +400,7 @@ Returns:
             checkOrThrow(self->getAmplitudeIndex(self, qubit, &output));
             return output;
           },
+          "index"_a,
           R"(Gets the complex amplitude of a state in the full state vector.
 
 The amplitude is selected by an integer index that corresponds to the
@@ -413,6 +418,7 @@ Returns:
             checkOrThrow(self->getAmplitudeBitstring(self, bitstring, &output));
             return output;
           },
+          "bitstring"_a,
           R"(Gets the complex amplitude of a state in the full state vector.
 
 The amplitude is selected by a bitstring representing the state.
@@ -429,6 +435,7 @@ Returns:
             checkOrThrow(self->getClassicalVariable(self, name, &output));
             return output;
           },
+          "name"_a,
           R"(Gets a classical variable by name.
 
 For registers, the name should be the register name followed by the index
@@ -462,6 +469,7 @@ Returns:
             }
             return output;
           },
+          "index"_a,
           R"(Gets the name of a classical variable by its index.
 
 For registers, each index is counted as a separate variable and can be
@@ -485,6 +493,7 @@ Returns:
             }
             return output;
           },
+          "index"_a,
           R"(Gets the name of a quantum variable by its index.
 
 For registers, each index is counted as a separate variable and can be
@@ -532,6 +541,7 @@ Returns:
                                                  &output));
             return result;
           },
+          "qubits"_a,
           R"(Gets a sub-state of the state vector of the simulation at the current time.
 
 The state vector is expected to be initialized with the correct number of
@@ -553,6 +563,7 @@ Returns:
                 self->setBreakpoint(self, desiredPosition, &actualPosition));
             return actualPosition;
           },
+          "desired_position"_a,
           R"(Sets a breakpoint at the desired position in the code.
 
 The position is given as a 0-indexed character position in the full code
@@ -593,6 +604,7 @@ Returns:
                 self->getStackTrace(self, maxDepth, stackTrace.data()));
             return stackTrace;
           },
+          "max_depth"_a,
           R"(Gets the current stack trace of the simulation.
 
 The stack trace is represented as a list of instruction indices. Each
@@ -624,6 +636,7 @@ Returns:
             std::string result(buffer.data(), size - 1);
             return result;
           },
+          "settings"_a,
           R"(Compiles the given code into a quantum circuit without assertions.
 
 Args:
@@ -654,7 +667,7 @@ void bindDiagnostics(nb::module_& m) {
       .def_rw("instruction", &ErrorCause ::instruction,
               "The instruction where the error may originate from or "
               "where the error can be detected.")
-      .def_rw("type", &ErrorCause ::type,
+      .def_rw("type_", &ErrorCause ::type,
               "The type of the potential error cause.")
       .doc() = "Represents a potential cause of an assertion error.";
 
@@ -732,6 +745,7 @@ Returns:
             }
             return result;
           },
+          "before_instruction"_a, "qubit"_a,
           R"(Extract all qubits that interact with a given qubit up to a specific instruction.
 
 If the target instruction is inside a custom gate definition, the

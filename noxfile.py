@@ -209,5 +209,50 @@ def docs(session: nox.Session) -> None:
     )
 
 
+@nox.session(reuse_venv=True, venv_backend="uv")
+def stubs(session: nox.Session) -> None:
+    """Generate type stubs for Python bindings using nanobind."""
+    env = {"UV_PROJECT_ENVIRONMENT": session.virtualenv.location}
+    session.run(
+        "uv",
+        "sync",
+        "--no-dev",
+        "--group",
+        "build",
+        env=env,
+    )
+
+    package_root = Path(__file__).parent / "python" / "mqt" / "debugger"
+    pattern_file = Path(__file__).parent / "bindings" / "debugger_patterns.txt"
+
+    session.run(
+        "python",
+        "-m",
+        "nanobind.stubgen",
+        "--recursive",
+        "--include-private",
+        "--output-dir",
+        str(package_root),
+        "--pattern-file",
+        str(pattern_file),
+        "--module",
+        "mqt.debugger.pydebugger",
+    )
+
+    pyi_files = list(package_root.glob("**/*.pyi"))
+
+    if shutil.which("prek") is None:
+        session.install("prek")
+
+    # Allow both 0 (no issues) and 1 as success codes for fixing up stubs
+    success_codes = [0, 1]
+    session.run("prek", "run", "license-tools", "--files", *pyi_files, external=True, success_codes=success_codes)
+    session.run("prek", "run", "ruff-check", "--files", *pyi_files, external=True, success_codes=success_codes)
+    session.run("prek", "run", "ruff-format", "--files", *pyi_files, external=True, success_codes=success_codes)
+
+    # Run ruff-check again to ensure everything is clean
+    session.run("prek", "run", "ruff-check", "--files", *pyi_files, external=True)
+
+
 if __name__ == "__main__":
     nox.main()
