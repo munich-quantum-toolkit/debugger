@@ -85,17 +85,17 @@ ParsedLoadError parseLoadErrorMessage(const std::string& message) {
   const std::string trimmed = trim(message);
   const std::string prefix = "<input>:";
   if (!trimmed.starts_with(prefix)) {
-    return {0, 0, trimmed};
+    return {.line = 0, .column = 0, .detail = trimmed};
   }
 
   const size_t lineStart = prefix.size();
   const size_t lineEnd = trimmed.find(':', lineStart);
   if (lineEnd == std::string::npos) {
-    return {0, 0, trimmed};
+    return {.line = 0, .column = 0, .detail = trimmed};
   }
   const size_t columnEnd = trimmed.find(':', lineEnd + 1);
   if (columnEnd == std::string::npos) {
-    return {0, 0, trimmed};
+    return {.line = 0, .column = 0, .detail = trimmed};
   }
 
   const std::string lineStr = trimmed.substr(lineStart, lineEnd - lineStart);
@@ -105,7 +105,7 @@ ParsedLoadError parseLoadErrorMessage(const std::string& message) {
   if (lineStr.empty() || columnStr.empty() ||
       !std::ranges::all_of(lineStr, isDigit) ||
       !std::ranges::all_of(columnStr, isDigit)) {
-    return {0, 0, trimmed};
+    return {.line = 0, .column = 0, .detail = trimmed};
   }
 
   const size_t line = std::stoul(lineStr);
@@ -114,7 +114,7 @@ ParsedLoadError parseLoadErrorMessage(const std::string& message) {
   if (detail.empty()) {
     detail = trimmed;
   }
-  return {line, column, detail};
+  return {.line = line, .column = column, .detail = detail};
 }
 
 const char* ddsimGetLastErrorMessage(SimulationState* self) {
