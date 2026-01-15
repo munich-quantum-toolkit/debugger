@@ -449,7 +449,7 @@ class DAPServer:
 
             for cause in error_causes:
                 message = self.format_error_cause(cause)
-                reason = self._format_highlight_reason(cause.type)
+                reason = self._format_highlight_reason(cause.type_)
                 entry = self._build_highlight_entry(cause.instruction, reason, message)
                 if entry is not None:
                     highlights.append(entry)

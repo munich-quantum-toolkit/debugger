@@ -62,6 +62,31 @@ struct StatevectorCPP {
 
 // NOLINTNEXTLINE(misc-use-internal-linkage)
 void bindFramework(nb::module_& m) {
+  // Bind the Result enum
+  nb::enum_<Result>(m, "Result", "Represents the result of an operation.")
+      .value("OK", OK, "Indicates that the operation was successful.")
+      .value("ERROR", ERROR, "Indicates that an error occurred.");
+
+  // Bind the LoadResult struct
+  nb::class_<LoadResult>(m, "LoadResult")
+      .def(nb::init<>())
+      .def_rw("status", &LoadResult::status,
+              "Indicates whether the load was successful.")
+      .def_rw("line", &LoadResult::line,
+              "The line number of the error location, or 0 if unknown.")
+      .def_rw("column", &LoadResult::column,
+              "The column number of the error location, or 0 if unknown.")
+      .def_prop_ro(
+          "message",
+          [](const LoadResult& self) {
+            if (self.message == nullptr) {
+              return nb::none();
+            }
+            return nb::cast(std::string(self.message));
+          },
+          "A human-readable error message, or None if none is available.")
+      .doc() = "The result of a code loading operation.";
+
   // Bind the VariableType enum
   nb::enum_<VariableType>(m, "VariableType",
                           "The type of a classical variable.")
