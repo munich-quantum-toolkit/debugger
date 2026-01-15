@@ -48,6 +48,7 @@
 #include <map>
 #include <memory>
 #include <numeric>
+#include <optional>
 #include <random>
 #include <ranges>
 #include <set>
@@ -80,6 +81,81 @@ struct ParsedLoadError {
   size_t column;
   std::string detail;
 };
+
+std::optional<bool> evaluateClassicConditionFromCode(DDSimulationState* ddsim,
+                                                     size_t instructionIndex) {
+  if (instructionIndex >= ddsim->instructionObjects.size()) {
+    return std::nullopt;
+  }
+  const auto& code = ddsim->instructionObjects[instructionIndex].code;
+  if (!isClassicControlledGate(code)) {
+    return std::nullopt;
+  }
+  const auto condition = parseClassicControlledGate(code).condition;
+  auto normalized = removeWhitespace(condition);
+  if (!normalized.empty() && normalized.front() == '(') {
+    normalized.erase(0, 1);
+  }
+  const auto eqPos = normalized.find("==");
+  if (eqPos == std::string::npos) {
+    return std::nullopt;
+  }
+  const auto lhs = normalized.substr(0, eqPos);
+  const auto rhs = normalized.substr(eqPos + 2);
+  if (lhs.empty() || rhs.empty()) {
+    return std::nullopt;
+  }
+
+  const auto parseIndex = [](const std::string& text,
+                             size_t& value) -> bool {
+    if (text.empty()) {
+      return false;
+    }
+    if (std::ranges::any_of(text, [](unsigned char c) { return !std::isdigit(c); })) {
+      return false;
+    }
+    value = std::stoull(text);
+    return true;
+  };
+
+  size_t expected = 0;
+  if (!parseIndex(rhs, expected)) {
+    return std::nullopt;
+  }
+
+  size_t registerValue = 0;
+  const auto bracketPos = lhs.find('[');
+  if (bracketPos != std::string::npos) {
+    const auto closePos = lhs.find(']', bracketPos + 1);
+    if (closePos == std::string::npos) {
+      return std::nullopt;
+    }
+    const auto base = lhs.substr(0, bracketPos);
+    const auto indexText =
+        lhs.substr(bracketPos + 1, closePos - bracketPos - 1);
+    size_t bitIndex = 0;
+    if (!parseIndex(indexText, bitIndex)) {
+      return std::nullopt;
+    }
+    const auto bitName = base + "[" + std::to_string(bitIndex) + "]";
+    const auto& value = ddsim->variables[bitName].value.boolValue;
+    registerValue = value ? 1ULL : 0ULL;
+  } else {
+    const auto regIt = std::ranges::find_if(
+        ddsim->classicalRegisters,
+        [&lhs](const auto& reg) { return reg.name == lhs; });
+    if (regIt == ddsim->classicalRegisters.end()) {
+      return std::nullopt;
+    }
+    for (size_t i = 0; i < regIt->size; i++) {
+      const auto name = getClassicalBitName(ddsim, regIt->index + i);
+      const auto& value = ddsim->variables[name].value.boolValue;
+      registerValue |= (value ? 1ULL : 0ULL) << i;
+    }
+  }
+
+  return registerValue == expected;
+}
 
 ParsedLoadError parseLoadErrorMessage(const std::string& message) {
   const std::string trimmed = trim(message);
@@ -1096,20 +1172,31 @@ Result ddsimStepForward(SimulationState* self) {
       throw std::runtime_error("If-else operations with non-equality "
                                "comparisons are currently not supported");
     }
-    if (op->getControlBit().has_value()) {
-      throw std::runtime_error("If-else operations controlled by a single "
-                               "classical bit are currently not supported");
+    const auto condition =
+        evaluateClassicConditionFromCode(ddsim, currentInstruction);
+    bool conditionMet = false;
+    if (condition.has_value()) {
+      conditionMet = condition.value();
+    } else {
+      const auto& exp = op->getExpectedValueRegister();
+      size_t registerValue = 0;
+      if (op->getControlBit().has_value()) {
+        const auto controlBit = op->getControlBit().value();
+        const auto name = getClassicalBitName(ddsim, controlBit);
+        const auto& value = ddsim->variables[name].value.boolValue;
+        registerValue = value ? 1ULL : 0ULL;
+      } else {
+        const auto& controls = op->getControlRegister();
+        for (size_t i = 0; i < controls->getSize(); i++) {
+          const auto name =
+              getClassicalBitName(ddsim, controls->getStartIndex() + i);
+          const auto& value = ddsim->variables[name].value.boolValue;
+          registerValue |= (value ? 1ULL : 0ULL) << i;
+        }
+      }
+      conditionMet = (registerValue == exp);
     }
-    const auto& controls = op->getControlRegister();
-    const auto& exp = op->getExpectedValueRegister();
-    size_t registerValue = 0;
-    for (size_t i = 0; i < controls->getSize(); i++) {
-      const auto name =
-          getClassicalBitName(ddsim, controls->getStartIndex() + i);
-      const auto& value = ddsim->variables[name].value.boolValue;
-      registerValue |= (value ? 1ULL : 0ULL) << i;
-    }
-    if (registerValue == exp) {
+    if (conditionMet) {
       auto* thenOp = op->getThenOp();
       currDD = dd::getDD(*thenOp, *ddsim->dd);
     } else if (op->getElseOp() != nullptr) {
@@ -1183,20 +1270,31 @@ Result ddsimStepBackward(SimulationState* self) {
       throw std::runtime_error("If-else operations with non-equality "
                                "comparisons are currently not supported");
     }
-    if (op->getControlBit().has_value()) {
-      throw std::runtime_error("If-else operations controlled by a single "
-                               "classical bit are currently not supported");
+    const auto condition = evaluateClassicConditionFromCode(
+        ddsim, ddsim->currentInstruction);
+    bool conditionMet = false;
+    if (condition.has_value()) {
+      conditionMet = condition.value();
+    } else {
+      const auto& exp = op->getExpectedValueRegister();
+      size_t registerValue = 0;
+      if (op->getControlBit().has_value()) {
+        const auto controlBit = op->getControlBit().value();
+        const auto name = getClassicalBitName(ddsim, controlBit);
+        const auto& value = ddsim->variables[name].value.boolValue;
+        registerValue = value ? 1ULL : 0ULL;
+      } else {
+        const auto& controls = op->getControlRegister();
+        for (size_t i = 0; i < controls->getSize(); i++) {
+          const auto name =
+              getClassicalBitName(ddsim, controls->getStartIndex() + i);
+          const auto& value = ddsim->variables[name].value.boolValue;
+          registerValue |= (value ? 1ULL : 0ULL) << i;
+        }
+      }
+      conditionMet = (registerValue == exp);
     }
-    const auto& controls = op->getControlRegister();
-    const auto& exp = op->getExpectedValueRegister();
-    size_t registerValue = 0;
-    for (size_t i = 0; i < controls->getSize(); i++) {
-      const auto name =
-          getClassicalBitName(ddsim, controls->getStartIndex() + i);
-      const auto& value = ddsim->variables[name].value.boolValue;
-      registerValue |= (value ? 1ULL : 0ULL) << i;
-    }
-    if (registerValue == exp) {
+    if (conditionMet) {
       auto* thenOp = op->getThenOp();
       currDD = dd::getInverseDD(*thenOp, *ddsim->dd);
     } else if (op->getElseOp() != nullptr) {
