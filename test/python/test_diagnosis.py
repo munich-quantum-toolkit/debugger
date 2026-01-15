@@ -67,10 +67,10 @@ def test_control_always_zero() -> None:
 
     assert len(causes) == 2
 
-    assert causes[0].type == ErrorCauseType.ControlAlwaysZero
+    assert causes[0].type_ == ErrorCauseType.ControlAlwaysZero
     assert causes[0].instruction == 3
 
-    assert causes[1].type == ErrorCauseType.ControlAlwaysZero
+    assert causes[1].type_ == ErrorCauseType.ControlAlwaysZero
     assert causes[1].instruction == 12
 
 
@@ -78,10 +78,10 @@ def test_missing_interaction() -> None:
     """Test the missing-interaction error diagnosis."""
     s = load_instance("missing-interaction")
     s.run_simulation()
-    causes = [x for x in s.get_diagnostics().potential_error_causes() if x.type == ErrorCauseType.MissingInteraction]
+    causes = [x for x in s.get_diagnostics().potential_error_causes() if x.type_ == ErrorCauseType.MissingInteraction]
     assert len(causes) == 0
     s.run_simulation()
-    causes = [x for x in s.get_diagnostics().potential_error_causes() if x.type == ErrorCauseType.MissingInteraction]
+    causes = [x for x in s.get_diagnostics().potential_error_causes() if x.type_ == ErrorCauseType.MissingInteraction]
     assert len(causes) == 1
     assert causes[0].instruction == 4
 

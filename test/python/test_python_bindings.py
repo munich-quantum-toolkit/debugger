@@ -322,9 +322,9 @@ def test_classical_get(simulation_instance_classical: SimulationInstance) -> Non
     assert simulation_state.get_classical_variable("c[1]").name == "c[1]"
     assert simulation_state.get_classical_variable("c[2]").name == "c[2]"
 
-    assert simulation_state.get_classical_variable("c[0]").type == mqt.debugger.VariableType.VarBool
-    assert simulation_state.get_classical_variable("c[1]").type == mqt.debugger.VariableType.VarBool
-    assert simulation_state.get_classical_variable("c[2]").type == mqt.debugger.VariableType.VarBool
+    assert simulation_state.get_classical_variable("c[0]").type_ == mqt.debugger.VariableType.VarBool
+    assert simulation_state.get_classical_variable("c[1]").type_ == mqt.debugger.VariableType.VarBool
+    assert simulation_state.get_classical_variable("c[2]").type_ == mqt.debugger.VariableType.VarBool
 
     first = simulation_state.get_classical_variable("c[0]").value.bool_value
     assert simulation_state.get_classical_variable("c[1]").value.bool_value == first

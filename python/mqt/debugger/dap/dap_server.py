@@ -385,9 +385,9 @@ class DAPServer:
         start_line, _ = self.code_pos_to_coordinates(start_pos)
         return (
             "The qubits never interact with each other. Are you missing a CX gate?"
-            if cause.type == mqt.debugger.ErrorCauseType.MissingInteraction
+            if cause.type_ == mqt.debugger.ErrorCauseType.MissingInteraction
             else f"Control qubit is always zero in line {start_line}."
-            if cause.type == mqt.debugger.ErrorCauseType.ControlAlwaysZero
+            if cause.type_ == mqt.debugger.ErrorCauseType.ControlAlwaysZero
             else ""
         )
 
