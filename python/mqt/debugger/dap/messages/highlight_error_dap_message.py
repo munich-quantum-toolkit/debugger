@@ -144,7 +144,7 @@ class HighlightError(DAPEvent):
         try:
             line = int(position["line"])
             column = int(position["column"])
-        except KeyError as exc:
+        except (KeyError, TypeError, ValueError) as exc:
             msg = "Highlight positions require 'line' and 'column'."
             raise ValueError(msg) from exc
         return {

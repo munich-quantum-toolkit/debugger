@@ -115,6 +115,7 @@ class DAPServer:
         self.lines_start_at_one = True
         self.columns_start_at_one = True
         self.pending_highlights: list[dict[str, Any]] = []
+        self.source_file = {"name": "", "path": ""}
         self._prevent_exit = False
 
     def start(self) -> None:
@@ -259,10 +260,17 @@ class DAPServer:
                 event_payload = json.dumps(e.encode())
                 send_message(event_payload, connection)
             if self.pending_highlights:
-                highlight_event = mqt.debugger.dap.messages.HighlightError(self.pending_highlights, self.source_file)
-                send_message(json.dumps(highlight_event.encode()), connection)
-                self.pending_highlights = []
-                self._prevent_exit = True
+                try:
+                    highlight_event = mqt.debugger.dap.messages.HighlightError(
+                        self.pending_highlights,
+                        self.source_file,
+                    )
+                    send_message(json.dumps(highlight_event.encode()), connection)
+                    self._prevent_exit = True
+                except (TypeError, ValueError):
+                    pass
+                finally:
+                    self.pending_highlights = []
             self.regular_checks(connection)
 
     def regular_checks(self, connection: socket.socket) -> None:
@@ -360,9 +368,12 @@ class DAPServer:
         )
         highlight_entries = self.collect_highlight_entries(current_instruction, error_causes)
         if highlight_entries:
-            highlight_event = mqt.debugger.dap.messages.HighlightError(highlight_entries, self.source_file)
-            send_message(json.dumps(highlight_event.encode()), connection)
-            self._prevent_exit = True
+            try:
+                highlight_event = mqt.debugger.dap.messages.HighlightError(highlight_entries, self.source_file)
+                send_message(json.dumps(highlight_event.encode()), connection)
+                self._prevent_exit = True
+            except (TypeError, ValueError):
+                pass
 
     def code_pos_to_coordinates(self, pos: int) -> tuple[int, int]:
         """Helper method to convert a code position to line and column.
