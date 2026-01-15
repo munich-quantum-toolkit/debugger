@@ -10,40 +10,6 @@ import enum
 from collections.abc import Sequence
 from typing import overload
 
-class Result(enum.Enum):
-    """Represents the result of an operation."""
-
-    OK = 0
-    """Indicates that the operation was successful."""
-    ERROR = 1
-    """Indicates that an error occurred."""
-
-class LoadResult:
-    """The result of a code loading operation."""
-
-    def __init__(self) -> None: ...
-    @property
-    def status(self) -> Result:
-        """Indicates whether the load was successful."""
-
-    @status.setter
-    def status(self, arg: Result, /) -> None: ...
-    @property
-    def line(self) -> int:
-        """The line number of the error location, or 0 if unknown."""
-
-    @line.setter
-    def line(self, arg: int, /) -> None: ...
-    @property
-    def column(self) -> int:
-        """The column number of the error location, or 0 if unknown."""
-
-    @column.setter
-    def column(self, arg: int, /) -> None: ...
-    @property
-    def message(self) -> str | None:
-        """A human-readable error message, or None if none is available."""
-
 class ErrorCauseType(enum.Enum):
     """The type of a potential error cause."""
 
@@ -187,6 +153,41 @@ class Diagnostics:
         Returns:
             A list of new assertions.
         """
+
+class Result(enum.Enum):
+    """Represents the result of an operation."""
+
+    OK = 0
+    """Indicates that the operation was successful."""
+
+    ERROR = 1
+    """Indicates that an error occurred."""
+
+class LoadResult:
+    """The result of a code loading operation."""
+
+    def __init__(self) -> None: ...
+    @property
+    def status(self) -> Result:
+        """Indicates whether the load was successful."""
+
+    @status.setter
+    def status(self, arg: Result, /) -> None: ...
+    @property
+    def line(self) -> int:
+        """The line number of the error location, or 0 if unknown."""
+
+    @line.setter
+    def line(self, arg: int, /) -> None: ...
+    @property
+    def column(self) -> int:
+        """The column number of the error location, or 0 if unknown."""
+
+    @column.setter
+    def column(self, arg: int, /) -> None: ...
+    @property
+    def message(self) -> object:
+        """A human-readable error message, or None if none is available."""
 
 class VariableType(enum.Enum):
     """The type of a classical variable."""
