@@ -76,7 +76,7 @@ class RestartDAPMessage(DAPMessage):
             parsed_successfully = False
             line = load_result.line if load_result.line > 0 else None
             column = load_result.column if load_result.column > 0 else None
-            message = load_result.message or ""
+            message = str(load_result.message or "")
             server.queue_parse_error(message, line, column)
         if parsed_successfully and not self.stop_on_entry:
             server.simulation_state.run_simulation()
