@@ -189,7 +189,9 @@ class DAPServer:
                 e = mqt.debugger.dap.messages.InitializedDAPEvent()
                 event_payload = json.dumps(e.encode())
                 send_message(event_payload, connection)
-            if isinstance(cmd, (mqt.debugger.dap.messages.LaunchDAPMessage, mqt.debugger.dap.messages.RestartDAPMessage)):
+            if isinstance(
+                cmd, (mqt.debugger.dap.messages.LaunchDAPMessage, mqt.debugger.dap.messages.RestartDAPMessage)
+            ):
                 clear_event = mqt.debugger.dap.messages.GrayOutDAPEvent([], self.source_file)
                 send_message(json.dumps(clear_event.encode()), connection)
             if (

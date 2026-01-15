@@ -106,12 +106,12 @@ std::optional<bool> evaluateClassicConditionFromCode(DDSimulationState* ddsim,
     return std::nullopt;
   }
 
-  const auto parseIndex = [](const std::string& text,
-                             size_t& value) -> bool {
+  const auto parseIndex = [](const std::string& text, size_t& value) -> bool {
     if (text.empty()) {
       return false;
     }
-    if (std::ranges::any_of(text, [](unsigned char c) { return !std::isdigit(c); })) {
+    if (std::ranges::any_of(text,
+                            [](unsigned char c) { return !std::isdigit(c); })) {
       return false;
     }
     value = std::stoull(text);
@@ -1270,8 +1270,8 @@ Result ddsimStepBackward(SimulationState* self) {
       throw std::runtime_error("If-else operations with non-equality "
                                "comparisons are currently not supported");
     }
-    const auto condition = evaluateClassicConditionFromCode(
-        ddsim, ddsim->currentInstruction);
+    const auto condition =
+        evaluateClassicConditionFromCode(ddsim, ddsim->currentInstruction);
     bool conditionMet = false;
     if (condition.has_value()) {
       conditionMet = condition.value();
