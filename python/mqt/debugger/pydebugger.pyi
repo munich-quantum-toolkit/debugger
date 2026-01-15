@@ -6,21 +6,9 @@
 #
 # Licensed under the MIT License
 
-"""Type stubs for python bindings of the debug module."""
-
 import enum
-
-# Enums
-
-class VariableType(enum.Enum):
-    """Represents possible types of classical variables."""
-
-    VarBool = 0
-    """A boolean variable."""
-    VarInt = 1
-    """A 32-bit integer variable."""
-    VarFloat = 2
-    """A floating-point variable."""
+from collections.abc import Sequence
+from typing import overload
 
 class Result(enum.Enum):
     """Represents the result of an operation."""
@@ -31,16 +19,160 @@ class Result(enum.Enum):
     """Indicates that an error occurred."""
 
 class ErrorCauseType(enum.Enum):
-    """Represents the type of a potential error cause."""
+    """The type of a potential error cause."""
 
     Unknown = 0
     """An unknown error cause."""
-    MissingInteraction = 1
-    """Indicates that an entanglement error may be caused by a missing interaction."""
-    ControlAlwaysZero = 2
-    """Indicates that an error may be related to a controlled gate with a control that is always zero."""
 
-# Classes
+    MissingInteraction = 1
+    """
+    Indicates that an entanglement error may be caused by a missing interaction.
+    """
+
+    ControlAlwaysZero = 2
+    """
+    Indicates that an error may be related to a controlled gate with a control that is always zero.
+    """
+
+class ErrorCause:
+    """Represents a potential cause of an assertion error."""
+
+    def __init__(self) -> None: ...
+    @property
+    def instruction(self) -> int:
+        """The instruction where the error may originate from or where the error can be detected."""
+
+    @instruction.setter
+    def instruction(self, arg: int, /) -> None: ...
+    @property
+    def type_(self) -> ErrorCauseType:
+        """The type of the potential error cause."""
+
+    @type_.setter
+    def type_(self, arg: ErrorCauseType, /) -> None: ...
+
+class Diagnostics:
+    """Provides diagnostics capabilities such as different analysis methods for the debugger."""
+
+    def __init__(self) -> None:
+        """Creates a new `Diagnostics` instance."""
+
+    def init(self) -> None:
+        """Initializes the diagnostics instance."""
+
+    def get_num_qubits(self) -> int:
+        """Get the number of qubits in the system.
+
+        Returns:
+            The number of qubits in the system.
+        """
+
+    def get_instruction_count(self) -> int:
+        """Get the number of instructions in the code.
+
+        Returns:
+            The number of instructions in the code.
+        """
+
+    def get_data_dependencies(self, instruction: int, include_callers: bool = False) -> list[int]:
+        """Extract all data dependencies for a given instruction.
+
+        If the instruction is inside a custom gate definition, the data
+        dependencies will by default not go outside of the custom gate, unless a
+        new call instruction is found. By setting `include_callers` to `True`, all
+        possible callers of the custom gate will also be included and further
+        dependencies outside the custom gate will be taken from there.
+
+        The line itself will also be counted as a dependency. Gate and register
+        declarations will not.
+
+        This method can be performed without running the program, as it is a static
+        analysis method.
+
+        Args:
+            instruction: The instruction to extract the data dependencies for.
+            include_callers: True, if the data dependencies should include all possible callers of the containing custom gate. Defaults to False.
+
+        Returns:
+            A list of instruction indices that are data dependencies of the given instruction.
+        """
+
+    def get_interactions(self, before_instruction: int, qubit: int) -> list[int]:
+        """Extract all qubits that interact with a given qubit up to a specific instruction.
+
+        If the target instruction is inside a custom gate definition, the
+        interactions will only be searched inside the custom gate, unless a new
+        call instruction is found.
+
+        The qubit itself will also be counted as an interaction.
+
+        This method can be performed without running the program, as it is a static
+        analysis method.
+
+        Args:
+            before_instruction: The instruction to extract the interactions up to (excluding).
+            qubit: The qubit to extract the interactions for.
+
+        Returns:
+            A list of qubit indices that interact with the given qubit up to the target instruction.
+        """
+
+    def get_zero_control_instructions(self) -> list[int]:
+        """Extract all controlled gates that have been marked as only having controls with value zero.
+
+        This method expects a continuous memory block of booleans with size equal
+        to the number of instructions. Each element represents an instruction and
+        will be set to true if the instruction is a controlled gate with only zero
+        controls.
+
+        This method can only be performed at runtime, as it is a dynamic analysis
+        method.
+
+        Returns:
+            The indices of instructions that are controlled gates with only zero controls.
+        """
+
+    def potential_error_causes(self) -> list[ErrorCause]:
+        """Extract a list of potential error causes encountered during execution.
+
+        This method should be run after the program has been executed and reached
+        an assertion error.
+
+        Returns:
+           A list of potential error causes encountered during execution.
+        """
+
+    def suggest_assertion_movements(self) -> list[tuple[int, int]]:
+        """Suggest movements of assertions to better positions.
+
+        Each entry of the resulting list consists of the original position of the assertion, followed by its new
+        suggested position.
+
+        Returns:
+            A list of moved assertions.
+        """
+
+    def suggest_new_assertions(self) -> list[tuple[int, str]]:
+        """Suggest new assertions to be added to the program.
+
+        Each entry of the resulting list consists of the suggested position for the new assertion, followed by its
+        string representation.
+
+        Returns:
+            A list of new assertions.
+        """
+
+class VariableType(enum.Enum):
+    """The type of a classical variable."""
+
+    VarBool = 0
+    """A boolean variable."""
+
+    VarInt = 1
+    """An integer variable."""
+
+    VarFloat = 2
+    """A floating-point variable."""
 
 class VariableValue:
     """Represents the value of a classical variable.
@@ -48,95 +180,134 @@ class VariableValue:
     Only one of these fields has a valid value at a time, based on the variable's `VariableType`.
     """
 
-    bool_value: bool
-    """The value of a boolean variable."""
-    int_value: int
-    """The value of a 32-bit integer variable."""
-    float_value: float
-    """The value of a floating-point variable."""
+    def __init__(self) -> None: ...
+    @property
+    def bool_value(self) -> bool:
+        """The value of a boolean variable."""
 
-    def __init__(self) -> None:
-        """Creates a new `VariableValue` instance."""
+    @bool_value.setter
+    def bool_value(self, arg: bool, /) -> None: ...
+    @property
+    def int_value(self) -> int:
+        """The value of an integer variable."""
+
+    @int_value.setter
+    def int_value(self, arg: int, /) -> None: ...
+    @property
+    def float_value(self) -> float:
+        """The value of a floating-point variable."""
+
+    @float_value.setter
+    def float_value(self, arg: float, /) -> None: ...
 
 class Variable:
     """Represents a classical variable."""
 
-    name: str
-    """The name of the variable."""
-    type: VariableType
-    """The type of the variable."""
-    value: VariableValue
-    """The value of the variable."""
-
     def __init__(self) -> None:
         """Creates a new `Variable` instance."""
+
+    @property
+    def name(self) -> str:
+        """The name of the variable."""
+
+    @name.setter
+    def name(self, arg: str, /) -> None: ...
+    @property
+    def type_(self) -> VariableType:
+        """The type of the variable."""
+
+    @type_.setter
+    def type_(self, arg: VariableType, /) -> None: ...
+    @property
+    def value(self) -> VariableValue:
+        """The value of the variable."""
+
+    @value.setter
+    def value(self, arg: VariableValue, /) -> None: ...
 
 class Complex:
     """Represents a complex number."""
 
-    real: float
-    """The real part of the complex number."""
-    imaginary: float
-    """The imaginary part of the complex number."""
+    @overload
+    def __init__(self) -> None:
+        """Initializes a new complex number."""
 
+    @overload
     def __init__(self, real: float = 0.0, imaginary: float = 0.0) -> None:
         """Initializes a new complex number.
 
         Args:
-            real (float, optional): The real part of the complex number. Defaults to 0.0.
-            imaginary (float, optional): The imaginary part of the complex number. Defaults to 0.0.
+            real: The real part of the complex number. Defaults to 0.0.
+            imaginary: The imaginary part of the complex number. Defaults to 0.0.
         """
+
+    @property
+    def real(self) -> float:
+        """The real part of the complex number."""
+
+    @real.setter
+    def real(self, arg: float, /) -> None: ...
+    @property
+    def imaginary(self) -> float:
+        """The imaginary part of the complex number."""
+
+    @imaginary.setter
+    def imaginary(self, arg: float, /) -> None: ...
+
+class Statevector:
+    """Represents a state vector."""
+
+    def __init__(self) -> None:
+        """Creates a new `Statevector` instance."""
+
+    @property
+    def num_qubits(self) -> int:
+        """The number of qubits in the state vector."""
+
+    @num_qubits.setter
+    def num_qubits(self, arg: int, /) -> None: ...
+    @property
+    def num_states(self) -> int:
+        """The number of states in the state vector.
+
+        This is always equal to 2^`num_qubits`.
+        """
+
+    @num_states.setter
+    def num_states(self, arg: int, /) -> None: ...
+    @property
+    def amplitudes(self) -> list[Complex]:
+        """The amplitudes of the state vector.
+
+        Contains one element for each of the `num_states` states in the state vector.
+        """
+
+    @amplitudes.setter
+    def amplitudes(self, arg: Sequence[Complex], /) -> None: ...
 
 class CompilationSettings:
     """The settings that should be used to compile an assertion program."""
-
-    opt: int
-    """The optimization level that should be used. Exact meaning depends on the implementation, but typically 0 means no optimization."""
-    slice_index: int
-    """The index of the slice that should be compiled."""
 
     def __init__(self, opt: int, slice_index: int = 0) -> None:
         """Initializes a new set of compilation settings.
 
         Args:
-            opt (int): The optimization level that should be used.
-            slice_index (int, optional): The index of the slice that should be compiled (defaults to 0).
+            opt: The optimization level that should be used.
+            slice_index: The index of the slice that should be compiled (defaults to 0).
         """
 
-class LoadResult:
-    """Represents the result of loading code."""
+    @property
+    def opt(self) -> int:
+        """The optimization level that should be used. Exact meaning depends on the implementation, but typically 0 means no optimization."""
 
-    status: Result
-    """The result status of the load operation."""
-    line: int
-    """The line number of the error location, or 0 if unknown."""
-    column: int
-    """The column number of the error location, or 0 if unknown."""
-    message: str | None
-    """A human-readable error message, or None if none is available."""
+    @opt.setter
+    def opt(self, arg: int, /) -> None: ...
+    @property
+    def slice_index(self) -> int:
+        """The index of the slice that should be compiled."""
 
-    def __init__(self) -> None:
-        """Creates a new `LoadResult` instance."""
-
-class Statevector:
-    """Represents a state vector."""
-
-    num_qubits: int
-    """The number of qubits in the state vector."""
-    num_states: int
-    """The number of states in the state vector.
-
-    This is always equal to 2^`num_qubits`.
-    """
-
-    amplitudes: list[Complex]
-    """The amplitudes of the state vector.
-
-    Contains one element for each of the `num_states` states in the state vector.
-    """
-
-    def __init__(self) -> None:
-        """Creates a new `Statevector` instance."""
+    @slice_index.setter
+    def slice_index(self, arg: int, /) -> None: ...
 
 class SimulationState:
     """Represents the state of a quantum simulation for debugging.
@@ -154,7 +325,7 @@ class SimulationState:
         """Loads the given code into the simulation state.
 
         Args:
-            code (str): The code to load.
+            code: The code to load.
         """
 
     def load_code_with_result(self, code: str) -> LoadResult:
@@ -189,28 +360,7 @@ class SimulationState:
         """Runs the simulation until it finishes, even if assertions fail.
 
         Returns:
-        int: The number of assertions that failed during execution.
-        """
-
-    def change_classical_variable_value(self, variable_name: str, value: bool | float) -> None:
-        """Updates the value of a classical variable.
-
-        Args:
-            variable_name (str): The name of the classical variable to update.
-            value (bool | float): The desired value.
-        """
-
-    def change_amplitude_value(self, basis_state: str, value: Complex) -> None:
-        """Updates the amplitude of a given computational basis state.
-
-        The basis state is provided as a bitstring whose length matches the
-        current number of qubits. Implementations are expected to renormalize the
-        remaining amplitudes so that the state vector stays normalized and to
-        reject invalid bitstrings or amplitudes that violate normalization.
-
-        Args:
-            basis_state (str): The bitstring identifying the basis state to update.
-            value (Complex): The desired complex amplitude.
+            The number of assertions that failed during execution.
         """
 
     def run_simulation(self) -> None:
@@ -248,7 +398,7 @@ class SimulationState:
         simulation has not been set up yet.
 
         Returns:
-        bool: True, if the simulation can step forward.
+            True, if the simulation can step forward.
         """
 
     def can_step_backward(self) -> bool:
@@ -258,7 +408,28 @@ class SimulationState:
         the simulation has not been set up yet.
 
         Returns:
-        bool: True, if the simulation can step backward.
+            True, if the simulation can step backward.
+        """
+
+    def change_classical_variable_value(self, variable_name: str, new_value: object) -> None:
+        """Updates the value of a classical variable.
+
+        Args:
+            variable_name: The name of the classical variable to update.
+            new_value: The desired value.
+        """
+
+    def change_amplitude_value(self, basis_state: str, value: Complex) -> None:
+        """Updates the amplitude of a given computational basis state.
+
+        The basis state is provided as a bitstring whose length matches the
+        current number of qubits. Implementations are expected to renormalize the
+        remaining amplitudes so that the state vector stays normalized and to
+        reject invalid bitstrings or amplitudes that violate normalization.
+
+        Args:
+            basis_state: The bitstring identifying the basis state to update.
+            value: The desired complex amplitude.
         """
 
     def is_finished(self) -> bool:
@@ -267,7 +438,7 @@ class SimulationState:
         The execution is considered finished if it has reached the end of the code.
 
         Returns:
-        bool: True, if the execution has finished.
+            True, if the execution has finished.
         """
 
     def did_assertion_fail(self) -> bool:
@@ -277,7 +448,7 @@ class SimulationState:
         be set to false again.
 
         Returns:
-        bool: True, if an assertion failed during the last step.
+            True, if an assertion failed during the last step.
         """
 
     def was_breakpoint_hit(self) -> bool:
@@ -287,21 +458,21 @@ class SimulationState:
         be set to false again.
 
         Returns:
-        bool: True, if a breakpoint was hit during the last step.
+            True, if a breakpoint was hit during the last step.
         """
 
     def get_current_instruction(self) -> int:
         """Gets the current instruction index.
 
         Returns:
-        int: The index of the current instruction.
+            The index of the current instruction.
         """
 
     def get_instruction_count(self) -> int:
         """Gets the number of instructions in the code.
 
         Returns:
-            int: The number of instructions in the code.
+            The number of instructions in the code.
         """
 
     def get_instruction_position(self, instruction: int) -> tuple[int, int]:
@@ -310,17 +481,17 @@ class SimulationState:
         Start and end positions are inclusive and white-spaces are ignored.
 
         Args:
-            instruction (int): The instruction to find.
+            instruction: The instruction to find.
 
         Returns:
-            tuple[int, int]: The start and end positions of the instruction.
+            The start and end positions of the instruction.
         """
 
     def get_num_qubits(self) -> int:
         """Gets the number of qubits used by the program.
 
         Returns:
-            int: The number of qubits used by the program.
+            The number of qubits used by the program.
         """
 
     def get_amplitude_index(self, index: int) -> Complex:
@@ -330,10 +501,10 @@ class SimulationState:
         binary representation of the state.
 
         Args:
-            index (int): The index of the state in the full state vector.
+            index: The index of the state in the full state vector.
 
         Returns:
-            Complex: The complex amplitude of the state.
+            The complex amplitude of the state.
         """
 
     def get_amplitude_bitstring(self, bitstring: str) -> Complex:
@@ -342,10 +513,10 @@ class SimulationState:
         The amplitude is selected by a bitstring representing the state.
 
         Args:
-            bitstring (str): The index of the state as a bitstring.
+            bitstring: The index of the state as a bitstring.
 
         Returns:
-            Complex: The complex amplitude of the state.
+            The complex amplitude of the state.
         """
 
     def get_classical_variable(self, name: str) -> Variable:
@@ -355,10 +526,10 @@ class SimulationState:
         in square brackets.
 
         Args:
-            name (str): The name of the variable.
+            name: The name of the variable.
 
         Returns:
-            Variable: The fetched variable.
+            The fetched variable.
         """
 
     def get_num_classical_variables(self) -> int:
@@ -367,7 +538,7 @@ class SimulationState:
         For registers, each index is counted as a separate variable.
 
         Returns:
-            int: The number of classical variables in the simulation.
+            The number of classical variables in the simulation.
         """
 
     def get_classical_variable_name(self, index: int) -> str:
@@ -378,36 +549,44 @@ class SimulationState:
         index of the register.
 
         Args:
-            index (int): The index of the variable.
+            index: The index of the variable.
 
         Returns:
-            str: The name of the variable.
+            The name of the variable.
+        """
+
+    def get_quantum_variable_name(self, index: int) -> str:
+        """Gets the name of a quantum variable by its index.
+
+        For registers, each index is counted as a separate variable and can be
+        accessed separately. This method will return the name of the specific
+        index of the register.
+
+        Args:
+            index: The index of the variable.
+
+        Returns:
+            The name of the variable.
         """
 
     def get_state_vector_full(self) -> Statevector:
         """Gets the full state vector of the simulation at the current time.
 
-        The state vector is expected to be initialized with the correct number of
-        qubits and allocated space for the amplitudes before calling this method.
-
         Returns:
-            Statevector: The full state vector of the current simulation state.
+            The full state vector of the current simulation state.
         """
 
-    def get_state_vector_sub(self, qubits: list[int]) -> Statevector:
+    def get_state_vector_sub(self, qubits: Sequence[int]) -> Statevector:
         """Gets a sub-state of the state vector of the simulation at the current time.
-
-        The state vector is expected to be initialized with the correct number of
-        qubits and allocated space for the amplitudes before calling this method.
 
         This method also supports the re-ordering of qubits, but does not allow
         qubits to be repeated.
 
         Args:
-            qubits (list[int]): The qubits to include in the sub-state.
+            qubits: The qubits to include in the sub-state.
 
         Returns:
-            Statevector: The sub-state vector of the current simulation state.
+            The sub-state vector of the current simulation state.
         """
 
     def set_breakpoint(self, desired_position: int) -> int:
@@ -417,10 +596,10 @@ class SimulationState:
         string.
 
         Args:
-            desired_position (int): The position in the code to set the breakpoint.
+            desired_position: The position in the code to set the breakpoint.
 
         Returns:
-            int: The index of the instruction where the breakpoint was set.
+            The index of the instruction where the breakpoint was set.
         """
 
     def clear_breakpoints(self) -> None:
@@ -432,7 +611,7 @@ class SimulationState:
         Each custom gate call corresponds to one stack entry.
 
         Returns:
-            int: The current stack depth of the simulation.
+            The current stack depth of the simulation.
         """
 
     def get_stack_trace(self, max_depth: int) -> list[int]:
@@ -443,160 +622,39 @@ class SimulationState:
         stack entry.
 
         Args:
-            max_depth (int): The maximum depth of the stack trace.
+            max_depth: The maximum depth of the stack trace.
 
         Returns:
-            list[int]: The stack trace of the simulation.
+            The stack trace of the simulation.
         """
 
     def get_diagnostics(self) -> Diagnostics:
         """Gets the diagnostics instance employed by this debugger.
 
         Returns:
-            Diagnostics: The diagnostics instance employed by this debugger.
+            The diagnostics instance employed by this debugger.
         """
 
     def compile(self, settings: CompilationSettings) -> str:
-        """Compiles the program in the current state.
+        """Compiles the given code into a quantum circuit without assertions.
 
         Args:
-        settings (CompilationSettings): The settings to use for the compilation.
+            settings: The settings to use for the compilation.
 
         Returns:
-            str: The compiled code.
-        """
-
-class ErrorCause:
-    """Represents a potential cause of an assertion error."""
-
-    instruction: int
-    """The instruction where the error may originate from or where the error can be detected."""
-    type: ErrorCauseType
-    """The type of the potential error cause."""
-
-    def __init__(self) -> None:
-        """Creates a new `ErrorCause` instance."""
-
-class Diagnostics:
-    """Provides diagnostics capabilities such as different analysis methods for the debugger."""
-    def __init__(self) -> None:
-        """Creates a new `Diagnostics` instance."""
-
-    def init(self) -> None:
-        """Initializes the diagnostics instance."""
-
-    def get_num_qubits(self) -> int:
-        """Get the number of qubits in the system.
-
-        Returns:
-            int: The number of qubits in the system.
-        """
-
-    def get_instruction_count(self) -> int:
-        """Get the number of instructions in the code.
-
-        Returns:
-            int: The number of instructions in the code.
-        """
-
-    def get_data_dependencies(self, instruction: int, include_callers: bool = False) -> list[int]:
-        """Extract all data dependencies for a given instruction.
-
-        If the instruction is inside a custom gate definition, the data
-        dependencies will by default not go outside of the custom gate, unless a
-        new call instruction is found. By setting `include_callers` to `True`, all
-        possible callers of the custom gate will also be included and further
-        dependencies outside the custom gate will be taken from there.
-
-        The line itself will also be counted as a dependency. Gate and register
-        declarations will not.
-
-        This method can be performed without running the program, as it is a static
-        analysis method.
-
-        Args:
-            instruction (int): The instruction to extract the data dependencies for.
-            include_callers (bool, optional): True, if the data dependencies should include all possible callers of the containing custom gate. Defaults to False.
-
-        Returns:
-            list[int]: A list of instruction indices that are data dependencies of the given instruction.
-        """
-
-    def get_interactions(self, before_instruction: int, qubit: int) -> list[int]:
-        """Extract all qubits that interact with a given qubit up to a specific instruction.
-
-        If the target instruction is inside a custom gate definition, the
-        interactions will only be searched inside the custom gate, unless a new
-        call instruction is found.
-
-        The qubit itself will also be counted as an interaction.
-
-        This method can be performed without running the program, as it is a static
-        analysis method.
-
-        Args:
-            before_instruction (int): The instruction to extract the interactions up to (excluding).
-            qubit (int): The qubit to extract the interactions for.
-
-        Returns:
-            list[int]: A list of qubit indices that interact with the given qubit up to the target instruction.
-        """
-
-    def get_zero_control_instructions(self) -> list[int]:
-        """Extract all controlled gates that have been marked as only having controls with value zero.
-
-        This method expects a continuous memory block of booleans with size equal
-        to the number of instructions. Each element represents an instruction and
-        will be set to true if the instruction is a controlled gate with only zero
-        controls.
-
-        This method can only be performed at runtime, as it is a dynamic analysis
-        method.
-
-        Returns:
-            list[int]: The indices of instructions that are controlled gates with only zero controls.
-        """
-
-    def potential_error_causes(self) -> list[ErrorCause]:
-        """Extract a list of potential error causes encountered during execution.
-
-        This method should be run after the program has been executed and reached
-        an assertion error.
-
-        Returns:
-            list[ErrorCause]: A list of potential error causes encountered during execution.
-        """
-
-    def suggest_assertion_movements(self) -> tuple[int, int]:
-        """Suggest movements of assertions to better positions.
-
-        Each entry of the resulting list consists of the original position of the assertion, followed by its new
-        suggested position.
-
-        Returns:
-            list[tuple[int, int]]: A list of moved assertions.
-        """
-
-    def suggest_new_assertions(self) -> tuple[int, str]:
-        """Suggest new assertions to be added to the program.
-
-        Each entry of the resulting list consists of the suggested position for the new assertion, followed by its
-        string representation.
-
-        Returns:
-          list[tupke[int, str]]: A list of new assertions.
+            The compiled code.
         """
 
 def create_ddsim_simulation_state() -> SimulationState:
     """Creates a new `SimulationState` instance using the DD backend for simulation and the OpenQASM language as input format.
 
     Returns:
-        SimulationState: The created simulation state.
+        The created simulation state.
     """
 
 def destroy_ddsim_simulation_state(state: SimulationState) -> None:
     """Delete a given DD-based `SimulationState` instance and free up resources.
 
     Args:
-        state (SimulationState): The simulation state to delete.
+        state: The simulation state to delete.
     """

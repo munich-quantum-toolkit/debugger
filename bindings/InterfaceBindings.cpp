@@ -14,8 +14,6 @@
  * diagnostics interfaces.
  */
 
-#include "python/InterfaceBindings.hpp"
-
 #include "backend/debug.h"
 #include "backend/diagnostics.h"
 #include "common.h"
@@ -23,19 +21,17 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
-#include <pybind11/cast.h>
-#include <pybind11/detail/common.h>
-#include <pybind11/native_enum.h>
-#include <pybind11/pybind11.h>
-#include <pybind11/pytypes.h>
-#include <pybind11/stl.h> // NOLINT(misc-include-cleaner)
+#include <nanobind/nanobind.h>
+#include <nanobind/stl/pair.h>   // NOLINT(misc-include-cleaner)
+#include <nanobind/stl/string.h> // NOLINT(misc-include-cleaner)
+#include <nanobind/stl/vector.h> // NOLINT(misc-include-cleaner)
 #include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
 
-namespace py = pybind11;
-using namespace pybind11::literals;
+namespace nb = nanobind;
+using namespace nb::literals;
 
 namespace {
 
@@ -64,61 +60,48 @@ struct StatevectorCPP {
   std::vector<Complex> amplitudes;
 };
 
-void bindFramework(py::module& m) {
-  // Bind the Result enum
-  py::native_enum<Result>(m, "Result", "enum.Enum",
-                          "Represents the result of an operation.")
-      .value("OK", OK, "Indicates that the operation was successful.")
-      .value("ERROR", ERROR, "Indicates that an error occurred.")
-      .export_values()
-      .finalize();
-
+// NOLINTNEXTLINE(misc-use-internal-linkage)
+void bindFramework(nb::module_& m) {
   // Bind the VariableType enum
-  py::native_enum<VariableType>(m, "VariableType", "enum.Enum",
-                                "The type of a classical variable.")
+  nb::enum_<VariableType>(m, "VariableType",
+                          "The type of a classical variable.")
       .value("VarBool", VarBool, "A boolean variable.")
       .value("VarInt", VarInt, "An integer variable.")
-      .value("VarFloat", VarFloat, "A floating-point variable.")
-      .export_values()
-      .finalize();
+      .value("VarFloat", VarFloat, "A floating-point variable.");
 
   // Bind the VariableValue union
-  py::class_<VariableValue>(m, "VariableValue")
-      .def(py::init<>())
-      .def_readwrite("bool_value", &VariableValue::boolValue,
-                     "The value of a boolean variable.")
-      .def_readwrite("int_value", &VariableValue::intValue,
-                     "The value of an integer variable.")
-      .def_readwrite("float_value", &VariableValue::floatValue,
-                     "The value of a floating-point variable.")
+  nb::class_<VariableValue>(m, "VariableValue")
+      .def(nb::init<>())
+      .def_rw("bool_value", &VariableValue::boolValue,
+              "The value of a boolean variable.")
+      .def_rw("int_value", &VariableValue::intValue,
+              "The value of an integer variable.")
+      .def_rw("float_value", &VariableValue::floatValue,
+              "The value of a floating-point variable.")
       .doc() = R"(Represents the value of a classical variable.
 
 Only one of these fields has a valid value at a time, based on the variable's `VariableType`.)";
 
   // Bind the Variable struct
-  py::class_<Variable>(m, "Variable")
-      .def(py::init<>(), "Creates a new `Variable` instance.")
-      .def_readwrite("name", &Variable::name, "The name of the variable.")
-      .def_readwrite("type", &Variable::type, "The type of the variable.")
-      .def_readwrite("value", &Variable::value, "The value of the variable.")
+  nb::class_<Variable>(m, "Variable")
+      .def(nb::init<>(), "Creates a new `Variable` instance.")
+      .def_rw("name", &Variable::name, "The name of the variable.")
+      .def_rw("type_", &Variable::type, "The type of the variable.")
+      .def_rw("value", &Variable::value, "The value of the variable.")
       .doc() = "Represents a classical variable.";
 
   // Bind the Complex struct
-  py::class_<Complex>(m, "Complex")
-      .def(py::init<>(), R"(Initializes a new complex number.
+  nb::class_<Complex>(m, "Complex")
+      .def(nb::init<>(), R"(Initializes a new complex number.)")
+      .def(nb::init<double, double>(), "real"_a = 0.0, "imaginary"_a = 0.0,
+           R"(Initializes a new complex number.
 
 Args:
-   real (float, optional): The real part of the complex number. Defaults to 0.0.
-   imaginary (float, optional): The imaginary part of the complex number. Defaults to 0.0.)")
-      .def(py::init<double, double>(), R"(Initializes a new complex number.
-
-Args:
-   real (float, optional): The real part of the complex number. Defaults to 0.0.
-   imaginary (float, optional): The imaginary part of the complex number. Defaults to 0.0.)")
-      .def_readwrite("real", &Complex::real,
-                     "The real part of the complex number.")
-      .def_readwrite("imaginary", &Complex::imaginary,
-                     "The imaginary part of the complex number.")
+    real: The real part of the complex number. Defaults to 0.0.
+    imaginary: The imaginary part of the complex number. Defaults to 0.0.)")
+      .def_rw("real", &Complex::real, "The real part of the complex number.")
+      .def_rw("imaginary", &Complex::imaginary,
+              "The imaginary part of the complex number.")
       .def(
           "__str__",
           [](const Complex& self) {
@@ -126,8 +109,9 @@ Args:
                    std::to_string(self.imaginary) + "i";
           },
           R"(Returns a string representation of the complex number.
+
 Returns:
-   str: The string representation of the complex number.
+    The string representation of the complex number.
 )")
       .def(
           "__repr__",
@@ -138,58 +122,42 @@ Returns:
           R"(Returns a string representation of the complex number.
 
 Returns:
-   str: The string representation of the complex number.)")
+    The string representation of the complex number.)")
       .doc() = "Represents a complex number.";
 
   // Bind the Statevector struct
-  py::class_<StatevectorCPP>(m, "Statevector")
-      .def(py::init<>(), "Creates a new `Statevector` instance.")
-      .def_readwrite("num_qubits", &StatevectorCPP::numQubits,
-                     "The number of qubits in the state vector.")
-      .def_readwrite("num_states", &StatevectorCPP::numStates,
-                     R"(The number of states in the state vector.
+  nb::class_<StatevectorCPP>(m, "Statevector")
+      .def(nb::init<>(), "Creates a new `Statevector` instance.")
+      .def_rw("num_qubits", &StatevectorCPP::numQubits,
+              "The number of qubits in the state vector.")
+      .def_rw("num_states", &StatevectorCPP::numStates,
+              R"(The number of states in the state vector.
 
 This is always equal to 2^`num_qubits`.)")
-      .def_readwrite("amplitudes", &StatevectorCPP::amplitudes,
-                     R"(The amplitudes of the state vector.
+      .def_rw("amplitudes", &StatevectorCPP::amplitudes,
+              R"(The amplitudes of the state vector.
 
 Contains one element for each of the `num_states` states in the state vector.)")
       .doc() = "Represents a state vector.";
 
-  py::class_<CompilationSettings>(m, "CompilationSettings")
-      .def(py::init<uint8_t, size_t>(), py::arg("opt"),
-           py::arg("slice_index") = 0,
+  nb::class_<CompilationSettings>(m, "CompilationSettings")
+      .def(nb::init<uint8_t, size_t>(), "opt"_a, "slice_index"_a = 0,
            R"(Initializes a new set of compilation settings.
 
 Args:
-   opt (int): The optimization level that should be used.
-   slice_index (int, optional): The index of the slice that should be compiled (defaults to 0).)")
-      .def_readwrite(
+    opt: The optimization level that should be used.
+    slice_index: The index of the slice that should be compiled (defaults to 0).)")
+      .def_rw(
           "opt", &CompilationSettings ::opt,
           "The optimization level that should be used. Exact meaning depends "
-          "on "
-          "the implementation, but typically 0 means no optimization.")
-      .def_readwrite("slice_index", &CompilationSettings::sliceIndex,
-                     "The index of the slice that should be compiled.")
+          "on the implementation, but typically 0 means no optimization.")
+      .def_rw("slice_index", &CompilationSettings::sliceIndex,
+              "The index of the slice that should be compiled.")
       .doc() =
       "The settings that should be used to compile an assertion program.";
 
-  py::class_<LoadResult>(m, "LoadResult")
-      .def(py::init<>(), "Creates a new `LoadResult` instance.")
-      .def_readwrite("status", &LoadResult::status,
-                     "The result status of the load operation.")
-      .def_readwrite("line", &LoadResult::line,
-                     "The line number of the error location, or 0 if unknown.")
-      .def_readwrite(
-          "column", &LoadResult::column,
-          "The column number of the error location, or 0 if unknown.")
-      .def_readwrite(
-          "message", &LoadResult::message,
-          "A human-readable error message, or None if none is available.")
-      .doc() = "Represents the result of loading code.";
-
-  py::class_<SimulationState>(m, "SimulationState")
-      .def(py::init<>(), "Creates a new `SimulationState` instance.")
+  nb::class_<SimulationState>(m, "SimulationState")
+      .def(nb::init<>(), "Creates a new `SimulationState` instance.")
       .def(
           "init", [](SimulationState* self) { checkOrThrow(self->init(self)); },
           "Initializes the simulation state.")
@@ -208,10 +176,11 @@ Args:
               throw std::runtime_error(message);
             }
           },
+          "code"_a,
           R"(Loads the given code into the simulation state.
 
 Args:
-    code (str): The code to load.)")
+    code: The code to load.)")
       .def(
           "load_code_with_result",
           [](SimulationState* self, const char* code) {
@@ -281,7 +250,7 @@ Returns:
           R"(Runs the simulation until it finishes, even if assertions fail.
 
 Returns:
-int: The number of assertions that failed during execution.)")
+    The number of assertions that failed during execution.)")
       .def(
           "run_simulation",
           [](SimulationState* self) {
@@ -329,7 +298,7 @@ The simulation is unable to step forward if it has finished or if the
 simulation has not been set up yet.
 
 Returns:
-bool: True, if the simulation can step forward.)")
+    True, if the simulation can step forward.)")
       .def(
           "can_step_backward",
           [](SimulationState* self) { return self->canStepBackward(self); },
@@ -339,31 +308,32 @@ The simulation is unable to step backward if it is at the beginning or if
 the simulation has not been set up yet.
 
 Returns:
-bool: True, if the simulation can step backward.)")
+    True, if the simulation can step backward.)")
       .def(
           "change_classical_variable_value",
           [](SimulationState* self, const std::string& variableName,
-             const py::object& newValue) {
+             const nb::object& newValue) {
             VariableValue value{};
-            if (py::isinstance<py::bool_>(newValue)) {
-              value.boolValue = newValue.cast<bool>();
-            } else if (py::isinstance<py::int_>(newValue)) {
-              value.intValue = newValue.cast<int>();
-            } else if (py::isinstance<py::float_>(newValue)) {
-              value.floatValue = newValue.cast<double>();
+            if (nb::isinstance<nb::bool_>(newValue)) {
+              value.boolValue = nb::cast<bool>(newValue);
+            } else if (nb::isinstance<nb::int_>(newValue)) {
+              value.intValue = nb::cast<int>(newValue);
+            } else if (nb::isinstance<nb::float_>(newValue)) {
+              value.floatValue = nb::cast<double>(newValue);
             } else {
-              throw py::type_error(
+              throw nb::type_error(
                   "change_classical_variable_value requires a bool, "
                   "int, or float value");
             }
             checkOrThrow(self->changeClassicalVariableValue(
                 self, variableName.c_str(), &value));
           },
+          "variable_name"_a, "new_value"_a,
           R"(Updates the value of a classical variable.
 
 Args:
-    variableName (str): The name of the classical variable to update.
-    newValue (bool | float): The desired value.)")
+    variable_name: The name of the classical variable to update.
+    new_value: The desired value.)")
       .def(
           "change_amplitude_value",
           [](SimulationState* self, const std::string& basisState,
@@ -371,6 +341,7 @@ Args:
             checkOrThrow(
                 self->changeAmplitudeValue(self, basisState.c_str(), &value));
           },
+          "basis_state"_a, "value"_a,
           R"(Updates the amplitude of a given computational basis state.
 
 The basis state is provided as a bitstring whose length matches the
@@ -379,8 +350,8 @@ remaining amplitudes so that the state vector stays normalized and to
 reject invalid bitstrings or amplitudes that violate normalization.
 
 Args:
-    basisState (str): The bitstring identifying the basis state to update.
-    value (Complex): The desired complex amplitude.)")
+    basis_state: The bitstring identifying the basis state to update.
+    value: The desired complex amplitude.)")
       .def(
           "is_finished",
           [](SimulationState* self) { return self->isFinished(self); },
@@ -389,7 +360,7 @@ Args:
 The execution is considered finished if it has reached the end of the code.
 
 Returns:
-bool: True, if the execution has finished.)")
+    True, if the execution has finished.)")
       .def(
           "did_assertion_fail",
           [](SimulationState* self) { return self->didAssertionFail(self); },
@@ -399,7 +370,7 @@ If execution is continued after a failed assertion, then this flag will
 be set to false again.
 
 Returns:
-bool: True, if an assertion failed during the last step.)")
+    True, if an assertion failed during the last step.)")
       .def(
           "was_breakpoint_hit",
           [](SimulationState* self) { return self->wasBreakpointHit(self); },
@@ -409,7 +380,7 @@ If execution is continued after a breakpoint, then this flag will
 be set to false again.
 
 Returns:
-bool: True, if a breakpoint was hit during the last step.)")
+    True, if a breakpoint was hit during the last step.)")
       .def(
           "get_current_instruction",
           [](SimulationState* self) {
@@ -418,14 +389,14 @@ bool: True, if a breakpoint was hit during the last step.)")
           R"(Gets the current instruction index.
 
 Returns:
-int: The index of the current instruction.)")
+    The index of the current instruction.)")
       .def(
           "get_instruction_count",
           [](SimulationState* self) { return self->getInstructionCount(self); },
           R"(Gets the number of instructions in the code.
 
 Returns:
-    int: The number of instructions in the code.)")
+    The number of instructions in the code.)")
       .def(
           "get_instruction_position",
           [](SimulationState* self, size_t instruction) {
@@ -435,22 +406,23 @@ Returns:
                 self->getInstructionPosition(self, instruction, &start, &end));
             return std::make_pair(start, end);
           },
+          "instruction"_a,
           R"(Gets the position of the given instruction in the code.
 
 Start and end positions are inclusive and white-spaces are ignored.
 
 Args:
-    instruction (int): The instruction to find.
+    instruction: The instruction to find.
 
 Returns:
-    tuple[int, int]: The start and end positions of the instruction.)")
+    The start and end positions of the instruction.)")
       .def(
           "get_num_qubits",
           [](SimulationState* self) { return self->getNumQubits(self); },
           R"(Gets the number of qubits used by the program.
 
 Returns:
-    int: The number of qubits used by the program.)")
+    The number of qubits used by the program.)")
       .def(
           "get_amplitude_index",
           [](SimulationState* self, size_t qubit) {
@@ -458,16 +430,17 @@ Returns:
             checkOrThrow(self->getAmplitudeIndex(self, qubit, &output));
             return output;
           },
+          "index"_a,
           R"(Gets the complex amplitude of a state in the full state vector.
 
 The amplitude is selected by an integer index that corresponds to the
 binary representation of the state.
 
 Args:
-    index (int): The index of the state in the full state vector.
+    index: The index of the state in the full state vector.
 
 Returns:
-    Complex: The complex amplitude of the state.)")
+    The complex amplitude of the state.)")
       .def(
           "get_amplitude_bitstring",
           [](SimulationState* self, const char* bitstring) {
@@ -475,15 +448,16 @@ Returns:
             checkOrThrow(self->getAmplitudeBitstring(self, bitstring, &output));
             return output;
           },
+          "bitstring"_a,
           R"(Gets the complex amplitude of a state in the full state vector.
 
 The amplitude is selected by a bitstring representing the state.
 
 Args:
-    bitstring (str): The index of the state as a bitstring.
+    bitstring: The index of the state as a bitstring.
 
 Returns:
-    Complex: The complex amplitude of the state.)")
+    The complex amplitude of the state.)")
       .def(
           "get_classical_variable",
           [](SimulationState* self, const char* name) {
@@ -491,16 +465,17 @@ Returns:
             checkOrThrow(self->getClassicalVariable(self, name, &output));
             return output;
           },
+          "name"_a,
           R"(Gets a classical variable by name.
 
 For registers, the name should be the register name followed by the index
 in square brackets.
 
 Args:
-    name (str): The name of the variable.
+    name: The name of the variable.
 
 Returns:
-    Variable: The fetched variable.)")
+    The fetched variable.)")
       .def(
           "get_num_classical_variables",
           [](SimulationState* self) {
@@ -511,7 +486,7 @@ Returns:
 For registers, each index is counted as a separate variable.
 
 Returns:
-    int: The number of classical variables in the simulation.)")
+    The number of classical variables in the simulation.)")
       .def(
           "get_classical_variable_name",
           [](SimulationState* self, size_t variableIndex) {
@@ -524,6 +499,7 @@ Returns:
             }
             return output;
           },
+          "index"_a,
           R"(Gets the name of a classical variable by its index.
 
 For registers, each index is counted as a separate variable and can be
@@ -531,10 +507,10 @@ accessed separately. This method will return the name of the specific
 index of the register.
 
 Args:
-    index (int): The index of the variable.
+    index: The index of the variable.
 
 Returns:
-    str: The name of the variable.)")
+    The name of the variable.)")
       .def(
           "get_quantum_variable_name",
           [](SimulationState* self, size_t variableIndex) {
@@ -547,6 +523,7 @@ Returns:
             }
             return output;
           },
+          "index"_a,
           R"(Gets the name of a quantum variable by its index.
 
 For registers, each index is counted as a separate variable and can be
@@ -554,10 +531,10 @@ accessed separately. This method will return the name of the specific
 index of the register.
 
 Args:
-    index (int): The index of the variable.
+    index: The index of the variable.
 
 Returns:
-    str: The name of the variable.)")
+    The name of the variable.)")
       .def(
           "get_state_vector_full",
           [](SimulationState* self) {
@@ -574,11 +551,8 @@ Returns:
           },
           R"(Gets the full state vector of the simulation at the current time.
 
-The state vector is expected to be initialized with the correct number of
-qubits and allocated space for the amplitudes before calling this method.
-
 Returns:
-    Statevector: The full state vector of the current simulation state.)")
+    The full state vector of the current simulation state.)")
       .def(
           "get_state_vector_sub",
           [](SimulationState* self, std::vector<size_t> qubits) {
@@ -594,19 +568,17 @@ Returns:
                                                  &output));
             return result;
           },
+          "qubits"_a,
           R"(Gets a sub-state of the state vector of the simulation at the current time.
-
-The state vector is expected to be initialized with the correct number of
-qubits and allocated space for the amplitudes before calling this method.
 
 This method also supports the re-ordering of qubits, but does not allow
 qubits to be repeated.
 
 Args:
-    qubits (list[int]): The qubits to include in the sub-state.
+    qubits: The qubits to include in the sub-state.
 
 Returns:
-    Statevector: The sub-state vector of the current simulation state.)")
+    The sub-state vector of the current simulation state.)")
       .def(
           "set_breakpoint",
           [](SimulationState* self, size_t desiredPosition) {
@@ -615,16 +587,17 @@ Returns:
                 self->setBreakpoint(self, desiredPosition, &actualPosition));
             return actualPosition;
           },
+          "desired_position"_a,
           R"(Sets a breakpoint at the desired position in the code.
 
 The position is given as a 0-indexed character position in the full code
 string.
 
 Args:
-    desired_position (int): The position in the code to set the breakpoint.
+    desired_position: The position in the code to set the breakpoint.
 
 Returns:
-    int: The index of the instruction where the breakpoint was set.)")
+    The index of the instruction where the breakpoint was set.)")
       .def(
           "clear_breakpoints",
           [](SimulationState* self) {
@@ -643,7 +616,7 @@ Returns:
 Each custom gate call corresponds to one stack entry.
 
 Returns:
-    int: The current stack depth of the simulation.)")
+    The current stack depth of the simulation.)")
       .def(
           "get_stack_trace",
           [](SimulationState* self, size_t maxDepth) {
@@ -655,6 +628,7 @@ Returns:
                 self->getStackTrace(self, maxDepth, stackTrace.data()));
             return stackTrace;
           },
+          "max_depth"_a,
           R"(Gets the current stack trace of the simulation.
 
 The stack trace is represented as a list of instruction indices. Each
@@ -662,18 +636,18 @@ instruction index represents a single return address for the corresponding
 stack entry.
 
 Args:
-    max_depth (int): The maximum depth of the stack trace.
+    max_depth: The maximum depth of the stack trace.
 
 Returns:
-    list[int]: The stack trace of the simulation.)")
+    The stack trace of the simulation.)")
       .def(
           "get_diagnostics",
           [](SimulationState* self) { return self->getDiagnostics(self); },
-          py::return_value_policy::reference_internal,
+          nb::rv_policy::reference_internal,
           R"(Gets the diagnostics instance employed by this debugger.
 
 Returns:
-    Diagnostics: The diagnostics instance employed by this debugger.)")
+    The diagnostics instance employed by this debugger.)")
       .def(
           "compile",
           [](SimulationState* self, CompilationSettings& settings) {
@@ -686,44 +660,44 @@ Returns:
             std::string result(buffer.data(), size - 1);
             return result;
           },
+          "settings"_a,
           R"(Compiles the given code into a quantum circuit without assertions.
 
 Args:
-    settings (CompilationSettings): The settings to use for the compilation.
+    settings: The settings to use for the compilation.
 
 Returns:
-  str: The compiled code.)")
+    The compiled code.)")
       .doc() = R"(Represents the state of a quantum simulation for debugging.
 
-"This is the main class of the `mqt-debugger` library, allowing developers to step through the code and inspect the state of the simulation.)";
+This is the main class of the `mqt-debugger` library, allowing developers to step through the code and inspect the state of the simulation.)";
 }
 
-void bindDiagnostics(py::module& m) {
+// NOLINTNEXTLINE(misc-use-internal-linkage)
+void bindDiagnostics(nb::module_& m) {
   // Bind the ErrorCauseType enum
-  py::native_enum<ErrorCauseType>(m, "ErrorCauseType", "enum.Enum",
-                                  "The type of a potential error cause.")
+  nb::enum_<ErrorCauseType>(m, "ErrorCauseType",
+                            "The type of a potential error cause.")
       .value("Unknown", Unknown, "An unknown error cause.")
       .value("MissingInteraction", MissingInteraction,
              "Indicates that an entanglement error may be caused by a missing "
              "interaction.")
       .value("ControlAlwaysZero", ControlAlwaysZero,
              "Indicates that an error may be related to a controlled gate with "
-             "a control that is always zero.")
-      .export_values()
-      .finalize();
+             "a control that is always zero.");
 
   // Bind the ErrorCause struct
-  py::class_<ErrorCause>(m, "ErrorCause")
-      .def(py::init<>())
-      .def_readwrite("instruction", &ErrorCause ::instruction,
-                     "The instruction where the error may originate from or "
-                     "where the error can be detected.")
-      .def_readwrite("type", &ErrorCause ::type,
-                     "The type of the potential error cause.")
+  nb::class_<ErrorCause>(m, "ErrorCause")
+      .def(nb::init<>())
+      .def_rw("instruction", &ErrorCause ::instruction,
+              "The instruction where the error may originate from or "
+              "where the error can be detected.")
+      .def_rw("type_", &ErrorCause ::type,
+              "The type of the potential error cause.")
       .doc() = "Represents a potential cause of an assertion error.";
 
-  py::class_<Diagnostics>(m, "Diagnostics")
-      .def(py::init<>(), "Creates a new `Diagnostics` instance.")
+  nb::class_<Diagnostics>(m, "Diagnostics")
+      .def(nb::init<>(), "Creates a new `Diagnostics` instance.")
       .def(
           "init", [](Diagnostics* self) { checkOrThrow(self->init(self)); },
           "Initializes the diagnostics instance.")
@@ -733,14 +707,14 @@ void bindDiagnostics(py::module& m) {
           R"(Get the number of qubits in the system.
 
 Returns:
-   int: The number of qubits in the system.)")
+    The number of qubits in the system.)")
       .def(
           "get_instruction_count",
           [](Diagnostics* self) { return self->getInstructionCount(self); },
           R"(Get the number of instructions in the code.
 
 Returns:
-   int: The number of instructions in the code.)")
+    The number of instructions in the code.)")
       .def(
           "get_data_dependencies",
           [](Diagnostics* self, size_t instruction, bool includeCallers) {
@@ -758,7 +732,7 @@ Returns:
             }
             return result;
           },
-          py::arg("instruction"), py::arg("include_callers") = false,
+          "instruction"_a, "include_callers"_a = false,
           R"(Extract all data dependencies for a given instruction.
 
 If the instruction is inside a custom gate definition, the data
@@ -774,11 +748,11 @@ This method can be performed without running the program, as it is a static
 analysis method.
 
 Args:
-   instruction (int): The instruction to extract the data dependencies for.
-   include_callers (bool, optional): True, if the data dependencies should include all possible callers of the containing custom gate. Defaults to False.
+    instruction: The instruction to extract the data dependencies for.
+    include_callers: True, if the data dependencies should include all possible callers of the containing custom gate. Defaults to False.
 
 Returns:
-   list[int]: A list of instruction indices that are data dependencies of the given instruction.)")
+    A list of instruction indices that are data dependencies of the given instruction.)")
       .def(
           "get_interactions",
           [](Diagnostics* self, size_t beforeInstruction, size_t qubit) {
@@ -796,6 +770,7 @@ Returns:
             }
             return result;
           },
+          "before_instruction"_a, "qubit"_a,
           R"(Extract all qubits that interact with a given qubit up to a specific instruction.
 
 If the target instruction is inside a custom gate definition, the
@@ -808,11 +783,11 @@ This method can be performed without running the program, as it is a static
 analysis method.
 
 Args:
-   before_instruction (int): The instruction to extract the interactions up to (excluding).
-   qubit (int): The qubit to extract the interactions for.
+    before_instruction: The instruction to extract the interactions up to (excluding).
+    qubit: The qubit to extract the interactions for.
 
 Returns:
-   list[int]: A list of qubit indices that interact with the given qubit up to the target instruction.)")
+    A list of qubit indices that interact with the given qubit up to the target instruction.)")
       .def(
           "get_zero_control_instructions",
           [](Diagnostics* self) {
@@ -840,7 +815,7 @@ This method can only be performed at runtime, as it is a dynamic analysis
 method.
 
 Returns:
-   list[int]: The indices of instructions that are controlled gates with only zero controls.)")
+    The indices of instructions that are controlled gates with only zero controls.)")
       .def(
           "potential_error_causes",
           [](Diagnostics* self) {
@@ -862,7 +837,7 @@ This method should be run after the program has been executed and reached
 an assertion error.
 
 Returns:
-   list[ErrorCause]: A list of potential error causes encountered during execution.)")
+   A list of potential error causes encountered during execution.)")
       .def(
           "suggest_assertion_movements",
           [](Diagnostics* self) {
@@ -886,7 +861,7 @@ Each entry of the resulting list consists of the original position of the assert
 suggested position.
 
 Returns:
-  list[tuple[int, int]]: A list of moved assertions.
+    A list of moved assertions.
 )")
       .def(
           "suggest_new_assertions",
@@ -932,7 +907,7 @@ Each entry of the resulting list consists of the suggested position for the new 
 string representation.
 
 Returns:
-  list[tuple[int, str]]: A list of new assertions.
+    A list of new assertions.
 )")
       .doc() = "Provides diagnostics capabilities such as different analysis "
                "methods for the debugger.";

@@ -88,7 +88,7 @@ jobs:
       clang-version: 20
       cmake-args: -DBUILD_MQT_DEBUGGER_BINDINGS=ON
       files-changed-only: true
-      install-pkgs: "pybind11==3.0.1"
+      install-pkgs: "nanobind==2.10.2"
       setup-python: true
       cpp-linter-extra-args: "-std=c++20"
 
@@ -125,6 +125,8 @@ jobs:
     needs: change-detection
     if: fromJSON(needs.change-detection.outputs.run-python-tests)
     uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-python-linter.yml@d6314c45667c131055a0389afc110e8dedc6da3f # v1.17.11
+    with:
+      check-stubs: true
 
   build-sdist:
     name: 🚀 CD
