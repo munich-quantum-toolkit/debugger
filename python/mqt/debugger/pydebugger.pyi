@@ -358,7 +358,7 @@ class SimulationState:
         """Loads the given code and returns details about any errors.
 
         Args:
-            code (str): The code to load.
+            code: The code to load.
 
         Returns:
             LoadResult: The result of the load operation.
