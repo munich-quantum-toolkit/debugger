@@ -40,16 +40,15 @@ class DAPMessage(ABC):
 
         Raises an exception if the message is invalid.
         """
-        ...
 
-    def handle(self, _server: DAPServer) -> dict[str, Any]:
+    def handle(self, server: DAPServer) -> dict[str, Any]:  # noqa: ARG002
         """Performs the action requested by the DAP request message and returns the response.
 
         Args:
-            server (DAPServer): The DAP server that received the request.
+            server: The DAP server that received the request.
 
         Returns:
-            dict[str, Any]: The response to the request.
+            The response to the request.
         """
         return {
             "type": "response",
