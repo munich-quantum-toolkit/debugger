@@ -15,11 +15,11 @@ from dataclasses import dataclass, field
 missing_optionals: list[str] = []
 
 try:
-    import numpy as np  # ty: ignore[unresolved-import]
+    import numpy as np
 except ImportError:
     missing_optionals.append("numpy")
 try:
-    from qiskit import QuantumCircuit  # ty: ignore[unresolved-import]
+    from qiskit import QuantumCircuit
 except ImportError:
     missing_optionals.append("qiskit")
 

@@ -52,10 +52,10 @@ dependencies = []
 [project.optional-dependencies]
 check = [
     "qiskit>=1.2.4",
-    "scipy>=1.13.1; python_version < '3.13'",
+    "scipy>=1.13.1",
     "scipy>=1.15; python_version >= '3.13'",
     "scipy>=1.16.2; python_version >= '3.14'",
-    "numpy>=2.1; python_version >= '3.13'",
+    "numpy>=2.1",
     "numpy>=2.3.2; python_version >= '3.14'",
 ]
 
@@ -320,6 +320,12 @@ test = [
     "pytest-sugar>=1.1.1",
     "pytest-xdist>=3.8.0",
 ]
+typing = [
+    "ty==0.0.12",
+    "numpy>=2.1",
+    "qiskit>=1.2.4",
+    "scipy>=1.13.1",
+]
 docs = [
     "breathe>=4.36.0",
     "furo>=2025.09.25",
@@ -341,6 +347,6 @@ docs = [
 dev = [
     {include-group = "build"},
     {include-group = "test"},
+    {include-group = "typing"},
     "nox>=2025.11.12",
-    "ty==0.0.12",
 ]

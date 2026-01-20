@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 
 missing_optionals: list[str] = []
 try:
-    from scipy.stats import chi2  # type: ignore[import-untyped]
+    from scipy.stats import chi2
 except ImportError:
     missing_optionals.append("scipy")
 
