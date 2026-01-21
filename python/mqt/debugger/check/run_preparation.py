@@ -44,7 +44,10 @@ def start_compilation(code: Path, output_dir: Path) -> None:
     state = dbg.create_ddsim_simulation_state()
     with code.open("r", encoding="utf-8") as f:
         code_str = f.read()
-    state.load_code(code_str)
+    load_result = state.load_code(code_str)
+    if load_result.status != dbg.Result.OK:
+        message = load_result.message or "Error loading code"
+        raise RuntimeError(message)
     i = 0
     while True:
         i += 1

@@ -193,14 +193,6 @@ ParsedLoadError parseLoadErrorMessage(const std::string& message) {
   return {.line = line, .column = column, .detail = detail};
 }
 
-const char* ddsimGetLastErrorMessage(SimulationState* self) {
-  const auto* ddsim = toDDSimulationState(self);
-  if (ddsim->lastErrorMessage.empty()) {
-    return nullptr;
-  }
-  return ddsim->lastErrorMessage.c_str();
-}
-
 /**
  * @brief Generate a random number between 0 and 1.
  *
@@ -378,8 +370,16 @@ bool checkAssertionEqualityCircuit(
 
   DDSimulationState secondSimulation;
   createDDSimulationState(&secondSimulation);
-  secondSimulation.interface.loadCode(&secondSimulation.interface,
-                                      assertion->getCircuitCode().c_str());
+  const auto loadResult = secondSimulation.interface.loadCode(
+      &secondSimulation.interface, assertion->getCircuitCode().c_str());
+  if (loadResult.status != OK) {
+    const char* message = loadResult.message;
+    destroyDDSimulationState(&secondSimulation);
+    throw std::runtime_error(
+        message && *message != '\0'
+            ? message
+            : "Failed to load circuit for equality assertion.");
+  }
   if (!secondSimulation.assertionInstructions.empty()) {
     destroyDDSimulationState(&secondSimulation);
     throw std::runtime_error(
@@ -639,8 +639,6 @@ Result createDDSimulationState(DDSimulationState* self) {
   self->interface.init = ddsimInit;
 
   self->interface.loadCode = ddsimLoadCode;
-  self->interface.loadCodeWithResult = ddsimLoadCodeWithResult;
-  self->interface.getLastErrorMessage = ddsimGetLastErrorMessage;
   self->interface.stepForward = ddsimStepForward;
   self->interface.stepBackward = ddsimStepBackward;
   self->interface.stepOverForward = ddsimStepOverForward;
@@ -700,10 +698,6 @@ Result ddsimInit(SimulationState* self) {
   ddsim->breakpoints.clear();
   ddsim->lastFailedAssertion = -1ULL;
   ddsim->lastMetBreakpoint = -1ULL;
-  ddsim->lastErrorMessage.clear();
-  ddsim->lastLoadErrorDetail.clear();
-  ddsim->lastLoadResult = {
-      .status = OK, .line = 0, .column = 0, .message = nullptr};
 
   destroyDDDiagnostics(&ddsim->diagnostics);
   createDDDiagnostics(&ddsim->diagnostics, ddsim);
@@ -715,7 +709,8 @@ Result ddsimInit(SimulationState* self) {
   return OK;
 }
 
-Result ddsimLoadCode(SimulationState* self, const char* code) {
+LoadResult ddsimLoadCode(SimulationState* self, const char* code) {
+  static thread_local std::string lastLoadErrorDetail;
   auto* ddsim = toDDSimulationState(self);
   ddsim->currentInstruction = 0;
   ddsim->previousInstructionStack.clear();
@@ -738,10 +733,6 @@ Result ddsimLoadCode(SimulationState* self, const char* code) {
   ddsim->functionCallers.clear();
   ddsim->targetQubits.clear();
   ddsim->instructionObjects.clear();
-  ddsim->lastErrorMessage.clear();
-  ddsim->lastLoadErrorDetail.clear();
-  ddsim->lastLoadResult = {
-      .status = OK, .line = 0, .column = 0, .message = nullptr};
 
   try {
     std::stringstream ss{preprocessAssertionCode(code, ddsim)};
@@ -749,29 +740,24 @@ Result ddsimLoadCode(SimulationState* self, const char* code) {
     ddsim->qc = std::make_unique<qc::QuantumComputation>(imported);
     qc::CircuitOptimizer::flattenOperations(*ddsim->qc, true);
   } catch (const std::exception& e) {
-    ddsim->lastErrorMessage = e.what();
-    if (ddsim->lastErrorMessage.empty()) {
-      ddsim->lastErrorMessage =
-          "An error occurred while executing the operation";
+    std::string message = e.what();
+    if (message.empty()) {
+      message = "An error occurred while executing the operation";
     }
-    const auto parsed = parseLoadErrorMessage(ddsim->lastErrorMessage);
-    ddsim->lastLoadErrorDetail = parsed.detail;
-    ddsim->lastLoadResult = {.status = ERROR,
-                             .line = parsed.line,
-                             .column = parsed.column,
-                             .message =
-                                 ddsim->lastLoadErrorDetail.empty()
-                                     ? nullptr
-                                     : ddsim->lastLoadErrorDetail.c_str()};
-    return ERROR;
+    const auto parsed = parseLoadErrorMessage(message);
+    lastLoadErrorDetail = parsed.detail;
+    return {.status = ERROR,
+            .line = parsed.line,
+            .column = parsed.column,
+            .message = lastLoadErrorDetail.empty()
+                           ? nullptr
+                           : lastLoadErrorDetail.c_str()};
   } catch (...) {
-    ddsim->lastErrorMessage = "An error occurred while executing the operation";
-    ddsim->lastLoadErrorDetail = ddsim->lastErrorMessage;
-    ddsim->lastLoadResult = {.status = ERROR,
-                             .line = 0,
-                             .column = 0,
-                             .message = ddsim->lastLoadErrorDetail.c_str()};
-    return ERROR;
+    lastLoadErrorDetail = "An error occurred while executing the operation";
+    return {.status = ERROR,
+            .line = 0,
+            .column = 0,
+            .message = lastLoadErrorDetail.c_str()};
   }
 
   ddsim->iterator = ddsim->qc->begin();
@@ -782,16 +768,8 @@ Result ddsimLoadCode(SimulationState* self, const char* code) {
   resetSimulationState(ddsim);
 
   ddsim->ready = true;
-  ddsim->lastLoadResult = {
-      .status = OK, .line = 0, .column = 0, .message = nullptr};
 
-  return OK;
-}
-
-LoadResult ddsimLoadCodeWithResult(SimulationState* self, const char* code) {
-  ddsimLoadCode(self, code);
-  auto* ddsim = toDDSimulationState(self);
-  return ddsim->lastLoadResult;
+  return {.status = OK, .line = 0, .column = 0, .message = nullptr};
 }
 
 Result ddsimChangeClassicalVariableValue(SimulationState* self,

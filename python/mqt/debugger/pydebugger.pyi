@@ -348,15 +348,8 @@ class SimulationState:
     def init(self) -> None:
         """Initializes the simulation state."""
 
-    def load_code(self, code: str) -> None:
+    def load_code(self, code: str) -> LoadResult:
         """Loads the given code into the simulation state.
-
-        Args:
-            code: The code to load.
-        """
-
-    def load_code_with_result(self, code: str) -> LoadResult:
-        """Loads the given code and returns details about any errors.
 
         Args:
             code: The code to load.

@@ -70,7 +70,7 @@ class LaunchDAPMessage(DAPMessage):
         parsed_successfully = True
         code = program_path.read_text(encoding=locale.getpreferredencoding(False))
         server.source_code = code
-        load_result = server.simulation_state.load_code_with_result(code)
+        load_result = server.simulation_state.load_code(code)
         if load_result.status != mqt.debugger.Result.OK:
             parsed_successfully = False
             line = load_result.line if load_result.line > 0 else None

@@ -189,41 +189,10 @@ Args:
       .def(
           "load_code",
           [](SimulationState* self, const char* code) {
-            const Result result = self->loadCode(self, code);
-            if (result != OK) {
-              const char* messagePtr = self->getLastErrorMessage
-                                           ? self->getLastErrorMessage(self)
-                                           : nullptr;
-              std::string message = messagePtr ? messagePtr : "";
-              if (message.empty()) {
-                message = "An error occurred while executing the operation";
-              }
-              throw std::runtime_error(message);
-            }
+            return self->loadCode(self, code);
           },
           "code"_a,
           R"(Loads the given code into the simulation state.
-
-Args:
-    code: The code to load.)")
-      .def(
-          "load_code_with_result",
-          [](SimulationState* self, const char* code) {
-            if (self->loadCodeWithResult != nullptr) {
-              return self->loadCodeWithResult(self, code);
-            }
-            LoadResult result{OK, 0, 0, nullptr};
-            const Result status = self->loadCode(self, code);
-            result.status = status;
-            if (status != OK) {
-              result.message = self->getLastErrorMessage
-                                   ? self->getLastErrorMessage(self)
-                                   : nullptr;
-            }
-            return result;
-          },
-          "code"_a,
-          R"(Loads the given code and returns details about any errors.
 
 Args:
     code: The code to load.

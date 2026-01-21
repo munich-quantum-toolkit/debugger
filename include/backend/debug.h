@@ -50,28 +50,9 @@ struct SimulationStateStruct {
    * @brief Loads the given code into the simulation state.
    * @param self The instance to load the code into.
    * @param code The code to load.
-   * @return The result of the operation.
-   */
-  Result (*loadCode)(SimulationState* self, const char* code);
-
-  /**
-   * @brief Loads the given code and returns detailed information about errors.
-   * @param self The instance to load the code into.
-   * @param code The code to load.
    * @return The result of the load operation.
    */
-  LoadResult (*loadCodeWithResult)(SimulationState* self, const char* code);
-
-  /**
-   * @brief Gets the last error message from the interface.
-   *
-   * The returned pointer is owned by the implementation and remains valid
-   * until the next interface call that modifies the error state.
-   *
-   * @param self The instance to query.
-   * @return A null-terminated error message, or nullptr if none is available.
-   */
-  const char* (*getLastErrorMessage)(SimulationState* self);
+  LoadResult (*loadCode)(SimulationState* self, const char* code);
 
   /**
    * @brief Steps the simulation forward by one instruction.
