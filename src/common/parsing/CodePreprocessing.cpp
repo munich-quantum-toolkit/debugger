@@ -427,10 +427,13 @@ std::vector<std::string> parseParameters(const std::string& instruction) {
   }
 
   if (isClassicControlledGate(instruction)) {
-    const auto end = instruction.find(')');
-
-    return parseParameters(
-        instruction.substr(end + 1, instruction.length() - end - 1));
+    const auto classic = parseClassicControlledGate(instruction);
+    std::vector<std::string> parameters;
+    for (const auto& op : classic.operations) {
+      const auto targets = parseParameters(op);
+      parameters.insert(parameters.end(), targets.begin(), targets.end());
+    }
+    return parameters;
   }
 
   auto parts = splitString(
@@ -530,6 +533,12 @@ preprocessCode(const std::string& code, size_t startIndex,
       line.replace(blockPos, endPos - blockPos + 1, "");
     }
 
+    if (block.valid && isClassicControlledGate(line)) {
+      line = line + " { " + block.code + " }";
+      block.valid = false;
+      block.code.clear();
+    }
+
     const auto targets = parseParameters(line);
 
     const size_t trueEnd = end + blocksOffset;
@@ -596,11 +605,7 @@ preprocessCode(const std::string& code, size_t startIndex,
     }
 
     if (isClassicControlledGate(line)) {
-      if (block.valid) {
-        throw ParsingError(
-            "Classic-controlled gates with body blocks are not supported. Use "
-            "individual `if` statements for each operation.");
-      }
+      // Body blocks are handled by inlining their code into the instruction.
     }
 
     bool isFunctionCall = false;
