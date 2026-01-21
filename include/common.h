@@ -45,11 +45,29 @@ typedef enum {
 /**
  * @brief The result of a code loading operation.
  */
+typedef enum {
+  /**
+   * @brief Indicates that the code was loaded successfully.
+   */
+  LOAD_OK,
+  /**
+   * @brief Indicates that the code could not be parsed.
+   */
+  LOAD_PARSE_ERROR,
+  /**
+   * @brief Indicates that an internal error occurred while loading the code.
+   */
+  LOAD_INTERNAL_ERROR,
+} LoadResultStatus;
+
+/**
+ * @brief The result of a code loading operation.
+ */
 typedef struct {
   /**
-   * @brief Indicates whether the load was successful.
+   * @brief Indicates whether the load was successful and why it failed.
    */
-  Result status;
+  LoadResultStatus status;
   /**
    * @brief The line number of the error location, or 0 if unknown.
    */

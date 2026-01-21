@@ -163,16 +163,28 @@ class Result(enum.Enum):
     ERROR = 1
     """Indicates that an error occurred."""
 
+class LoadResultStatus(enum.Enum):
+    """Represents the result of a code loading operation."""
+
+    OK = 0
+    """Indicates that the code was loaded successfully."""
+
+    PARSE_ERROR = 1
+    """Indicates that the code could not be parsed."""
+
+    INTERNAL_ERROR = 2
+    """Indicates that an internal error occurred while loading."""
+
 class LoadResult:
     """The result of a code loading operation."""
 
     def __init__(self) -> None: ...
     @property
-    def status(self) -> Result:
-        """Indicates whether the load was successful."""
+    def status(self) -> LoadResultStatus:
+        """Indicates whether the load was successful and why it failed."""
 
     @status.setter
-    def status(self, arg: Result, /) -> None: ...
+    def status(self, arg: LoadResultStatus, /) -> None: ...
     @property
     def line(self) -> int:
         """The line number of the error location, or 0 if unknown."""

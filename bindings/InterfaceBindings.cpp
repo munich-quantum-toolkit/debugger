@@ -67,11 +67,21 @@ void bindFramework(nb::module_& m) {
       .value("OK", OK, "Indicates that the operation was successful.")
       .value("ERROR", ERROR, "Indicates that an error occurred.");
 
+  // Bind the LoadResultStatus enum
+  nb::enum_<LoadResultStatus>(
+      m, "LoadResultStatus",
+      "Represents the result of a code loading operation.")
+      .value("OK", LOAD_OK, "Indicates that the code was loaded successfully.")
+      .value("PARSE_ERROR", LOAD_PARSE_ERROR,
+             "Indicates that the code could not be parsed.")
+      .value("INTERNAL_ERROR", LOAD_INTERNAL_ERROR,
+             "Indicates that an internal error occurred while loading.");
+
   // Bind the LoadResult struct
   nb::class_<LoadResult>(m, "LoadResult")
       .def(nb::init<>())
       .def_rw("status", &LoadResult::status,
-              "Indicates whether the load was successful.")
+              "Indicates whether the load was successful and why it failed.")
       .def_rw("line", &LoadResult::line,
               "The line number of the error location, or 0 if unknown.")
       .def_rw("column", &LoadResult::column,

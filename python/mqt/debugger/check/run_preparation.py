@@ -45,7 +45,7 @@ def start_compilation(code: Path, output_dir: Path) -> None:
     with code.open("r", encoding="utf-8") as f:
         code_str = f.read()
     load_result = state.load_code(code_str)
-    if load_result.status != dbg.Result.OK:
+    if load_result.status != dbg.LoadResultStatus.OK:
         message = load_result.message or "Error loading code"
         raise RuntimeError(message)
     i = 0

@@ -372,7 +372,7 @@ bool checkAssertionEqualityCircuit(
   createDDSimulationState(&secondSimulation);
   const auto loadResult = secondSimulation.interface.loadCode(
       &secondSimulation.interface, assertion->getCircuitCode().c_str());
-  if (loadResult.status != OK) {
+  if (loadResult.status != LOAD_OK) {
     const char* message = loadResult.message;
     destroyDDSimulationState(&secondSimulation);
     throw std::runtime_error(
@@ -746,7 +746,10 @@ LoadResult ddsimLoadCode(SimulationState* self, const char* code) {
     }
     const auto parsed = parseLoadErrorMessage(message);
     lastLoadErrorDetail = parsed.detail;
-    return {.status = ERROR,
+    const LoadResultStatus status = (parsed.line > 0 || parsed.column > 0)
+                                        ? LOAD_PARSE_ERROR
+                                        : LOAD_INTERNAL_ERROR;
+    return {.status = status,
             .line = parsed.line,
             .column = parsed.column,
             .message = lastLoadErrorDetail.empty()
@@ -754,7 +757,7 @@ LoadResult ddsimLoadCode(SimulationState* self, const char* code) {
                            : lastLoadErrorDetail.c_str()};
   } catch (...) {
     lastLoadErrorDetail = "An error occurred while executing the operation";
-    return {.status = ERROR,
+    return {.status = LOAD_INTERNAL_ERROR,
             .line = 0,
             .column = 0,
             .message = lastLoadErrorDetail.c_str()};
@@ -769,7 +772,7 @@ LoadResult ddsimLoadCode(SimulationState* self, const char* code) {
 
   ddsim->ready = true;
 
-  return {.status = OK, .line = 0, .column = 0, .message = nullptr};
+  return {.status = LOAD_OK, .line = 0, .column = 0, .message = nullptr};
 }
 
 Result ddsimChangeClassicalVariableValue(SimulationState* self,
