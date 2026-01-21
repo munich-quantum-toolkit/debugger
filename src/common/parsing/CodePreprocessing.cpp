@@ -167,7 +167,10 @@ void validateTargets(const std::string& code, size_t instructionStart,
                      const std::string& context) {
   for (const auto& target : targets) {
     if (target.empty()) {
-      continue;
+      std::string detail = "Empty target";
+      detail += context;
+      detail += ".";
+      throw ParsingError(formatParseError(code, instructionStart, detail));
     }
     const auto open = target.find('[');
     if (open == std::string::npos) {

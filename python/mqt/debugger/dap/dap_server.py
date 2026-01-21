@@ -116,6 +116,7 @@ class DAPServer:
         self.columns_start_at_one = True
         self.pending_highlights: list[dict[str, Any]] = []
         self.source_file = {"name": "", "path": ""}
+        self.source_code = ""
         self._prevent_exit = False
 
     def start(self) -> None:
@@ -450,7 +451,7 @@ class DAPServer:
     ) -> list[dict[str, Any]]:
         """Collect highlight entries for the current assertion failure."""
         highlights: list[dict[str, Any]] = []
-        if getattr(self, "source_code", ""):
+        if self.source_code:
             try:
                 if error_causes is None:
                     diagnostics = self.simulation_state.get_diagnostics()
@@ -535,7 +536,7 @@ class DAPServer:
 
     def _build_parse_error_highlight(self, line: int, column: int, detail: str) -> dict[str, Any] | None:
         """Create a highlight entry for a parse error."""
-        if not getattr(self, "source_code", ""):
+        if not self.source_code:
             return None
         lines = self.source_code.split("\n")
         if not lines:

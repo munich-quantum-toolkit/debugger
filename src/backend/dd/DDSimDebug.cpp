@@ -76,12 +76,21 @@ DDSimulationState* toDDSimulationState(SimulationState* state) {
   // NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast)
 }
 
+/**
+ * @brief Represents a parsed load error with optional location metadata.
+ */
 struct ParsedLoadError {
   size_t line;
   size_t column;
   std::string detail;
 };
 
+/**
+ * @brief Evaluate a classic-controlled condition from the original code.
+ * @param ddsim The simulation state.
+ * @param instructionIndex The instruction index to inspect.
+ * @return The evaluated condition, or std::nullopt if it cannot be evaluated.
+ */
 std::optional<bool> evaluateClassicConditionFromCode(DDSimulationState* ddsim,
                                                      size_t instructionIndex) {
   if (instructionIndex >= ddsim->instructionObjects.size()) {
@@ -157,6 +166,11 @@ std::optional<bool> evaluateClassicConditionFromCode(DDSimulationState* ddsim,
   return registerValue == expected;
 }
 
+/**
+ * @brief Parse a load error message into a structured error descriptor.
+ * @param message The raw error message.
+ * @return The parsed load error.
+ */
 ParsedLoadError parseLoadErrorMessage(const std::string& message) {
   const std::string trimmed = trim(message);
   const std::string prefix = "<input>:";
