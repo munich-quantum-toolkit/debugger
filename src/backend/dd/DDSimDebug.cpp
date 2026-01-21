@@ -390,7 +390,7 @@ bool checkAssertionEqualityCircuit(
     const char* message = loadResult.message;
     destroyDDSimulationState(&secondSimulation);
     throw std::runtime_error(
-        message && *message != '\0'
+        message != nullptr && *message != '\0'
             ? message
             : "Failed to load circuit for equality assertion.");
   }
