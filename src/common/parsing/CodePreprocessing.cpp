@@ -534,7 +534,7 @@ preprocessCode(const std::string& code, size_t startIndex,
     }
 
     if (block.valid && isClassicControlledGate(line)) {
-      line = line + " { " + block.code + " }";
+      line.append(" { ").append(block.code).append(" }");
       block.valid = false;
       block.code.clear();
     }
