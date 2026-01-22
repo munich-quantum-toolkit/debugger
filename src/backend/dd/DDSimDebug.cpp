@@ -388,14 +388,12 @@ bool checkAssertionEqualityCircuit(
       &secondSimulation.interface, assertion->getCircuitCode().c_str());
   if (loadResult.status != LOAD_OK) {
     const char* message = loadResult.message;
-    destroyDDSimulationState(&secondSimulation);
     throw std::runtime_error(
         message != nullptr && *message != '\0'
             ? message
             : "Failed to load circuit for equality assertion.");
   }
   if (!secondSimulation.assertionInstructions.empty()) {
-    destroyDDSimulationState(&secondSimulation);
     throw std::runtime_error(
         "Circuit equality assertions cannot contain nested assertions");
   }
@@ -409,7 +407,6 @@ bool checkAssertionEqualityCircuit(
   sv2.amplitudes = amplitudes2.data();
   secondSimulation.interface.getStateVectorFull(&secondSimulation.interface,
                                                 &sv2);
-  destroyDDSimulationState(&secondSimulation);
 
   Statevector sv;
   sv.numQubits = qubits.size();
