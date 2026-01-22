@@ -199,6 +199,18 @@ def test_incorrect_good_sample_size(compiled_slice_1: str) -> None:
     assert errors >= 75
 
 
+def test_start_compilation_raises_on_invalid_code(tmp_path: Path) -> None:
+    """Ensure invalid input code surfaces as a RuntimeError."""
+    invalid_code = tmp_path / "invalid.qasm"
+    invalid_code.write_text("INVALID QASM", encoding="utf-8")
+
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+
+    with pytest.raises(RuntimeError):
+        check.start_compilation(invalid_code, output_dir)
+
+
 def test_sample_estimate(compiled_slice_1: str) -> None:
     """Test the estimation of required shots.
 
