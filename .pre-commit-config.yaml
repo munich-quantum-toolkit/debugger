@@ -77,8 +77,9 @@ repos:
       - id: ty-check
         name: ty check
         entry: uvx python -c "import subprocess; import sys; r = subprocess.run(['uv', 'sync', '--no-install-project', '--inexact']); sys.exit(r.returncode or subprocess.run(['uv', 'run', '--no-sync', 'ty', 'check']).returncode)"
-        language: unsupported
+        language: system
         require_serial: true
+        pass_filenames: false
         types_or: [python, pyi, jupyter]
         exclude: ^(docs/)
 
