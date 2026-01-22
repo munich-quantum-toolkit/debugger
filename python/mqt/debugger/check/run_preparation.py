@@ -42,25 +42,32 @@ def start_compilation(code: Path, output_dir: Path) -> None:
         output_dir (Path): The directory to store the compiled slices.
     """
     state = dbg.create_ddsim_simulation_state()
-    with code.open("r", encoding="utf-8") as f:
-        code_str = f.read()
-    load_result = state.load_code(code_str)
-    if load_result.status != dbg.LoadResultStatus.OK:
-        message = load_result.message or "Error loading code"
-        raise RuntimeError(message)
-    i = 0
-    while True:
-        i += 1
-        settings = dbg.CompilationSettings(
-            opt=0,
-            slice_index=i - 1,
-        )
-        compiled = state.compile(settings)
-        if not compiled:
-            break
-        with (output_dir / f"slice_{i}.qasm").open("w") as f:
-            f.write(compiled)
-    dbg.destroy_ddsim_simulation_state(state)
+    try:
+        with code.open("r", encoding="utf-8") as f:
+            code_str = f.read()
+        load_result = state.load_code(code_str)
+        if load_result.status != dbg.LoadResultStatus.OK:
+            message = load_result.message or "Error loading code"
+            raise RuntimeError(message)
+        i = 0
+        compiled_any = False
+        while True:
+            i += 1
+            settings = dbg.CompilationSettings(
+                opt=0,
+                slice_index=i - 1,
+            )
+            compiled = state.compile(settings)
+            if not compiled:
+                break
+            compiled_any = True
+            with (output_dir / f"slice_{i}.qasm").open("w") as f:
+                f.write(compiled)
+        if not compiled_any:
+            msg = "No compiled slices produced; check input code for validity."
+            raise RuntimeError(msg)
+    finally:
+        dbg.destroy_ddsim_simulation_state(state)
 
 
 # -------------------------
