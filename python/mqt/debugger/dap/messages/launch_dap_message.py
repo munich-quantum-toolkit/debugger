@@ -68,9 +68,7 @@ class LaunchDAPMessage(DAPMessage):
         program_path = Path(self.program)
         server.source_file = {"name": program_path.name, "path": self.program}
         parsed_successfully = True
-        code = program_path.read_text(
-            encoding=locale.getpreferredencoding(do_setlocale=False)
-        )
+        code = program_path.read_text(encoding=locale.getpreferredencoding(do_setlocale=False))
         server.source_code = code
         load_result = server.simulation_state.load_code(code)
         if load_result.status != mqt.debugger.LoadResultStatus.OK:
