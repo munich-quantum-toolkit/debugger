@@ -41,7 +41,6 @@ __all__ = [
     "__version__",
     "check",
     "create_ddsim_simulation_state",
-    "create_ddsim_simulation_state",
     "dap",
     "destroy_ddsim_simulation_state",
 ]
