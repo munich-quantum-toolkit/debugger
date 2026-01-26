@@ -60,7 +60,8 @@ protected:
    */
   void loadFromFile(const std::string& testName) {
     const auto code = readFromCircuitsPath(testName);
-    state->loadCode(state, code.c_str());
+    const auto result = state->loadCode(state, code.c_str());
+    ASSERT_EQ(result.status, OK);
   }
 
   /**

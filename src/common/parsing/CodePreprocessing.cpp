@@ -20,7 +20,9 @@
 #include "common/parsing/Utils.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <cstddef>
+#include <exception>
 #include <iterator>
 #include <map>
 #include <memory>
@@ -32,6 +34,181 @@
 namespace mqt::debugger {
 
 namespace {
+
+/**
+ * @brief Check whether a string is non-empty and contains only digits.
+ * @param text The string to validate.
+ * @return True if the string is non-empty and all characters are digits.
+ */
+bool isDigits(const std::string& text) {
+  if (text.empty()) {
+    return false;
+  }
+  return std::ranges::all_of(
+      text, [](unsigned char c) { return std::isdigit(c) != 0; });
+}
+
+struct LineColumn {
+  size_t line = 1;
+  size_t column = 1;
+};
+
+/**
+ * @brief Compute the 1-based line and column for a given character offset.
+ * @param code The source code to inspect.
+ * @param offset The zero-based character offset in the source code.
+ * @return The line and column of the offset in the source code.
+ */
+LineColumn lineColumnForOffset(const std::string& code, size_t offset) {
+  LineColumn location;
+  const auto lineStartPos = code.rfind('\n', offset);
+  const size_t lineStart = (lineStartPos == std::string::npos)
+                               ? 0
+                               : static_cast<size_t>(lineStartPos + 1);
+  location.line = 1;
+  for (size_t i = 0; i < lineStart; i++) {
+    if (code[i] == '\n') {
+      location.line++;
+    }
+  }
+  location.column = offset - lineStart + 1;
+  return location;
+}
+
+/**
+ * @brief Compute the 1-based line and column for a target within a line.
+ * @param code The source code to inspect.
+ * @param instructionStart The zero-based offset of the instruction start.
+ * @param target The target token to locate on the line.
+ * @return The line and column of the target, or the first non-space column.
+ */
+LineColumn lineColumnForTarget(const std::string& code, size_t instructionStart,
+                               const std::string& target) {
+  LineColumn location = lineColumnForOffset(code, instructionStart);
+  const auto lineStartPos = code.rfind('\n', instructionStart);
+  const size_t lineStart = (lineStartPos == std::string::npos)
+                               ? 0
+                               : static_cast<size_t>(lineStartPos + 1);
+  auto lineEndPos = code.find('\n', instructionStart);
+  const size_t lineEnd = (lineEndPos == std::string::npos)
+                             ? code.size()
+                             : static_cast<size_t>(lineEndPos);
+  const auto lineText = code.substr(lineStart, lineEnd - lineStart);
+  if (!target.empty()) {
+    const auto targetPos = lineText.find(target);
+    if (targetPos != std::string::npos) {
+      location.column = targetPos + 1;
+      return location;
+    }
+  }
+  const auto nonSpace = lineText.find_first_not_of(" \t");
+  if (nonSpace != std::string::npos) {
+    location.column = nonSpace + 1;
+  }
+  return location;
+}
+
+/**
+ * @brief Format a parse error with line/column location information.
+ * @param code The source code to inspect.
+ * @param instructionStart The zero-based offset of the instruction start.
+ * @param detail The error detail text.
+ * @param target Optional target token to locate more precisely.
+ * @return The formatted error string.
+ */
+std::string formatParseError(const std::string& code, size_t instructionStart,
+                             const std::string& detail,
+                             const std::string& target = "") {
+  const auto location = lineColumnForTarget(code, instructionStart, target);
+  return "<input>:" + std::to_string(location.line) + ":" +
+         std::to_string(location.column) + ": " + detail;
+}
+
+/**
+ * @brief Build an error detail string for an invalid target.
+ * @param target The invalid target token.
+ * @param context Additional context to append.
+ * @return The formatted detail string.
+ */
+std::string invalidTargetDetail(const std::string& target,
+                                const std::string& context) {
+  std::string detail = "Invalid target qubit ";
+  detail += target;
+  detail += context;
+  detail += ".";
+  return detail;
+}
+
+/**
+ * @brief Build an error detail string for an invalid register declaration.
+ * @param trimmedLine The register declaration line.
+ * @return The formatted detail string.
+ */
+std::string invalidRegisterDetail(const std::string& trimmedLine) {
+  std::string detail = "Invalid register declaration ";
+  detail += trimmedLine;
+  detail += ".";
+  return detail;
+}
+
+/**
+ * @brief Validate target references against known registers and indices.
+ * @param code The source code to inspect.
+ * @param instructionStart The zero-based offset of the instruction start.
+ * @param targets The target tokens to validate.
+ * @param definedRegisters The registers defined in the current scope.
+ * @param shadowedRegisters The shadowed register names in the current scope.
+ * @param context Additional context to append to error messages.
+ */
+void validateTargets(const std::string& code, size_t instructionStart,
+                     const std::vector<std::string>& targets,
+                     const std::map<std::string, size_t>& definedRegisters,
+                     const std::vector<std::string>& shadowedRegisters,
+                     const std::string& context) {
+  for (const auto& target : targets) {
+    if (target.empty()) {
+      std::string detail = "Empty target";
+      detail += context;
+      detail += ".";
+      throw ParsingError(formatParseError(code, instructionStart, detail));
+    }
+    const auto open = target.find('[');
+    if (open == std::string::npos) {
+      continue;
+    }
+    const auto close = target.find(']', open + 1);
+    if (open == 0 || close == std::string::npos || close != target.size() - 1) {
+      throw ParsingError(formatParseError(code, instructionStart,
+                                          invalidTargetDetail(target, context),
+                                          target));
+    }
+    const auto registerName = target.substr(0, open);
+    const auto indexText = target.substr(open + 1, close - open - 1);
+    if (!isDigits(indexText)) {
+      throw ParsingError(formatParseError(code, instructionStart,
+                                          invalidTargetDetail(target, context),
+                                          target));
+    }
+    size_t registerIndex = 0;
+    try {
+      registerIndex = std::stoul(indexText);
+    } catch (const std::exception&) {
+      throw ParsingError(formatParseError(code, instructionStart,
+                                          invalidTargetDetail(target, context),
+                                          target));
+    }
+    if (std::ranges::find(shadowedRegisters, registerName) !=
+        shadowedRegisters.end()) {
+      continue;
+    }
+    const auto found = definedRegisters.find(registerName);
+    if (found == definedRegisters.end() || found->second <= registerIndex) {
+      throw ParsingError(formatParseError(code, instructionStart,
+                                          invalidTargetDetail(target, context),
+                                          target));
+    }
+  }
+}
 
 /**
  * @brief Sweep a given code string for blocks and replace them with a unique
@@ -250,10 +427,13 @@ std::vector<std::string> parseParameters(const std::string& instruction) {
   }
 
   if (isClassicControlledGate(instruction)) {
-    const auto end = instruction.find(')');
-
-    return parseParameters(
-        instruction.substr(end + 1, instruction.length() - end - 1));
+    const auto classic = parseClassicControlledGate(instruction);
+    std::vector<std::string> parameters;
+    for (const auto& op : classic.operations) {
+      const auto targets = parseParameters(op);
+      parameters.insert(parameters.end(), targets.begin(), targets.end());
+    }
+    return parameters;
   }
 
   auto parts = splitString(
@@ -332,7 +512,11 @@ preprocessCode(const std::string& code, size_t startIndex,
     auto isAssert = isAssertion(line);
     auto blockPos = line.find("$__block");
 
-    const size_t trueStart = pos + blocksOffset;
+    const auto leadingPos = blocksRemoved.find_first_not_of(" \t\r\n", pos);
+    const size_t trueStart =
+        ((leadingPos != std::string::npos && leadingPos < end) ? leadingPos
+                                                               : pos) +
+        blocksOffset;
 
     Block block{.valid = false, .code = ""};
     if (blockPos != std::string::npos) {
@@ -349,6 +533,12 @@ preprocessCode(const std::string& code, size_t startIndex,
       line.replace(blockPos, endPos - blockPos + 1, "");
     }
 
+    if (block.valid && isClassicControlledGate(line)) {
+      line.append(" { ").append(block.code).append(" }");
+      block.valid = false;
+      block.code.clear();
+    }
+
     const auto targets = parseParameters(line);
 
     const size_t trueEnd = end + blocksOffset;
@@ -358,7 +548,18 @@ preprocessCode(const std::string& code, size_t startIndex,
           replaceString(replaceString(trimmedLine, "creg", ""), "qreg", ""));
       const auto parts = splitString(declaration, {'[', ']'});
       const auto& name = parts[0];
-      const auto size = std::stoi(parts[1]);
+      const auto sizeText = parts.size() > 1 ? parts[1] : "";
+      if (name.empty() || !isDigits(sizeText)) {
+        throw ParsingError(formatParseError(
+            code, trueStart, invalidRegisterDetail(trimmedLine)));
+      }
+      size_t size = 0;
+      try {
+        size = std::stoul(sizeText);
+      } catch (const std::exception&) {
+        throw ParsingError(formatParseError(
+            code, trueStart, invalidRegisterDetail(trimmedLine)));
+      }
       definedRegisters.insert({name, size});
     }
 
@@ -404,11 +605,7 @@ preprocessCode(const std::string& code, size_t startIndex,
     }
 
     if (isClassicControlledGate(line)) {
-      if (block.valid) {
-        throw ParsingError(
-            "Classic-controlled gates with body blocks are not supported. Use "
-            "individual `if` statements for each operation.");
-      }
+      // Body blocks are handled by inlining their code into the instruction.
     }
 
     bool isFunctionCall = false;
@@ -423,25 +620,16 @@ preprocessCode(const std::string& code, size_t startIndex,
       auto a = parseAssertion(line, block.code);
       unfoldAssertionTargetRegisters(*a, definedRegisters, shadowedRegisters);
       a->validate();
-      for (const auto& target : a->getTargetQubits()) {
-        if (std::ranges::find(shadowedRegisters, target) !=
-            shadowedRegisters.end()) {
-          continue;
-        }
-        const auto registerName = variableBaseName(target);
-        const auto registerIndex =
-            std::stoul(splitString(splitString(target, '[')[1], ']')[0]);
-
-        if (!definedRegisters.contains(registerName) ||
-            definedRegisters[registerName] <= registerIndex) {
-          throw ParsingError("Invalid target qubit " + target +
-                             " in assertion.");
-        }
-      }
+      validateTargets(code, trueStart, a->getTargetQubits(), definedRegisters,
+                      shadowedRegisters, " in assertion");
       instructions.emplace_back(i, line, a, a->getTargetQubits(), trueStart,
                                 trueEnd, i + 1, isFunctionCall, calledFunction,
                                 false, false, block);
     } else {
+      if (!isVariableDeclaration(line)) {
+        validateTargets(code, trueStart, targets, definedRegisters,
+                        shadowedRegisters, "");
+      }
       std::unique_ptr<Assertion> a(nullptr);
       instructions.emplace_back(i, line, a, targets, trueStart, trueEnd, i + 1,
                                 isFunctionCall, calledFunction, false, false,
