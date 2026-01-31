@@ -8,7 +8,7 @@
 
 [build-system]
 requires = [
-  "nanobind~=2.10.2",
+  "nanobind~=2.11.0",
   "setuptools-scm>=9.2.2",
   "scikit-build-core>=0.11.6",
 ]
@@ -310,7 +310,7 @@ repair-wheel-command = "uvx abi3audit --strict --report {wheel}"
 
 [dependency-groups]
 build = [
-    "nanobind~=2.10.2",
+    "nanobind~=2.11.0",
     "setuptools-scm>=9.2.2",
     "scikit-build-core>=0.11.6",
 ]
