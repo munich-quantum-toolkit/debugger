@@ -195,7 +195,11 @@ void validateTargets(const std::string& code, size_t instructionStart,
     size_t registerIndex = 0;
     try {
       registerIndex = std::stoul(indexText);
-    } catch (const std::exception&) {
+    } catch (const std::invalid_argument&) {
+      throw ParsingError(formatParseError(code, instructionStart,
+                                          invalidTargetDetail(target, context),
+                                          target));
+    } catch (const std::out_of_range&) {
       throw ParsingError(formatParseError(code, instructionStart,
                                           invalidTargetDetail(target, context),
                                           target));
