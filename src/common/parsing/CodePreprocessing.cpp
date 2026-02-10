@@ -48,6 +48,9 @@ bool isDigits(const std::string& text) {
       text, [](unsigned char c) { return std::isdigit(c) != 0; });
 }
 
+/**
+ * @brief 1-based line/column location within source text.
+ */
 struct LineColumn {
   size_t line = 1;
   size_t column = 1;
