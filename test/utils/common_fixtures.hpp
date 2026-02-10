@@ -124,7 +124,11 @@ protected:
     userCode = code;
     fullCode = addBoilerplate(numQubits, numClassics, code, preamble);
     const auto result = state->loadCode(state, fullCode.c_str());
-    ASSERT_EQ(result.status, shouldFail ? ERROR : OK);
+    if (shouldFail) {
+      ASSERT_NE(result.status, LOAD_OK);
+    } else {
+      ASSERT_EQ(result.status, LOAD_OK);
+    }
   }
 
   /**
@@ -182,7 +186,7 @@ protected:
   void loadFromFile(const std::string& testName) {
     const auto code = readFromCircuitsPath(testName);
     const auto result = state->loadCode(state, code.c_str());
-    ASSERT_EQ(result.status, OK);
+    ASSERT_EQ(result.status, LOAD_OK);
   }
 
   /**
