@@ -611,10 +611,6 @@ preprocessCode(const std::string& code, size_t startIndex,
       continue;
     }
 
-    if (isClassicControlledGate(line)) {
-      // Body blocks are handled by inlining their code into the instruction.
-    }
-
     bool isFunctionCall = false;
     std::string calledFunction;
     if (!tokens.empty() &&
