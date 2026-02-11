@@ -26,6 +26,7 @@
 #include <iterator>
 #include <map>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -414,6 +415,72 @@ ClassicControlledGate parseClassicControlledGate(const std::string& code) {
   return {.condition = condition.str(), .operations = operations};
 }
 
+std::optional<ClassicCondition>
+parseClassicConditionExpression(const std::string& condition) {
+  auto normalized = removeWhitespace(condition);
+  if (!normalized.empty() && normalized.front() == '(') {
+    normalized.erase(0, 1);
+  }
+  const auto eqPos = normalized.find("==");
+  if (eqPos == std::string::npos) {
+    return std::nullopt;
+  }
+  const auto lhs = normalized.substr(0, eqPos);
+  const auto rhs = normalized.substr(eqPos + 2);
+  if (lhs.empty() || rhs.empty()) {
+    return std::nullopt;
+  }
+
+  if (!isDigits(rhs)) {
+    return std::nullopt;
+  }
+  size_t expected = 0;
+  try {
+    expected = std::stoull(rhs);
+  } catch (const std::invalid_argument&) {
+    return std::nullopt;
+  } catch (const std::out_of_range&) {
+    return std::nullopt;
+  }
+
+  const auto bracketPos = lhs.find('[');
+  if (bracketPos != std::string::npos) {
+    const auto closePos = lhs.find(']', bracketPos + 1);
+    if (bracketPos == 0 || closePos == std::string::npos ||
+        closePos != lhs.size() - 1) {
+      return std::nullopt;
+    }
+    const auto base = lhs.substr(0, bracketPos);
+    const auto indexText =
+        lhs.substr(bracketPos + 1, closePos - bracketPos - 1);
+    if (!isDigits(indexText)) {
+      return std::nullopt;
+    }
+    size_t bitIndex = 0;
+    try {
+      bitIndex = std::stoull(indexText);
+    } catch (const std::invalid_argument&) {
+      return std::nullopt;
+    } catch (const std::out_of_range&) {
+      return std::nullopt;
+    }
+    return ClassicCondition{
+        .registerName = base, .bitIndex = bitIndex, .expectedValue = expected};
+  }
+
+  return ClassicCondition{
+      .registerName = lhs, .bitIndex = std::nullopt, .expectedValue = expected};
+}
+
+std::optional<ClassicCondition>
+parseClassicConditionFromCode(const std::string& code) {
+  if (!isClassicControlledGate(code)) {
+    return std::nullopt;
+  }
+  const auto condition = parseClassicControlledGate(code).condition;
+  return parseClassicConditionExpression(condition);
+}
+
 bool isMeasurement(const std::string& line) {
   return line.find("->") != std::string::npos;
 }
@@ -473,6 +540,42 @@ std::vector<std::string> parseParameters(const std::string& instruction) {
     return {};
   }
   return parameters;
+}
+
+ParsedLoadError parseLoadErrorMessage(const std::string& message) {
+  const std::string trimmed = trim(message);
+  const std::string prefix = "<input>:";
+  if (!trimmed.starts_with(prefix)) {
+    return {.line = 0, .column = 0, .detail = trimmed};
+  }
+
+  const size_t lineStart = prefix.size();
+  const size_t lineEnd = trimmed.find(':', lineStart);
+  if (lineEnd == std::string::npos) {
+    return {.line = 0, .column = 0, .detail = trimmed};
+  }
+  const size_t columnEnd = trimmed.find(':', lineEnd + 1);
+  if (columnEnd == std::string::npos) {
+    return {.line = 0, .column = 0, .detail = trimmed};
+  }
+
+  const std::string lineStr = trimmed.substr(lineStart, lineEnd - lineStart);
+  const std::string columnStr =
+      trimmed.substr(lineEnd + 1, columnEnd - lineEnd - 1);
+  auto isDigit = [](unsigned char c) { return std::isdigit(c) != 0; };
+  if (lineStr.empty() || columnStr.empty() ||
+      !std::ranges::all_of(lineStr, isDigit) ||
+      !std::ranges::all_of(columnStr, isDigit)) {
+    return {.line = 0, .column = 0, .detail = trimmed};
+  }
+
+  const size_t line = std::stoul(lineStr);
+  const size_t column = std::stoul(columnStr);
+  std::string detail = trim(trimmed.substr(columnEnd + 1));
+  if (detail.empty()) {
+    detail = trimmed;
+  }
+  return {.line = line, .column = column, .detail = detail};
 }
 
 std::vector<Instruction> preprocessCode(const std::string& code,
