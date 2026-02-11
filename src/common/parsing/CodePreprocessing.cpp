@@ -22,12 +22,12 @@
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
-#include <exception>
 #include <iterator>
 #include <map>
 #include <memory>
 #include <optional>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -112,29 +112,13 @@ LineColumn lineColumnForTarget(const std::string& code, size_t instructionStart,
   return location;
 }
 
-/**
- * @brief Format a parse error with line/column location information.
- * @param code The source code to inspect.
- * @param instructionStart The zero-based offset of the instruction start.
- * @param detail The error detail text.
- * @param target Optional target token to locate more precisely.
- * @return The formatted error string.
- */
-std::string formatParseError(const std::string& code, size_t instructionStart,
-                             const std::string& detail,
-                             const std::string& target = "") {
-  const auto location = lineColumnForTarget(code, instructionStart, target);
-  return "<input>:" + std::to_string(location.line) + ":" +
-         std::to_string(location.column) + ": " + detail;
-}
-
 ParsingError makeParseError(const std::string& code, size_t instructionStart,
                             const std::string& detail,
                             const std::string& target = "") {
   const auto location = lineColumnForTarget(code, instructionStart, target);
   const std::string message = "<input>:" + std::to_string(location.line) + ":" +
                               std::to_string(location.column) + ": " + detail;
-  return ParsingError(location.line, location.column, detail, message);
+  return {location.line, location.column, detail, message};
 }
 
 /**
