@@ -20,6 +20,22 @@
 
 namespace mqt::debugger {
 
-ParsingError::ParsingError(const std::string& msg) : std::runtime_error(msg) {}
+ParsingError::ParsingError(const std::string& msg)
+    : std::runtime_error(msg), detail_(msg) {}
+
+ParsingError::ParsingError(size_t line, size_t column, std::string detail)
+    : std::runtime_error(detail), line_(line), column_(column),
+      detail_(std::move(detail)) {}
+
+ParsingError::ParsingError(size_t line, size_t column, std::string detail,
+                           const std::string& message)
+    : std::runtime_error(message), line_(line), column_(column),
+      detail_(std::move(detail)) {}
+
+size_t ParsingError::line() const noexcept { return line_; }
+
+size_t ParsingError::column() const noexcept { return column_; }
+
+const std::string& ParsingError::detail() const noexcept { return detail_; }
 
 } // namespace mqt::debugger

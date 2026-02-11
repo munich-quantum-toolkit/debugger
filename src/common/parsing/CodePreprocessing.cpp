@@ -128,6 +128,15 @@ std::string formatParseError(const std::string& code, size_t instructionStart,
          std::to_string(location.column) + ": " + detail;
 }
 
+ParsingError makeParseError(const std::string& code, size_t instructionStart,
+                            const std::string& detail,
+                            const std::string& target = "") {
+  const auto location = lineColumnForTarget(code, instructionStart, target);
+  const std::string message = "<input>:" + std::to_string(location.line) + ":" +
+                              std::to_string(location.column) + ": " + detail;
+  return ParsingError(location.line, location.column, detail, message);
+}
+
 /**
  * @brief Build an error detail string for an invalid target.
  * @param target The invalid target token.
@@ -174,7 +183,7 @@ void validateTargets(const std::string& code, size_t instructionStart,
       std::string detail = "Empty target";
       detail += context;
       detail += ".";
-      throw ParsingError(formatParseError(code, instructionStart, detail));
+      throw makeParseError(code, instructionStart, detail);
     }
     const auto open = target.find('[');
     if (open == std::string::npos) {
@@ -182,28 +191,24 @@ void validateTargets(const std::string& code, size_t instructionStart,
     }
     const auto close = target.find(']', open + 1);
     if (open == 0 || close == std::string::npos || close != target.size() - 1) {
-      throw ParsingError(formatParseError(code, instructionStart,
-                                          invalidTargetDetail(target, context),
-                                          target));
+      throw makeParseError(code, instructionStart,
+                           invalidTargetDetail(target, context), target);
     }
     const auto registerName = target.substr(0, open);
     const auto indexText = target.substr(open + 1, close - open - 1);
     if (!isDigits(indexText)) {
-      throw ParsingError(formatParseError(code, instructionStart,
-                                          invalidTargetDetail(target, context),
-                                          target));
+      throw makeParseError(code, instructionStart,
+                           invalidTargetDetail(target, context), target);
     }
     size_t registerIndex = 0;
     try {
       registerIndex = std::stoul(indexText);
     } catch (const std::invalid_argument&) {
-      throw ParsingError(formatParseError(code, instructionStart,
-                                          invalidTargetDetail(target, context),
-                                          target));
+      throw makeParseError(code, instructionStart,
+                           invalidTargetDetail(target, context), target);
     } catch (const std::out_of_range&) {
-      throw ParsingError(formatParseError(code, instructionStart,
-                                          invalidTargetDetail(target, context),
-                                          target));
+      throw makeParseError(code, instructionStart,
+                           invalidTargetDetail(target, context), target);
     }
     if (std::ranges::find(shadowedRegisters, registerName) !=
         shadowedRegisters.end()) {
@@ -211,9 +216,8 @@ void validateTargets(const std::string& code, size_t instructionStart,
     }
     const auto found = definedRegisters.find(registerName);
     if (found == definedRegisters.end() || found->second <= registerIndex) {
-      throw ParsingError(formatParseError(code, instructionStart,
-                                          invalidTargetDetail(target, context),
-                                          target));
+      throw makeParseError(code, instructionStart,
+                           invalidTargetDetail(target, context), target);
     }
   }
 }
@@ -660,15 +664,15 @@ preprocessCode(const std::string& code, size_t startIndex,
       const auto& name = parts[0];
       const auto sizeText = parts.size() > 1 ? parts[1] : "";
       if (name.empty() || !isDigits(sizeText)) {
-        throw ParsingError(formatParseError(
-            code, trueStart, invalidRegisterDetail(trimmedLine)));
+        throw makeParseError(code, trueStart,
+                             invalidRegisterDetail(trimmedLine));
       }
       size_t size = 0;
       try {
         size = std::stoul(sizeText);
       } catch (const std::exception&) {
-        throw ParsingError(formatParseError(
-            code, trueStart, invalidRegisterDetail(trimmedLine)));
+        throw makeParseError(code, trueStart,
+                             invalidRegisterDetail(trimmedLine));
       }
       definedRegisters.insert({name, size});
     }

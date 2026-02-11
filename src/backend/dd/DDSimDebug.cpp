@@ -25,6 +25,7 @@
 #include "common/parsing/AssertionParsing.hpp"
 #include "common/parsing/AssertionTools.hpp"
 #include "common/parsing/CodePreprocessing.hpp"
+#include "common/parsing/ParsingError.hpp"
 #include "common/parsing/Utils.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/Operations.hpp"
@@ -101,8 +102,7 @@ std::optional<bool> evaluateClassicConditionFromCode(DDSimulationState* ddsim,
     registerValue = value ? 1ULL : 0ULL;
   } else {
     const auto regIt = std::ranges::find_if(
-        ddsim->classicalRegisters,
-        [&parsed](const auto& reg) {
+        ddsim->classicalRegisters, [&parsed](const auto& reg) {
           return reg.name == parsed->registerName;
         });
     if (regIt == ddsim->classicalRegisters.end()) {
@@ -632,8 +632,8 @@ Result ddsimInit(SimulationState* self) {
 }
 
 LoadResult ddsimLoadCode(SimulationState* self, const char* code) {
-  static thread_local std::string lastLoadErrorDetail;
   auto* ddsim = toDDSimulationState(self);
+  ddsim->lastLoadErrorDetail.clear();
   ddsim->currentInstruction = 0;
   ddsim->previousInstructionStack.clear();
   ddsim->callReturnStack.clear();
@@ -661,28 +661,31 @@ LoadResult ddsimLoadCode(SimulationState* self, const char* code) {
     const auto imported = qasm3::Importer::import(ss);
     ddsim->qc = std::make_unique<qc::QuantumComputation>(imported);
     qc::CircuitOptimizer::flattenOperations(*ddsim->qc, true);
+  } catch (const ParsingError& e) {
+    ddsim->lastLoadErrorDetail = e.detail();
+    return {.status = LOAD_PARSE_ERROR,
+            .line = e.line(),
+            .column = e.column(),
+            .message = ddsim->lastLoadErrorDetail.empty()
+                           ? nullptr
+                           : ddsim->lastLoadErrorDetail.c_str()};
   } catch (const std::exception& e) {
     std::string message = e.what();
     if (message.empty()) {
       message = "An error occurred while executing the operation";
     }
-    const auto parsed = parseLoadErrorMessage(message);
-    lastLoadErrorDetail = parsed.detail;
-    const LoadResultStatus status = (parsed.line > 0 || parsed.column > 0)
-                                        ? LOAD_PARSE_ERROR
-                                        : LOAD_INTERNAL_ERROR;
-    return {.status = status,
-            .line = parsed.line,
-            .column = parsed.column,
-            .message = lastLoadErrorDetail.empty()
-                           ? nullptr
-                           : lastLoadErrorDetail.c_str()};
-  } catch (...) {
-    lastLoadErrorDetail = "An error occurred while executing the operation";
+    ddsim->lastLoadErrorDetail = message;
     return {.status = LOAD_INTERNAL_ERROR,
             .line = 0,
             .column = 0,
-            .message = lastLoadErrorDetail.c_str()};
+            .message = ddsim->lastLoadErrorDetail.c_str()};
+  } catch (...) {
+    ddsim->lastLoadErrorDetail =
+        "An error occurred while executing the operation";
+    return {.status = LOAD_INTERNAL_ERROR,
+            .line = 0,
+            .column = 0,
+            .message = ddsim->lastLoadErrorDetail.c_str()};
   }
 
   ddsim->iterator = ddsim->qc->begin();

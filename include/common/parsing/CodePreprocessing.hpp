@@ -327,8 +327,8 @@ parseClassicConditionExpression(const std::string& condition);
  * @param code The code to parse.
  * @return The parsed condition, or std::nullopt if it cannot be parsed.
  */
-std::optional<ClassicCondition> parseClassicConditionFromCode(
-    const std::string& code);
+std::optional<ClassicCondition>
+parseClassicConditionFromCode(const std::string& code);
 
 /**
  * @brief Check if a given line is a variable declaration.
