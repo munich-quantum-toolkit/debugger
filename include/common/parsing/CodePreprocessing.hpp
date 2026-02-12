@@ -231,15 +231,6 @@ struct ClassicCondition {
 };
 
 /**
- * @brief Represents a parsed load error with optional location metadata.
- */
-struct ParsedLoadError {
-  size_t line;
-  size_t column;
-  std::string detail;
-};
-
-/**
  * @brief Represents a function definition in the code.
  */
 struct FunctionDefinition {
@@ -372,12 +363,5 @@ bool isBarrier(const std::string& line);
  * @return A vector containing the parsed parameters.
  */
 std::vector<std::string> parseParameters(const std::string& instruction);
-
-/**
- * @brief Parse a load error message into a structured error descriptor.
- * @param message The raw error message.
- * @return The parsed load error.
- */
-ParsedLoadError parseLoadErrorMessage(const std::string& message);
 
 } // namespace mqt::debugger

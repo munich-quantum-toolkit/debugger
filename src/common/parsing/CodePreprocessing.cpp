@@ -531,42 +531,6 @@ std::vector<std::string> parseParameters(const std::string& instruction) {
   return parameters;
 }
 
-ParsedLoadError parseLoadErrorMessage(const std::string& message) {
-  const std::string trimmed = trim(message);
-  const std::string prefix = "<input>:";
-  if (!trimmed.starts_with(prefix)) {
-    return {.line = 0, .column = 0, .detail = trimmed};
-  }
-
-  const size_t lineStart = prefix.size();
-  const size_t lineEnd = trimmed.find(':', lineStart);
-  if (lineEnd == std::string::npos) {
-    return {.line = 0, .column = 0, .detail = trimmed};
-  }
-  const size_t columnEnd = trimmed.find(':', lineEnd + 1);
-  if (columnEnd == std::string::npos) {
-    return {.line = 0, .column = 0, .detail = trimmed};
-  }
-
-  const std::string lineStr = trimmed.substr(lineStart, lineEnd - lineStart);
-  const std::string columnStr =
-      trimmed.substr(lineEnd + 1, columnEnd - lineEnd - 1);
-  auto isDigit = [](unsigned char c) { return std::isdigit(c) != 0; };
-  if (lineStr.empty() || columnStr.empty() ||
-      !std::ranges::all_of(lineStr, isDigit) ||
-      !std::ranges::all_of(columnStr, isDigit)) {
-    return {.line = 0, .column = 0, .detail = trimmed};
-  }
-
-  const size_t line = std::stoul(lineStr);
-  const size_t column = std::stoul(columnStr);
-  std::string detail = trim(trimmed.substr(columnEnd + 1));
-  if (detail.empty()) {
-    detail = trimmed;
-  }
-  return {.line = line, .column = column, .detail = detail};
-}
-
 std::vector<Instruction> preprocessCode(const std::string& code,
                                         std::string& processedCode) {
   std::map<std::string, size_t> definedRegisters;
