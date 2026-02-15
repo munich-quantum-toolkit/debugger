@@ -123,8 +123,12 @@ protected:
                 bool shouldFail = false, const char* preamble = "") {
     userCode = code;
     fullCode = addBoilerplate(numQubits, numClassics, code, preamble);
-    ASSERT_EQ(state->loadCode(state, fullCode.c_str()),
-              shouldFail ? ERROR : OK);
+    const auto result = state->loadCode(state, fullCode.c_str());
+    if (shouldFail) {
+      ASSERT_NE(result.status, LOAD_OK);
+    } else {
+      ASSERT_EQ(result.status, LOAD_OK);
+    }
   }
 
   /**
@@ -181,7 +185,8 @@ protected:
    */
   void loadFromFile(const std::string& testName) {
     const auto code = readFromCircuitsPath(testName);
-    state->loadCode(state, code.c_str());
+    const auto result = state->loadCode(state, code.c_str());
+    ASSERT_EQ(result.status, LOAD_OK);
   }
 
   /**

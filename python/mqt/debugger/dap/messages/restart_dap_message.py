@@ -10,9 +10,12 @@
 
 from __future__ import annotations
 
+import contextlib
 import locale
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+
+import mqt.debugger
 
 from .dap_message import DAPMessage
 
@@ -64,12 +67,22 @@ class RestartDAPMessage(DAPMessage):
         """
         server.simulation_state.reset_simulation()
         program_path = Path(self.program)
-        code = program_path.read_text(encoding=locale.getpreferredencoding(False))
-        server.source_code = code
-        server.simulation_state.load_code(code)
-        if not self.stop_on_entry:
-            server.simulation_state.run_simulation()
         server.source_file = {"name": program_path.name, "path": self.program}
+        parsed_successfully = True
+        code = program_path.read_text(encoding=locale.getpreferredencoding(do_setlocale=False))
+        server.source_code = code
+        load_result = server.simulation_state.load_code(code)
+        if load_result.status != mqt.debugger.LoadResultStatus.OK:
+            parsed_successfully = False
+            line = load_result.line if load_result.line > 0 else None
+            column = load_result.column if load_result.column > 0 else None
+            message = str(load_result.message or "")
+            server.queue_parse_error(message, line, column)
+        if parsed_successfully and not self.stop_on_entry:
+            server.simulation_state.run_simulation()
+        if not parsed_successfully:
+            with contextlib.suppress(RuntimeError):
+                server.simulation_state.reset_simulation()
         return {
             "type": "response",
             "request_seq": self.sequence_number,

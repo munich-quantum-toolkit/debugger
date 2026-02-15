@@ -154,6 +154,53 @@ class Diagnostics:
             A list of new assertions.
         """
 
+class Result(enum.Enum):
+    """Represents the result of an operation."""
+
+    OK = 0
+    """Indicates that the operation was successful."""
+
+    ERROR = 1
+    """Indicates that an error occurred."""
+
+class LoadResultStatus(enum.Enum):
+    """Represents the result of a code loading operation."""
+
+    OK = 0
+    """Indicates that the code was loaded successfully."""
+
+    PARSE_ERROR = 1
+    """Indicates that the code could not be parsed."""
+
+    INTERNAL_ERROR = 2
+    """Indicates that an internal error occurred while loading."""
+
+class LoadResult:
+    """The result of a code loading operation."""
+
+    def __init__(self) -> None: ...
+    @property
+    def status(self) -> LoadResultStatus:
+        """Indicates whether the load was successful and why it failed."""
+
+    @status.setter
+    def status(self, arg: LoadResultStatus, /) -> None: ...
+    @property
+    def line(self) -> int:
+        """The line number of the error location, or 0 if unknown."""
+
+    @line.setter
+    def line(self, arg: int, /) -> None: ...
+    @property
+    def column(self) -> int:
+        """The column number of the error location, or 0 if unknown."""
+
+    @column.setter
+    def column(self, arg: int, /) -> None: ...
+    @property
+    def message(self) -> object:
+        """A human-readable error message, or None if none is available."""
+
 class VariableType(enum.Enum):
     """The type of a classical variable."""
 
@@ -313,11 +360,14 @@ class SimulationState:
     def init(self) -> None:
         """Initializes the simulation state."""
 
-    def load_code(self, code: str) -> None:
+    def load_code(self, code: str) -> LoadResult:
         """Loads the given code into the simulation state.
 
         Args:
             code: The code to load.
+
+        Returns:
+            LoadResult: The result of the load operation.
         """
 
     def step_forward(self) -> None:

@@ -25,6 +25,7 @@
 #include "common/parsing/AssertionParsing.hpp"
 #include "common/parsing/AssertionTools.hpp"
 #include "common/parsing/CodePreprocessing.hpp"
+#include "common/parsing/ParsingError.hpp"
 #include "common/parsing/Utils.hpp"
 #include "dd/DDDefinitions.hpp"
 #include "dd/Operations.hpp"
@@ -48,6 +49,7 @@
 #include <map>
 #include <memory>
 #include <numeric>
+#include <optional>
 #include <random>
 #include <ranges>
 #include <set>
@@ -73,6 +75,47 @@ DDSimulationState* toDDSimulationState(SimulationState* state) {
   // NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
   return reinterpret_cast<DDSimulationState*>(state);
   // NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast)
+}
+
+/**
+ * @brief Evaluate a classic-controlled condition from the original code.
+ * @param ddsim The simulation state.
+ * @param instructionIndex The instruction index to inspect.
+ * @return The evaluated condition, or std::nullopt if it cannot be evaluated.
+ */
+std::optional<bool> evaluateClassicConditionFromCode(DDSimulationState* ddsim,
+                                                     size_t instructionIndex) {
+  if (instructionIndex >= ddsim->instructionObjects.size()) {
+    return std::nullopt;
+  }
+  const auto& code = ddsim->instructionObjects[instructionIndex].code;
+  const auto parsed = parseClassicConditionFromCode(code);
+  if (!parsed.has_value()) {
+    return std::nullopt;
+  }
+
+  size_t registerValue = 0;
+  if (parsed->bitIndex.has_value()) {
+    const auto bitName = parsed->registerName + "[" +
+                         std::to_string(parsed->bitIndex.value()) + "]";
+    const auto& value = ddsim->variables[bitName].value.boolValue;
+    registerValue = value ? 1ULL : 0ULL;
+  } else {
+    const auto regIt = std::ranges::find_if(
+        ddsim->classicalRegisters, [&parsed](const auto& reg) {
+          return reg.name == parsed->registerName;
+        });
+    if (regIt == ddsim->classicalRegisters.end()) {
+      return std::nullopt;
+    }
+    for (size_t i = 0; i < regIt->size; i++) {
+      const auto name = getClassicalBitName(ddsim, regIt->index + i);
+      const auto& value = ddsim->variables[name].value.boolValue;
+      registerValue |= (value ? 1ULL : 0ULL) << i;
+    }
+  }
+
+  return registerValue == parsed->expectedValue;
 }
 
 /**
@@ -252,10 +295,16 @@ bool checkAssertionEqualityCircuit(
 
   DDSimulationState secondSimulation;
   createDDSimulationState(&secondSimulation);
-  secondSimulation.interface.loadCode(&secondSimulation.interface,
-                                      assertion->getCircuitCode().c_str());
+  const auto loadResult = secondSimulation.interface.loadCode(
+      &secondSimulation.interface, assertion->getCircuitCode().c_str());
+  if (loadResult.status != LOAD_OK) {
+    const char* message = loadResult.message;
+    throw std::runtime_error(
+        message != nullptr && *message != '\0'
+            ? message
+            : "Failed to load circuit for equality assertion.");
+  }
   if (!secondSimulation.assertionInstructions.empty()) {
-    destroyDDSimulationState(&secondSimulation);
     throw std::runtime_error(
         "Circuit equality assertions cannot contain nested assertions");
   }
@@ -269,7 +318,6 @@ bool checkAssertionEqualityCircuit(
   sv2.amplitudes = amplitudes2.data();
   secondSimulation.interface.getStateVectorFull(&secondSimulation.interface,
                                                 &sv2);
-  destroyDDSimulationState(&secondSimulation);
 
   Statevector sv;
   sv.numQubits = qubits.size();
@@ -583,25 +631,61 @@ Result ddsimInit(SimulationState* self) {
   return OK;
 }
 
-Result ddsimLoadCode(SimulationState* self, const char* code) {
+LoadResult ddsimLoadCode(SimulationState* self, const char* code) {
   auto* ddsim = toDDSimulationState(self);
+  ddsim->lastLoadErrorDetail.clear();
   ddsim->currentInstruction = 0;
   ddsim->previousInstructionStack.clear();
   ddsim->callReturnStack.clear();
   ddsim->callSubstitutions.clear();
   ddsim->restoreCallReturnStack.clear();
+  ddsim->ready = false;
   ddsim->code = code;
   ddsim->variables.clear();
   ddsim->variableNames.clear();
+  ddsim->instructionTypes.clear();
+  ddsim->instructionStarts.clear();
+  ddsim->instructionEnds.clear();
+  ddsim->functionDefinitions.clear();
+  ddsim->assertionInstructions.clear();
+  ddsim->successorInstructions.clear();
+  ddsim->classicalRegisters.clear();
+  ddsim->qubitRegisters.clear();
+  ddsim->dataDependencies.clear();
+  ddsim->functionCallers.clear();
+  ddsim->targetQubits.clear();
+  ddsim->instructionObjects.clear();
 
   try {
     std::stringstream ss{preprocessAssertionCode(code, ddsim)};
     const auto imported = qasm3::Importer::import(ss);
     ddsim->qc = std::make_unique<qc::QuantumComputation>(imported);
     qc::CircuitOptimizer::flattenOperations(*ddsim->qc, true);
+  } catch (const ParsingError& e) {
+    ddsim->lastLoadErrorDetail = e.detail();
+    return {.status = LOAD_PARSE_ERROR,
+            .line = e.line(),
+            .column = e.column(),
+            .message = ddsim->lastLoadErrorDetail.empty()
+                           ? nullptr
+                           : ddsim->lastLoadErrorDetail.c_str()};
   } catch (const std::exception& e) {
-    std::cerr << e.what() << "\n";
-    return ERROR;
+    std::string message = e.what();
+    if (message.empty()) {
+      message = "An error occurred while executing the operation";
+    }
+    ddsim->lastLoadErrorDetail = message;
+    return {.status = LOAD_INTERNAL_ERROR,
+            .line = 0,
+            .column = 0,
+            .message = ddsim->lastLoadErrorDetail.c_str()};
+  } catch (...) {
+    ddsim->lastLoadErrorDetail =
+        "An error occurred while executing the operation";
+    return {.status = LOAD_INTERNAL_ERROR,
+            .line = 0,
+            .column = 0,
+            .message = ddsim->lastLoadErrorDetail.c_str()};
   }
 
   ddsim->iterator = ddsim->qc->begin();
@@ -613,7 +697,7 @@ Result ddsimLoadCode(SimulationState* self, const char* code) {
 
   ddsim->ready = true;
 
-  return OK;
+  return {.status = LOAD_OK, .line = 0, .column = 0, .message = nullptr};
 }
 
 Result ddsimChangeClassicalVariableValue(SimulationState* self,
@@ -994,20 +1078,31 @@ Result ddsimStepForward(SimulationState* self) {
       throw std::runtime_error("If-else operations with non-equality "
                                "comparisons are currently not supported");
     }
-    if (op->getControlBit().has_value()) {
-      throw std::runtime_error("If-else operations controlled by a single "
-                               "classical bit are currently not supported");
+    const auto condition =
+        evaluateClassicConditionFromCode(ddsim, currentInstruction);
+    bool conditionMet = false;
+    if (condition.has_value()) {
+      conditionMet = condition.value();
+    } else {
+      const auto& exp = op->getExpectedValueRegister();
+      size_t registerValue = 0;
+      if (op->getControlBit().has_value()) {
+        const auto controlBit = op->getControlBit().value();
+        const auto name = getClassicalBitName(ddsim, controlBit);
+        const auto& value = ddsim->variables[name].value.boolValue;
+        registerValue = value ? 1ULL : 0ULL;
+      } else {
+        const auto& controls = op->getControlRegister();
+        for (size_t i = 0; i < controls->getSize(); i++) {
+          const auto name =
+              getClassicalBitName(ddsim, controls->getStartIndex() + i);
+          const auto& value = ddsim->variables[name].value.boolValue;
+          registerValue |= (value ? 1ULL : 0ULL) << i;
+        }
+      }
+      conditionMet = (registerValue == exp);
     }
-    const auto& controls = op->getControlRegister();
-    const auto& exp = op->getExpectedValueRegister();
-    size_t registerValue = 0;
-    for (size_t i = 0; i < controls->getSize(); i++) {
-      const auto name =
-          getClassicalBitName(ddsim, controls->getStartIndex() + i);
-      const auto& value = ddsim->variables[name].value.boolValue;
-      registerValue |= (value ? 1ULL : 0ULL) << i;
-    }
-    if (registerValue == exp) {
+    if (conditionMet) {
       auto* thenOp = op->getThenOp();
       currDD = dd::getDD(*thenOp, *ddsim->dd);
     } else if (op->getElseOp() != nullptr) {
@@ -1081,20 +1176,31 @@ Result ddsimStepBackward(SimulationState* self) {
       throw std::runtime_error("If-else operations with non-equality "
                                "comparisons are currently not supported");
     }
-    if (op->getControlBit().has_value()) {
-      throw std::runtime_error("If-else operations controlled by a single "
-                               "classical bit are currently not supported");
+    const auto condition =
+        evaluateClassicConditionFromCode(ddsim, ddsim->currentInstruction);
+    bool conditionMet = false;
+    if (condition.has_value()) {
+      conditionMet = condition.value();
+    } else {
+      const auto& exp = op->getExpectedValueRegister();
+      size_t registerValue = 0;
+      if (op->getControlBit().has_value()) {
+        const auto controlBit = op->getControlBit().value();
+        const auto name = getClassicalBitName(ddsim, controlBit);
+        const auto& value = ddsim->variables[name].value.boolValue;
+        registerValue = value ? 1ULL : 0ULL;
+      } else {
+        const auto& controls = op->getControlRegister();
+        for (size_t i = 0; i < controls->getSize(); i++) {
+          const auto name =
+              getClassicalBitName(ddsim, controls->getStartIndex() + i);
+          const auto& value = ddsim->variables[name].value.boolValue;
+          registerValue |= (value ? 1ULL : 0ULL) << i;
+        }
+      }
+      conditionMet = (registerValue == exp);
     }
-    const auto& controls = op->getControlRegister();
-    const auto& exp = op->getExpectedValueRegister();
-    size_t registerValue = 0;
-    for (size_t i = 0; i < controls->getSize(); i++) {
-      const auto name =
-          getClassicalBitName(ddsim, controls->getStartIndex() + i);
-      const auto& value = ddsim->variables[name].value.boolValue;
-      registerValue |= (value ? 1ULL : 0ULL) << i;
-    }
-    if (registerValue == exp) {
+    if (conditionMet) {
       auto* thenOp = op->getThenOp();
       currDD = dd::getInverseDD(*thenOp, *ddsim->dd);
     } else if (op->getElseOp() != nullptr) {
@@ -1119,6 +1225,10 @@ Result ddsimStepBackward(SimulationState* self) {
 }
 
 Result ddsimRunAll(SimulationState* self, size_t* failedAssertions) {
+  auto* ddsim = toDDSimulationState(self);
+  if (!ddsim->ready) {
+    return ERROR;
+  }
   size_t errorCount = 0;
   while (!self->isFinished(self)) {
     const Result result = self->runSimulation(self);
@@ -1129,7 +1239,9 @@ Result ddsimRunAll(SimulationState* self, size_t* failedAssertions) {
       errorCount++;
     }
   }
-  *failedAssertions = errorCount;
+  if (failedAssertions != nullptr) {
+    *failedAssertions = errorCount;
+  }
   return OK;
 }
 
@@ -1389,6 +1501,11 @@ Result ddsimSetBreakpoint(SimulationState* self, size_t desiredPosition,
   for (auto i = 0ULL; i < ddsim->instructionTypes.size(); i++) {
     const size_t start = ddsim->instructionStarts[i];
     const size_t end = ddsim->instructionEnds[i];
+    if (desiredPosition < start) {
+      *targetInstruction = i;
+      ddsim->breakpoints.insert(i);
+      return OK;
+    }
     if (desiredPosition >= start && desiredPosition <= end) {
       if (ddsim->functionDefinitions.contains(i)) {
         // Breakpoint may be located in a sub-gate of the gate definition.

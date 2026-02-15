@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 import socket
 import sys
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import mqt.debugger
 
@@ -114,6 +114,10 @@ class DAPServer:
         self.simulation_state = mqt.debugger.SimulationState()
         self.lines_start_at_one = True
         self.columns_start_at_one = True
+        self.pending_highlights: list[dict[str, Any]] = []
+        self.source_file = {"name": "", "path": ""}
+        self.source_code = ""
+        self._prevent_exit = False
 
     def start(self) -> None:
         """Start the DAP server and listen for one connection."""
@@ -166,12 +170,32 @@ class DAPServer:
             result, cmd = self.handle_command(payload)
             result_payload = json.dumps(result)
             send_message(result_payload, connection)
+            if isinstance(
+                cmd,
+                (
+                    mqt.debugger.dap.messages.NextDAPMessage,
+                    mqt.debugger.dap.messages.StepBackDAPMessage,
+                    mqt.debugger.dap.messages.StepInDAPMessage,
+                    mqt.debugger.dap.messages.StepOutDAPMessage,
+                    mqt.debugger.dap.messages.ContinueDAPMessage,
+                    mqt.debugger.dap.messages.ReverseContinueDAPMessage,
+                    mqt.debugger.dap.messages.RestartFrameDAPMessage,
+                    mqt.debugger.dap.messages.RestartDAPMessage,
+                    mqt.debugger.dap.messages.LaunchDAPMessage,
+                ),
+            ):
+                self._prevent_exit = False
 
             e: mqt.debugger.dap.messages.DAPEvent | None = None
             if isinstance(cmd, mqt.debugger.dap.messages.LaunchDAPMessage):
                 e = mqt.debugger.dap.messages.InitializedDAPEvent()
                 event_payload = json.dumps(e.encode())
                 send_message(event_payload, connection)
+            if isinstance(
+                cmd, (mqt.debugger.dap.messages.LaunchDAPMessage, mqt.debugger.dap.messages.RestartDAPMessage)
+            ):
+                clear_event = mqt.debugger.dap.messages.GrayOutDAPEvent([], self.source_file)
+                send_message(json.dumps(clear_event.encode()), connection)
             if (
                 isinstance(
                     cmd, (mqt.debugger.dap.messages.LaunchDAPMessage, mqt.debugger.dap.messages.RestartDAPMessage)
@@ -236,6 +260,18 @@ class DAPServer:
                 )
                 event_payload = json.dumps(e.encode())
                 send_message(event_payload, connection)
+            if self.pending_highlights:
+                try:
+                    highlight_event = mqt.debugger.dap.messages.HighlightError(
+                        self.pending_highlights,
+                        self.source_file,
+                    )
+                    send_message(json.dumps(highlight_event.encode()), connection)
+                    self._prevent_exit = True
+                except (TypeError, ValueError):
+                    pass
+                finally:
+                    self.pending_highlights = []
             self.regular_checks(connection)
 
     def regular_checks(self, connection: socket.socket) -> None:
@@ -245,7 +281,11 @@ class DAPServer:
             connection (socket.socket): The client socket.
         """
         e: mqt.debugger.dap.messages.DAPEvent | None = None
-        if self.simulation_state.is_finished() and self.simulation_state.get_instruction_count() != 0:
+        if (
+            self.simulation_state.is_finished()
+            and self.simulation_state.get_instruction_count() != 0
+            and not self._prevent_exit
+        ):
             e = mqt.debugger.dap.messages.ExitedDAPEvent(0)
             event_payload = json.dumps(e.encode())
             send_message(event_payload, connection)
@@ -325,7 +365,16 @@ class DAPServer:
             line,
             column,
             connection,
+            "stderr",
         )
+        highlight_entries = self.collect_highlight_entries(current_instruction, error_causes)
+        if highlight_entries:
+            try:
+                highlight_event = mqt.debugger.dap.messages.HighlightError(highlight_entries, self.source_file)
+                send_message(json.dumps(highlight_event.encode()), connection)
+                self._prevent_exit = True
+            except (TypeError, ValueError):
+                pass
 
     def code_pos_to_coordinates(self, pos: int) -> tuple[int, int]:
         """Helper method to convert a code position to line and column.
@@ -337,14 +386,18 @@ class DAPServer:
             tuple[int, int]: The line and column, 0-or-1-indexed.
         """
         lines = self.source_code.split("\n")
-        line = 0
+        line = 1 if lines else 0
         col = 0
         for i, line_code in enumerate(lines):
-            if pos < len(line_code):
+            if pos <= len(line_code):
                 line = i + 1
                 col = pos
                 break
             pos -= len(line_code) + 1
+        else:
+            if lines:
+                line = len(lines)
+                col = len(lines[-1])
         if self.columns_start_at_one:
             col += 1
         if not self.lines_start_at_one:
@@ -391,8 +444,164 @@ class DAPServer:
             else ""
         )
 
+    def collect_highlight_entries(
+        self,
+        failing_instruction: int,
+        error_causes: list[mqt.debugger.ErrorCause] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Collect highlight entries for the current assertion failure."""
+        highlights: list[dict[str, Any]] = []
+        if self.source_code:
+            try:
+                if error_causes is None:
+                    diagnostics = self.simulation_state.get_diagnostics()
+                    error_causes = diagnostics.potential_error_causes()
+            except RuntimeError:
+                error_causes = []
+
+            for cause in error_causes:
+                message = self.format_error_cause(cause)
+                reason = self._format_highlight_reason(cause.type_)
+                entry = self._build_highlight_entry(cause.instruction, reason, message)
+                if entry is not None:
+                    highlights.append(entry)
+
+        if not highlights:
+            entry = self._build_highlight_entry(
+                failing_instruction,
+                mqt.debugger.dap.messages.HighlightReason.ASSERTION_FAILED,
+                "Assertion failed at this instruction.",
+            )
+            if entry is not None:
+                highlights.append(entry)
+
+        return highlights
+
+    def _build_highlight_entry(
+        self,
+        instruction: int,
+        reason: mqt.debugger.dap.messages.HighlightReason,
+        message: str,
+    ) -> dict[str, Any] | None:
+        """Create a highlight entry for a specific instruction."""
+        try:
+            start_pos, end_pos = self.simulation_state.get_instruction_position(instruction)
+        except RuntimeError:
+            return None
+        start_line, start_column = self.code_pos_to_coordinates(start_pos)
+        if end_pos < len(self.source_code) and self.source_code[end_pos] == "\n":
+            end_position_exclusive = end_pos
+        else:
+            end_position_exclusive = min(len(self.source_code), end_pos + 1)
+        end_line, end_column = self.code_pos_to_coordinates(end_position_exclusive)
+        snippet = self.source_code[start_pos : end_pos + 1].replace("\r", "")
+        return {
+            "instruction": int(instruction),
+            "range": {
+                "start": {"line": start_line, "column": start_column},
+                "end": {"line": end_line, "column": end_column},
+            },
+            "reason": reason,
+            "code": snippet.strip(),
+            "message": message,
+        }
+
+    @staticmethod
+    def _format_highlight_reason(
+        cause_type: mqt.debugger.ErrorCauseType | None,
+    ) -> mqt.debugger.dap.messages.HighlightReason:
+        """Return a short identifier for the highlight reason."""
+        if cause_type == mqt.debugger.ErrorCauseType.MissingInteraction:
+            return mqt.debugger.dap.messages.HighlightReason.MISSING_INTERACTION
+        if cause_type == mqt.debugger.ErrorCauseType.ControlAlwaysZero:
+            return mqt.debugger.dap.messages.HighlightReason.CONTROL_ALWAYS_ZERO
+        return mqt.debugger.dap.messages.HighlightReason.UNKNOWN
+
+    def queue_parse_error(
+        self,
+        error_message: str,
+        line: int | None = None,
+        column: int | None = None,
+    ) -> None:
+        """Store highlight data for a parse error to be emitted later."""
+        detail = error_message.strip()
+        if not detail:
+            detail = "An error occurred while parsing the code."
+        if line is None or column is None:
+            line = 1
+            column = 1
+        entry = self._build_parse_error_highlight(line, column, detail)
+        if entry is not None:
+            self.pending_highlights = [entry]
+
+    def _build_parse_error_highlight(self, line: int, column: int, detail: str) -> dict[str, Any] | None:
+        """Create a highlight entry for a parse error."""
+        if not self.source_code:
+            return None
+        lines = self.source_code.split("\n")
+        if not lines:
+            return None
+        line = max(1, min(line, len(lines)))
+        column = max(1, column)
+        line_index = line - 1
+        line_text = lines[line_index]
+
+        if column <= 1 and line_index > 0 and not line_text.strip():
+            prev_index = line_index - 1
+            while prev_index >= 0 and not lines[prev_index].strip():
+                prev_index -= 1
+            if prev_index >= 0:
+                line_index = prev_index
+                line = line_index + 1
+                line_text = lines[line_index]
+                stripped = line_text.lstrip()
+                column = max(1, len(line_text) - len(stripped) + 1) if stripped else 1
+
+        end_column = max(column, len(line_text) + 1)
+        snippet = line_text.strip() or line_text
+        return {
+            "instruction": -1,
+            "range": {
+                "start": {"line": line, "column": column},
+                "end": {"line": line, "column": end_column if end_column > 0 else column},
+            },
+            "reason": mqt.debugger.dap.messages.HighlightReason.PARSE_ERROR,
+            "code": snippet,
+            "message": detail,
+        }
+
+    def _flatten_message_parts(self, parts: list[Any]) -> list[str]:
+        """Flatten nested message structures into plain text lines."""
+        flattened: list[str] = []
+        for part in parts:
+            if isinstance(part, str):
+                if part:
+                    flattened.append(part)
+            elif isinstance(part, dict):
+                title = part.get("title")
+                if isinstance(title, str) and title:
+                    flattened.append(title)
+                body = part.get("body")
+                if isinstance(body, list):
+                    flattened.extend(self._flatten_message_parts(body))
+                elif isinstance(body, str) and body:
+                    flattened.append(body)
+                end = part.get("end")
+                if isinstance(end, str) and end:
+                    flattened.append(end)
+            elif isinstance(part, list):
+                flattened.extend(self._flatten_message_parts(part))
+            elif part is not None:
+                flattened.append(str(part))
+        return flattened
+
     def send_message_hierarchy(
-        self, message: dict[str, str | list[Any] | dict[str, Any]], line: int, column: int, connection: socket.socket
+        self,
+        message: dict[str, str | list[Any] | dict[str, Any]],
+        line: int,
+        column: int,
+        connection: socket.socket,
+        category: str = "console",
     ) -> None:
         """Send a hierarchy of messages to the client.
 
@@ -401,34 +610,56 @@ class DAPServer:
             line (int): The line number.
             column (int): The column number.
             connection (socket.socket): The client socket.
+            category (str): The output category (console/stdout/stderr).
         """
-        if "title" in message:
-            title_event = mqt.debugger.dap.messages.OutputDAPEvent(
-                "console", cast("str", message["title"]), "start", line, column, self.source_file
-            )
-            send_message(json.dumps(title_event.encode()), connection)
+        raw_body = message.get("body")
+        body: list[str] | None = None
+        if isinstance(raw_body, list):
+            body = self._flatten_message_parts(raw_body)
+        elif isinstance(raw_body, str):
+            body = [raw_body]
+        end_value = message.get("end")
+        end = end_value if isinstance(end_value, str) else None
+        title = str(message.get("title", ""))
+        self.send_message_simple(title, body, end, line, column, connection, category)
 
-        if "body" in message:
-            body = message["body"]
-            if isinstance(body, list):
-                for msg in body:
-                    if isinstance(msg, dict):
-                        self.send_message_hierarchy(msg, line, column, connection)
-                    else:
-                        output_event = mqt.debugger.dap.messages.OutputDAPEvent(
-                            "console", msg, None, line, column, self.source_file
-                        )
-                        send_message(json.dumps(output_event.encode()), connection)
-            elif isinstance(body, dict):
-                self.send_message_hierarchy(body, line, column, connection)
-            elif isinstance(body, str):
-                output_event = mqt.debugger.dap.messages.OutputDAPEvent(
-                    "console", body, None, line, column, self.source_file
-                )
-                send_message(json.dumps(output_event.encode()), connection)
+    def send_message_simple(
+        self,
+        title: str,
+        body: list[str] | None,
+        end: str | None,
+        line: int,
+        column: int,
+        connection: socket.socket,
+        category: str = "console",
+    ) -> None:
+        """Send a simple message to the client.
 
-        if "end" in message or "title" in message:
-            end_event = mqt.debugger.dap.messages.OutputDAPEvent(
-                "console", cast("str", message.get("end")), "end", line, column, self.source_file
-            )
-            send_message(json.dumps(end_event.encode()), connection)
+        Args:
+            title (str): The title of the message.
+            body (list[str]): The body of the message.
+            end (str | None): The end of the message.
+            line (int): The line number.
+            column (int): The column number.
+            connection (socket.socket): The client socket.
+            category (str): The output category (console/stdout/stderr).
+        """
+        segments: list[str] = []
+        if title:
+            segments.append(title)
+        if body:
+            segments.extend(body)
+        if end:
+            segments.append(end)
+        if not segments:
+            return
+        output_text = "\n".join(segments)
+        event = mqt.debugger.dap.messages.OutputDAPEvent(
+            category,
+            output_text,
+            None,
+            line,
+            column,
+            self.source_file,
+        )
+        send_message(json.dumps(event.encode()), connection)

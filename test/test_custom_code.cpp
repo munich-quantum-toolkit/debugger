@@ -86,8 +86,13 @@ TEST_F(CustomCodeTest, IfElseOperationMulti) {
   loadCode(2, 1,
            "x q[0];"
            "measure q[0] -> c[0];"
-           "if(c==1) { x q[0]; x q[1]; }",
-           true);
+           "if(c==1) { x q[0]; x q[1]; }");
+  ASSERT_EQ(state->runSimulation(state), OK);
+
+  std::array<Complex, 4> amplitudes{};
+  Statevector sv{2, 4, amplitudes.data()};
+  state->getStateVectorFull(state, &sv);
+  ASSERT_TRUE(complexEquality(amplitudes[2], 1, 0.0));
 }
 
 /**

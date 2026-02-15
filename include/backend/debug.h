@@ -50,9 +50,9 @@ struct SimulationStateStruct {
    * @brief Loads the given code into the simulation state.
    * @param self The instance to load the code into.
    * @param code The code to load.
-   * @return The result of the operation.
+   * @return The result of the load operation.
    */
-  Result (*loadCode)(SimulationState* self, const char* code);
+  LoadResult (*loadCode)(SimulationState* self, const char* code);
 
   /**
    * @brief Steps the simulation forward by one instruction.

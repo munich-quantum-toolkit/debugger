@@ -23,8 +23,9 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
+import mqt.debugger as dbg
 from mqt.debugger import check
-from mqt.debugger.check import result_checker, runtime_check
+from mqt.debugger.check import result_checker, run_preparation, runtime_check
 
 if TYPE_CHECKING:
     import types
@@ -197,6 +198,48 @@ def test_incorrect_good_sample_size(compiled_slice_1: str) -> None:
             results.append(result)
     errors = 100 - sum(results)
     assert errors >= 75
+
+
+def test_start_compilation_raises_on_invalid_code(tmp_path: Path) -> None:
+    """Ensure invalid input code surfaces as a RuntimeError."""
+    invalid_code = tmp_path / "invalid.qasm"
+    invalid_code.write_text("INVALID QASM", encoding="utf-8")
+
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+
+    with pytest.raises(RuntimeError):
+        check.start_compilation(invalid_code, output_dir)
+
+
+def test_start_compilation_raises_on_load_error(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Ensure load errors surface as RuntimeError with the provided message."""
+
+    class DummyLoadResult:
+        status = dbg.LoadResultStatus.PARSE_ERROR
+        message = "Bad input"
+
+    class DummyState:
+        @staticmethod
+        def load_code(_code: str) -> DummyLoadResult:
+            return DummyLoadResult()
+
+        @staticmethod
+        def compile(_settings: dbg.CompilationSettings) -> str:
+            msg = "compile should not be called"
+            raise AssertionError(msg)
+
+    monkeypatch.setattr(run_preparation.dbg, "create_ddsim_simulation_state", DummyState)
+    monkeypatch.setattr(run_preparation.dbg, "destroy_ddsim_simulation_state", lambda _state: None)
+
+    invalid_code = tmp_path / "invalid.qasm"
+    invalid_code.write_text("INVALID QASM", encoding="utf-8")
+
+    output_dir = tmp_path / "out"
+    output_dir.mkdir()
+
+    with pytest.raises(RuntimeError, match="Bad input"):
+        check.start_compilation(invalid_code, output_dir)
 
 
 def test_sample_estimate(compiled_slice_1: str) -> None:
