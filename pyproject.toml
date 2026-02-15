@@ -322,7 +322,7 @@ test = [
     "pytest-xdist>=3.8.0",
 ]
 typing = [
-    "ty==0.0.15",
+    "ty==0.0.17",
     "numpy>=2.1",
     "qiskit>=1.2.4",
     "scipy>=1.13.1",
