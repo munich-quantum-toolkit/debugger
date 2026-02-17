@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import json
+import math
 import operator
 from dataclasses import dataclass
 from pathlib import Path
@@ -112,7 +113,7 @@ def distribution_equal_under_noise(
     )
     result: tuple[float, float] = check_power_divergence(scaled_distribution, preprocessed_expected)
     (statistic, p) = result
-    if p == 0.0 and statistic == 0.0:
+    if math.isclose(p, 0.0, abs_tol=1e-8) and math.isclose(statistic, 0.0, abs_tol=1e-8):
         return False
 
     return float(p) > p_value
