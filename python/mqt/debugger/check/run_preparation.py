@@ -114,7 +114,7 @@ def estimate_required_shots_for_assertion(
         int: The estimated number of shots required for the assertion.
     """
     expected_distribution: list[float] = []
-    num_variables = assertion.split("(")[1].split(")")[0].count(",") + 1
+    num_variables = assertion.split("(")[1].split(")", maxsplit=1)[0].count(",") + 1
     if "{zero}" in assertion:
         expected_distribution = [0.0] * 2**num_variables
         expected_distribution[0] = 1.0
@@ -122,7 +122,7 @@ def estimate_required_shots_for_assertion(
         # superposition assertions should detect any superposition, but here we just consider the uniform one.
         expected_distribution = [1.0 / 2**num_variables] * 2**num_variables
     else:
-        expected_distribution = [float(x) for x in assertion.split("{")[1].split("}")[0].split(",")]
+        expected_distribution = [float(x) for x in assertion.split("{")[1].split("}", maxsplit=1)[0].split(",")]
         norm = sum(expected_distribution)
         expected_distribution = [x / norm for x in expected_distribution]
 

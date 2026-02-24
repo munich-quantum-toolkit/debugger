@@ -495,5 +495,5 @@ def test_contribution_equal_under_noise_big_difference() -> None:
 def test_check_power_divergence_zeros() -> None:
     """Tests that `check_power_divergence` correctly returns `False` if the expected distribution has a zero entry while the observed distribution's entry is non-zero."""
     statistic, p = result_checker.check_power_divergence([99, 1, 0, 0], [100, 0, 0, 0])
-    assert statistic == 0.0
-    assert p == 0.0
+    assert statistic == pytest.approx(0.0, abs=1e-8)
+    assert p == pytest.approx(0.0, abs=1e-8)
