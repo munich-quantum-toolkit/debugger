@@ -78,8 +78,8 @@ def send_message(msg: str, client: socket.socket) -> None:
     """Send a message to the client according to the DAP messaging protocol.
 
     Args:
-        msg (str): The message to send.
-        client (socket.socket): The client socket to send the message to.
+        msg: The message to send.
+        client: The client socket to send the message to.
     """
     msg = msg.replace("\n", "\r\n")
     length = len(msg)
@@ -105,8 +105,8 @@ class DAPServer:
         """Create a new DAP server instance.
 
         Args:
-            host (str, optional): The host IP Address. Defaults to "0.0.0.0".
-            port (int, optional): The port to run the server on. Defaults to 4711.
+            host: The host IP Address. Defaults to "0.0.0.0".
+            port: The port to run the server on. Defaults to 4711.
         """
         self.host = host
         self.port = port
@@ -145,7 +145,7 @@ class DAPServer:
         """Handle incoming messages from the client.
 
         Args:
-            connection (socket.socket): The client socket.
+            connection: The client socket.
         """
         data_str = ""
         message_str = ""
@@ -298,13 +298,13 @@ class DAPServer:
         """Handle an incoming command from the client and return the corresponding response.
 
         Args:
-            command (dict[str, Any]): The command read from the client.
+            command: The command read from the client.
+
+        Returns:
+            The response to the message as a dictionary and the message object.
 
         Raises:
             RuntimeError: If the command is not supported.
-
-        Returns:
-            tuple[dict[str, Any], mqt.debugger.dap.messages.DAPMessage]: The response to the message as a dictionary and the message object.
         """
         if command["command"] == "setVariable":
             arguments = command.get("arguments", {})
@@ -326,7 +326,7 @@ class DAPServer:
         """Handles the sending of output events when an assertion fails.
 
         Args:
-            connection (socket.socket): The client socket.
+            connection: The client socket.
         """
         current_instruction = self.simulation_state.get_current_instruction()
         dependencies = self.simulation_state.get_diagnostics().get_data_dependencies(current_instruction)
@@ -380,10 +380,10 @@ class DAPServer:
         """Helper method to convert a code position to line and column.
 
         Args:
-            pos (int): The 0-indexed position in the code.
+            pos: The 0-indexed position in the code.
 
         Returns:
-            tuple[int, int]: The line and column, 0-or-1-indexed.
+            The line and column, 0-or-1-indexed.
         """
         lines = self.source_code.split("\n")
         line = 1 if lines else 0
@@ -408,11 +408,11 @@ class DAPServer:
         """Helper method to convert a code line and column to its position idnex.
 
         Args:
-            line (int): The 0-or-1-indexed line in the code.
-            col (int): The 0-or-1-indexed column in the line.
+            line: The 0-or-1-indexed line in the code.
+            col: The 0-or-1-indexed column in the line.
 
         Returns:
-            int: The 0-indexed position in the code.
+            The 0-indexed position in the code.
         """
         lines = self.source_code.split("\n")
         if not self.lines_start_at_one:
@@ -429,10 +429,10 @@ class DAPServer:
         """Format an error cause for output.
 
         Args:
-            cause (mqt.debugger.ErrorCause): The error cause.
+            cause: The error cause.
 
         Returns:
-            str: The formatted error cause.
+            The formatted error cause.
         """
         (start_pos, _) = self.simulation_state.get_instruction_position(cause.instruction)
         start_line, _ = self.code_pos_to_coordinates(start_pos)
@@ -606,11 +606,10 @@ class DAPServer:
         """Send a hierarchy of messages to the client.
 
         Args:
-            message (dict[str, str | list[str], dict[str, Any]]): An object representing the message to send. Supported keys are "title", "body", "end".
-            line (int): The line number.
-            column (int): The column number.
-            connection (socket.socket): The client socket.
-            category (str): The output category (console/stdout/stderr).
+            message: An object representing the message to send. Supported keys are "title", "body", "end".
+            line: The line number.
+            column: The column number.
+            connection: The client socket.
         """
         raw_body = message.get("body")
         body: list[str] | None = None

@@ -8,7 +8,7 @@
 
 [build-system]
 requires = [
-  "nanobind~=2.11.0",
+  "nanobind~=2.12.0",
   "setuptools-scm>=9.2.2",
   "scikit-build-core>=0.11.6",
 ]
@@ -310,7 +310,7 @@ repair-wheel-command = "uvx abi3audit --strict --report {wheel}"
 
 [dependency-groups]
 build = [
-    "nanobind~=2.11.0",
+    "nanobind~=2.12.0",
     "setuptools-scm>=9.2.2",
     "scikit-build-core>=0.11.6",
 ]
@@ -322,7 +322,7 @@ test = [
     "pytest-xdist>=3.8.0",
 ]
 typing = [
-    "ty==0.0.18",
+    "ty==0.0.19",
     "numpy>=2.1",
     "qiskit>=1.2.4",
     "scipy>=1.13.1",
