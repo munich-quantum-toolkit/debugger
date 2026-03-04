@@ -22,14 +22,21 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <iostream>
 #include <set>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace mqt::debugger {
 
 namespace {
+
+std::string_view loadResultMessageView(const LoadResult& result) {
+  const auto* data = std::data(result.message);
+  return {data, std::strnlen(data, LOAD_RESULT_MESSAGE_MAX)};
+}
 
 /**
  * @brief ANSI escape sequence for resetting the background color.
@@ -69,8 +76,9 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
   const auto result = state->loadCode(state, code);
   state->resetSimulation(state);
   if (result.status != LOAD_OK) {
-    if (result.message[0] != '\0') {
-      std::cout << "Error loading code: " << result.message << "\n";
+    const auto message_view = loadResultMessageView(result);
+    if (!message_view.empty()) {
+      std::cout << "Error loading code: " << message_view << "\n";
     } else {
       std::cout << "Error loading code\n";
     }

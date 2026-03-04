@@ -21,12 +21,15 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
+#include <iterator>
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/pair.h>   // NOLINT(misc-include-cleaner)
 #include <nanobind/stl/string.h> // NOLINT(misc-include-cleaner)
 #include <nanobind/stl/vector.h> // NOLINT(misc-include-cleaner)
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -89,10 +92,13 @@ void bindFramework(nb::module_& m) {
       .def_prop_ro(
           "message",
           [](const LoadResult& self) {
-            if (self.message[0] == '\0') {
+            const auto* data = std::data(self.message);
+            const std::string_view message_view(
+                data, std::strnlen(data, LOAD_RESULT_MESSAGE_MAX));
+            if (message_view.empty()) {
               return nb::none();
             }
-            return nb::cast(std::string(self.message));
+            return nb::cast(std::string(message_view));
           },
           "A human-readable error message, or None if none is available.")
       .doc() = "The result of a code loading operation.";

@@ -56,6 +56,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -310,13 +311,16 @@ bool checkAssertionEqualityCircuit(
     throw std::runtime_error(
         "Failed to initialize simulation for equality assertion.");
   }
-  DDSimulationStateGuard secondSimulationGuard(&secondSimulation);
+  const DDSimulationStateGuard secondSimulationGuard(&secondSimulation);
   const auto loadResult = secondSimulation.interface.loadCode(
       &secondSimulation.interface, assertion->getCircuitCode().c_str());
   if (loadResult.status != LOAD_OK) {
+    const auto* data = std::data(loadResult.message);
+    const std::string_view message_view(
+        data, std::strnlen(data, LOAD_RESULT_MESSAGE_MAX));
     throw std::runtime_error(
-        loadResult.message[0] != '\0'
-            ? loadResult.message
+        !message_view.empty()
+            ? std::string(message_view)
             : "Failed to load circuit for equality assertion.");
   }
   if (!secondSimulation.assertionInstructions.empty()) {
@@ -535,7 +539,9 @@ void setLoadResultMessage(LoadResult& result, const std::string& message) {
   if (message.empty()) {
     return;
   }
-  std::strncpy(result.message, message.c_str(), LOAD_RESULT_MESSAGE_MAX - 1);
+  const auto copy_len =
+      std::min(message.size(), LOAD_RESULT_MESSAGE_MAX - 1);
+  std::copy_n(message.data(), copy_len, std::begin(result.message));
   result.message[LOAD_RESULT_MESSAGE_MAX - 1] = '\0';
 }
 
