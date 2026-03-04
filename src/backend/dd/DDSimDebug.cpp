@@ -77,6 +77,18 @@ DDSimulationState* toDDSimulationState(SimulationState* state) {
   // NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast)
 }
 
+struct DDSimulationStateGuard {
+  explicit DDSimulationStateGuard(DDSimulationState* state) : state(state) {}
+  DDSimulationStateGuard(const DDSimulationStateGuard&) = delete;
+  DDSimulationStateGuard& operator=(const DDSimulationStateGuard&) = delete;
+  ~DDSimulationStateGuard() {
+    if (state != nullptr) {
+      destroyDDSimulationState(state);
+    }
+  }
+  DDSimulationState* state;
+};
+
 /**
  * @brief Evaluate a classic-controlled condition from the original code.
  * @param ddsim The simulation state.
@@ -294,7 +306,11 @@ bool checkAssertionEqualityCircuit(
   }
 
   DDSimulationState secondSimulation;
-  createDDSimulationState(&secondSimulation);
+  if (createDDSimulationState(&secondSimulation) == ERROR) {
+    throw std::runtime_error(
+        "Failed to initialize simulation for equality assertion.");
+  }
+  DDSimulationStateGuard secondSimulationGuard(&secondSimulation);
   const auto loadResult = secondSimulation.interface.loadCode(
       &secondSimulation.interface, assertion->getCircuitCode().c_str());
   if (loadResult.status != LOAD_OK) {
@@ -633,6 +649,7 @@ Result ddsimInit(SimulationState* self) {
 
 LoadResult ddsimLoadCode(SimulationState* self, const char* code) {
   auto* ddsim = toDDSimulationState(self);
+  // Keep backing storage for LoadResult::message valid after return.
   ddsim->lastLoadErrorDetail.clear();
   ddsim->currentInstruction = 0;
   ddsim->previousInstructionStack.clear();
