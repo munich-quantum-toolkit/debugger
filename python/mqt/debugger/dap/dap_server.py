@@ -610,6 +610,7 @@ class DAPServer:
             line: The line number.
             column: The column number.
             connection: The client socket.
+            category: The output category (console/stdout/stderr).
         """
         raw_body = message.get("body")
         body: list[str] | None = None

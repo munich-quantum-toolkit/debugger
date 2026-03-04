@@ -82,7 +82,8 @@ typedef struct {
    */
   size_t column;
   /**
-   * @brief A human-readable error message, or empty string if none is available.
+   * @brief A human-readable error message, or empty string if none is
+   * available.
    */
   char message[LOAD_RESULT_MESSAGE_MAX];
 } LoadResult;

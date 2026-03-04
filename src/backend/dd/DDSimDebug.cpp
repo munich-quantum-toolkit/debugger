@@ -539,8 +539,7 @@ void setLoadResultMessage(LoadResult& result, const std::string& message) {
   if (message.empty()) {
     return;
   }
-  const auto copy_len =
-      std::min(message.size(), LOAD_RESULT_MESSAGE_MAX - 1);
+  const auto copy_len = std::min(message.size(), LOAD_RESULT_MESSAGE_MAX - 1);
   std::copy_n(message.data(), copy_len, std::begin(result.message));
   result.message[LOAD_RESULT_MESSAGE_MAX - 1] = '\0';
 }
@@ -709,9 +708,8 @@ LoadResult ddsimLoadCode(SimulationState* self, const char* code) {
     }
     return makeLoadResult(LOAD_INTERNAL_ERROR, 0, 0, message);
   } catch (...) {
-    return makeLoadResult(
-        LOAD_INTERNAL_ERROR, 0, 0,
-        "An error occurred while executing the operation");
+    return makeLoadResult(LOAD_INTERNAL_ERROR, 0, 0,
+                          "An error occurred while executing the operation");
   }
 
   ddsim->iterator = ddsim->qc->begin();
