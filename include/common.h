@@ -61,6 +61,11 @@ typedef enum {
 } LoadResultStatus;
 
 /**
+ * @brief Maximum length of a load error message (including null terminator).
+ */
+#define LOAD_RESULT_MESSAGE_MAX 1024
+
+/**
  * @brief The result of a code loading operation.
  */
 typedef struct {
@@ -77,9 +82,9 @@ typedef struct {
    */
   size_t column;
   /**
-   * @brief A human-readable error message, or nullptr if none is available.
+   * @brief A human-readable error message, or empty string if none is available.
    */
-  const char* message;
+  char message[LOAD_RESULT_MESSAGE_MAX];
 } LoadResult;
 
 /**

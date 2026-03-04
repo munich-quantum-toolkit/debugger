@@ -89,7 +89,7 @@ void bindFramework(nb::module_& m) {
       .def_prop_ro(
           "message",
           [](const LoadResult& self) {
-            if (self.message == nullptr) {
+            if (self.message[0] == '\0') {
               return nb::none();
             }
             return nb::cast(std::string(self.message));

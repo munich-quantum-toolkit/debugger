@@ -69,9 +69,8 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
   const auto result = state->loadCode(state, code);
   state->resetSimulation(state);
   if (result.status != LOAD_OK) {
-    const char* message = result.message;
-    if (message != nullptr && *message != '\0') {
-      std::cout << "Error loading code: " << message << "\n";
+    if (result.message[0] != '\0') {
+      std::cout << "Error loading code: " << result.message << "\n";
     } else {
       std::cout << "Error loading code\n";
     }

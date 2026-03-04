@@ -120,10 +120,6 @@ struct DDSimulationState {
    */
   std::string processedCode;
   /**
-   * @brief The most recent load error detail message.
-   */
-  std::string lastLoadErrorDetail;
-  /**
    * @brief Indicates whether the debugger is ready to start simulation.
    */
   bool ready;
