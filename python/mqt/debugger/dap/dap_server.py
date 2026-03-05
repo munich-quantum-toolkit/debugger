@@ -557,7 +557,10 @@ class DAPServer:
                 stripped = line_text.lstrip()
                 column = max(1, len(line_text) - len(stripped) + 1) if stripped else 1
 
-        end_column = max(column, len(line_text) + 1)
+        # Clamp to end-of-line to keep columns within bounds while preserving end >= start.
+        max_column = len(line_text) + 1
+        column = min(column, max_column)
+        end_column = max_column
         snippet = line_text.strip() or line_text
         return {
             "instruction": -1,
