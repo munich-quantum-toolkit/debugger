@@ -93,12 +93,12 @@ void bindFramework(nb::module_& m) {
           "message",
           [](const LoadResult& self) {
             const auto* data = std::data(self.message);
-            const std::string_view message_view(
+            const std::string_view messageView(
                 data, ::strnlen(data, LOAD_RESULT_MESSAGE_MAX));
-            if (message_view.empty()) {
+            if (messageView.empty()) {
               return nb::none();
             }
-            return nb::cast(std::string(message_view));
+            return nb::cast(std::string(messageView));
           },
           "A human-readable error message, or None if none is available.")
       .doc() = "The result of a code loading operation.";

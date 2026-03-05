@@ -316,11 +316,11 @@ bool checkAssertionEqualityCircuit(
       &secondSimulation.interface, assertion->getCircuitCode().c_str());
   if (loadResult.status != LOAD_OK) {
     const auto* data = std::data(loadResult.message);
-    const std::string_view message_view(
+    const std::string_view messageView(
         data, ::strnlen(data, LOAD_RESULT_MESSAGE_MAX));
     throw std::runtime_error(
-        !message_view.empty()
-            ? std::string(message_view)
+        !messageView.empty()
+            ? std::string(messageView)
             : "Failed to load circuit for equality assertion.");
   }
   if (!secondSimulation.assertionInstructions.empty()) {
@@ -539,9 +539,9 @@ void setLoadResultMessage(LoadResult& result, const std::string& message) {
   if (message.empty()) {
     return;
   }
-  const auto copy_len = std::min(
+  const auto copyLen = std::min(
       message.size(), static_cast<size_t>(LOAD_RESULT_MESSAGE_MAX - 1));
-  std::copy_n(message.data(), copy_len, std::begin(result.message));
+  std::copy_n(message.data(), copyLen, std::begin(result.message));
   result.message[LOAD_RESULT_MESSAGE_MAX - 1] = '\0';
 }
 
