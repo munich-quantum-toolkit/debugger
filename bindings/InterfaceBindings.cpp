@@ -94,7 +94,7 @@ void bindFramework(nb::module_& m) {
           [](const LoadResult& self) {
             const auto* data = std::data(self.message);
             const std::string_view message_view(
-                data, std::strnlen(data, LOAD_RESULT_MESSAGE_MAX));
+                data, ::strnlen(data, LOAD_RESULT_MESSAGE_MAX));
             if (message_view.empty()) {
               return nb::none();
             }
