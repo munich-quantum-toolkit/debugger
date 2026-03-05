@@ -21,13 +21,13 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <iterator>
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/pair.h>   // NOLINT(misc-include-cleaner)
 #include <nanobind/stl/string.h> // NOLINT(misc-include-cleaner)
 #include <nanobind/stl/vector.h> // NOLINT(misc-include-cleaner)
 #include <stdexcept>
-#include <string.h>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -37,6 +37,11 @@ namespace nb = nanobind;
 using namespace nb::literals;
 
 namespace {
+
+size_t boundedStrnlen(const char* data, size_t max) {
+  const auto* end = static_cast<const char*>(std::memchr(data, '\0', max));
+  return end ? static_cast<size_t>(end - data) : max;
+}
 
 /**
  * @brief Checks whether the given result is OK, and throws a runtime_error
@@ -94,7 +99,7 @@ void bindFramework(nb::module_& m) {
           [](const LoadResult& self) {
             const auto* data = std::data(self.message);
             const std::string_view messageView(
-                data, ::strnlen(data, LOAD_RESULT_MESSAGE_MAX));
+                data, boundedStrnlen(data, LOAD_RESULT_MESSAGE_MAX));
             if (messageView.empty()) {
               return nb::none();
             }

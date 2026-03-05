@@ -22,9 +22,9 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <iostream>
 #include <set>
-#include <string.h>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -33,9 +33,14 @@ namespace mqt::debugger {
 
 namespace {
 
+size_t boundedStrnlen(const char* data, size_t max) {
+  const auto* end = static_cast<const char*>(std::memchr(data, '\0', max));
+  return end ? static_cast<size_t>(end - data) : max;
+}
+
 std::string_view loadResultMessageView(const LoadResult& result) {
   const auto* data = std::data(result.message);
-  return {data, ::strnlen(data, LOAD_RESULT_MESSAGE_MAX)};
+  return {data, boundedStrnlen(data, LOAD_RESULT_MESSAGE_MAX)};
 }
 
 /**

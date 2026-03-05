@@ -42,6 +42,7 @@
 #include <cctype>
 #include <cmath>
 #include <cstddef>
+#include <cstring>
 #include <exception>
 #include <iostream>
 #include <iterator>
@@ -54,7 +55,6 @@
 #include <set>
 #include <sstream>
 #include <stdexcept>
-#include <string.h>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -63,6 +63,11 @@
 namespace mqt::debugger {
 
 namespace {
+
+size_t boundedStrnlen(const char* data, size_t max) {
+  const auto* end = static_cast<const char*>(std::memchr(data, '\0', max));
+  return end ? static_cast<size_t>(end - data) : max;
+}
 
 /**
  * @brief Cast a `SimulationState` pointer to a `DDSimulationState` pointer.
@@ -317,7 +322,7 @@ bool checkAssertionEqualityCircuit(
   if (loadResult.status != LOAD_OK) {
     const auto* data = std::data(loadResult.message);
     const std::string_view messageView(
-        data, ::strnlen(data, LOAD_RESULT_MESSAGE_MAX));
+        data, boundedStrnlen(data, LOAD_RESULT_MESSAGE_MAX));
     throw std::runtime_error(
         !messageView.empty()
             ? std::string(messageView)
