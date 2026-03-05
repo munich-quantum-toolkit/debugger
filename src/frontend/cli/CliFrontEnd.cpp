@@ -22,9 +22,9 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
-#include <cstring>
 #include <iostream>
 #include <set>
+#include <string.h>
 #include <string>
 #include <string_view>
 #include <vector>

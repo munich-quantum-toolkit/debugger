@@ -42,7 +42,6 @@
 #include <cctype>
 #include <cmath>
 #include <cstddef>
-#include <cstring>
 #include <exception>
 #include <iostream>
 #include <iterator>
@@ -55,6 +54,7 @@
 #include <set>
 #include <sstream>
 #include <stdexcept>
+#include <string.h>
 #include <string>
 #include <string_view>
 #include <utility>

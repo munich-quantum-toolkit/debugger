@@ -21,13 +21,13 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
-#include <cstring>
 #include <iterator>
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/pair.h>   // NOLINT(misc-include-cleaner)
 #include <nanobind/stl/string.h> // NOLINT(misc-include-cleaner)
 #include <nanobind/stl/vector.h> // NOLINT(misc-include-cleaner)
 #include <stdexcept>
+#include <string.h>
 #include <string>
 #include <string_view>
 #include <utility>
