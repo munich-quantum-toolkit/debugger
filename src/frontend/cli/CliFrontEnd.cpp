@@ -35,7 +35,7 @@ namespace {
 
 std::string_view loadResultMessageView(const LoadResult& result) {
   const auto* data = std::data(result.message);
-  return {data, std::strnlen(data, LOAD_RESULT_MESSAGE_MAX)};
+  return {data, ::strnlen(data, LOAD_RESULT_MESSAGE_MAX)};
 }
 
 /**

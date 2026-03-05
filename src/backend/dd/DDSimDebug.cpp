@@ -317,7 +317,7 @@ bool checkAssertionEqualityCircuit(
   if (loadResult.status != LOAD_OK) {
     const auto* data = std::data(loadResult.message);
     const std::string_view message_view(
-        data, std::strnlen(data, LOAD_RESULT_MESSAGE_MAX));
+        data, ::strnlen(data, LOAD_RESULT_MESSAGE_MAX));
     throw std::runtime_error(
         !message_view.empty()
             ? std::string(message_view)
@@ -539,7 +539,8 @@ void setLoadResultMessage(LoadResult& result, const std::string& message) {
   if (message.empty()) {
     return;
   }
-  const auto copy_len = std::min(message.size(), LOAD_RESULT_MESSAGE_MAX - 1);
+  const auto copy_len = std::min(
+      message.size(), static_cast<size_t>(LOAD_RESULT_MESSAGE_MAX - 1));
   std::copy_n(message.data(), copy_len, std::begin(result.message));
   result.message[LOAD_RESULT_MESSAGE_MAX - 1] = '\0';
 }
