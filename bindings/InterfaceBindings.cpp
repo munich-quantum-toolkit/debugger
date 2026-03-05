@@ -40,7 +40,7 @@ namespace {
 
 size_t boundedStrnlen(const char* data, size_t max) {
   const auto* end = static_cast<const char*>(std::memchr(data, '\0', max));
-  return end ? static_cast<size_t>(end - data) : max;
+  return end != nullptr ? static_cast<size_t>(end - data) : max;
 }
 
 /**
