@@ -43,6 +43,52 @@ typedef enum {
 } Result;
 
 /**
+ * @brief The result of a code loading operation.
+ */
+typedef enum {
+  /**
+   * @brief Indicates that the code was loaded successfully.
+   */
+  LOAD_OK,
+  /**
+   * @brief Indicates that the code could not be parsed.
+   */
+  LOAD_PARSE_ERROR,
+  /**
+   * @brief Indicates that an internal error occurred while loading the code.
+   */
+  LOAD_INTERNAL_ERROR,
+} LoadResultStatus;
+
+/**
+ * @brief Maximum length of a load error message (including null terminator).
+ */
+#define LOAD_RESULT_MESSAGE_MAX 1024
+
+/**
+ * @brief The result of a code loading operation.
+ */
+typedef struct {
+  /**
+   * @brief Indicates whether the load was successful and why it failed.
+   */
+  LoadResultStatus status;
+  /**
+   * @brief The line number of the error location, or 0 if unknown.
+   */
+  size_t line;
+  /**
+   * @brief The column number of the error location, or 0 if unknown.
+   */
+  size_t column;
+  /**
+   * @brief A human-readable error message, or empty string if none is
+   * available.
+   */
+  char message[LOAD_RESULT_MESSAGE_MAX];
+} LoadResult;
+
+/**
  * @brief The type of classical variables.
  *
  * Supports Bool, Int, and Float.

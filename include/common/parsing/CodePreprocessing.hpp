@@ -21,6 +21,7 @@
 #include <cstddef>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <utility>
@@ -212,6 +213,24 @@ struct ClassicControlledGate {
 };
 
 /**
+ * @brief Represents a parsed classic-controlled condition.
+ */
+struct ClassicCondition {
+  /**
+   * @brief The name of the classical register.
+   */
+  std::string registerName;
+  /**
+   * @brief Optional bit index if the condition targets a single bit.
+   */
+  std::optional<size_t> bitIndex;
+  /**
+   * @brief The expected value in the condition comparison.
+   */
+  size_t expectedValue;
+};
+
+/**
  * @brief Represents a function definition in the code.
  */
 struct FunctionDefinition {
@@ -285,6 +304,22 @@ bool isClassicControlledGate(const std::string& line);
  * @return The parsed classic-controlled gate.
  */
 ClassicControlledGate parseClassicControlledGate(const std::string& code);
+
+/**
+ * @brief Parse a classic-controlled condition expression.
+ * @param condition The condition string to parse.
+ * @return The parsed condition, or std::nullopt if it cannot be parsed.
+ */
+std::optional<ClassicCondition>
+parseClassicConditionExpression(const std::string& condition);
+
+/**
+ * @brief Parse a classic-controlled condition from a classic-controlled gate.
+ * @param code The code to parse.
+ * @return The parsed condition, or std::nullopt if it cannot be parsed.
+ */
+std::optional<ClassicCondition>
+parseClassicConditionFromCode(const std::string& code);
 
 /**
  * @brief Check if a given line is a variable declaration.

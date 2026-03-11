@@ -21,12 +21,15 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
+#include <iterator>
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/pair.h>   // NOLINT(misc-include-cleaner)
 #include <nanobind/stl/string.h> // NOLINT(misc-include-cleaner)
 #include <nanobind/stl/vector.h> // NOLINT(misc-include-cleaner)
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -34,6 +37,11 @@ namespace nb = nanobind;
 using namespace nb::literals;
 
 namespace {
+
+size_t boundedStrnlen(const char* data, size_t max) {
+  const auto* end = static_cast<const char*>(std::memchr(data, '\0', max));
+  return end != nullptr ? static_cast<size_t>(end - data) : max;
+}
 
 /**
  * @brief Checks whether the given result is OK, and throws a runtime_error
@@ -62,6 +70,44 @@ struct StatevectorCPP {
 
 // NOLINTNEXTLINE(misc-use-internal-linkage)
 void bindFramework(nb::module_& m) {
+  // Bind the Result enum
+  nb::enum_<Result>(m, "Result", "Represents the result of an operation.")
+      .value("OK", OK, "Indicates that the operation was successful.")
+      .value("ERROR", ERROR, "Indicates that an error occurred.");
+
+  // Bind the LoadResultStatus enum
+  nb::enum_<LoadResultStatus>(
+      m, "LoadResultStatus",
+      "Represents the result of a code loading operation.")
+      .value("OK", LOAD_OK, "Indicates that the code was loaded successfully.")
+      .value("PARSE_ERROR", LOAD_PARSE_ERROR,
+             "Indicates that the code could not be parsed.")
+      .value("INTERNAL_ERROR", LOAD_INTERNAL_ERROR,
+             "Indicates that an internal error occurred while loading.");
+
+  // Bind the LoadResult struct
+  nb::class_<LoadResult>(m, "LoadResult")
+      .def(nb::init<>())
+      .def_rw("status", &LoadResult::status,
+              "Indicates whether the load was successful and why it failed.")
+      .def_rw("line", &LoadResult::line,
+              "The line number of the error location, or 0 if unknown.")
+      .def_rw("column", &LoadResult::column,
+              "The column number of the error location, or 0 if unknown.")
+      .def_prop_ro(
+          "message",
+          [](const LoadResult& self) {
+            const auto* data = std::data(self.message);
+            const std::string_view messageView(
+                data, boundedStrnlen(data, LOAD_RESULT_MESSAGE_MAX));
+            if (messageView.empty()) {
+              return nb::none();
+            }
+            return nb::cast(std::string(messageView));
+          },
+          "A human-readable error message, or None if none is available.")
+      .doc() = "The result of a code loading operation.";
+
   // Bind the VariableType enum
   nb::enum_<VariableType>(m, "VariableType",
                           "The type of a classical variable.")
@@ -164,13 +210,16 @@ Args:
       .def(
           "load_code",
           [](SimulationState* self, const char* code) {
-            checkOrThrow(self->loadCode(self, code));
+            return self->loadCode(self, code);
           },
           "code"_a,
           R"(Loads the given code into the simulation state.
 
 Args:
-    code: The code to load.)")
+    code: The code to load.
+
+Returns:
+    LoadResult: The result of the load operation.)")
       .def(
           "step_forward",
           [](SimulationState* self) { checkOrThrow(self->stepForward(self)); },
