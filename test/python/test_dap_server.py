@@ -35,7 +35,7 @@ def test_build_highlight_entry_does_not_span_next_instruction() -> None:
         get_instruction_position=lambda _instr: (0, first_line_end),
         get_diagnostics=lambda: fake_diagnostics,
     )
-    server.simulation_state = fake_state  # type: ignore[assignment]
+    server.simulation_state = fake_state  # ty: ignore[invalid-assignment]
 
     entries = server.collect_highlight_entries(0)
     assert entries
