@@ -10,7 +10,7 @@
 requires = [
   "nanobind~=2.12.0",
   "setuptools-scm>=9.2.2",
-  "scikit-build-core>=0.11.6",
+  "scikit-build-core>=0.12.2",
 ]
 build-backend = "scikit_build_core.build"
 
@@ -311,7 +311,7 @@ repair-wheel-command = "uvx abi3audit --strict --report {wheel}"
 build = [
     "nanobind~=2.12.0",
     "setuptools-scm>=9.2.2",
-    "scikit-build-core>=0.11.6",
+    "scikit-build-core>=0.12.2",
 ]
 test = [
     "pytest>=9.0.1",
