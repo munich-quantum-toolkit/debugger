@@ -35,6 +35,6 @@
     "py\\.typed",
     ".*build.*",
     "Doxyfile",
-    "LICENSE"
+    "(^|/)LICENSE$"
   ]
 }
