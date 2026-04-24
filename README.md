@@ -88,8 +88,8 @@ from mqt import debugger
 state = debugger.create_ddsim_simulation_state()
 with open("code.qasm", "r") as f:
     state.load_code(f.read())
-f.run_simulation()
-print(f.get_state_vector_full())
+state.run_simulation()
+print(state.get_state_vector_full())
 ```
 
 **Detailed documentation and examples are available at [ReadTheDocs](https://mqt.readthedocs.io/projects/debugger).**
