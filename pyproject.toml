@@ -319,12 +319,12 @@ test = [
     "pytest-console-scripts>=1.4.1",
     "pytest-sugar>=1.1.1",
     "pytest-xdist>=3.8.0",
-]
-typing = [
-    "ty==0.0.40",
     "numpy>=2.1",
+    "numpy>=2.3.2; python_version >= '3.14'",
     "qiskit>=1.2.4",
     "scipy>=1.13.1",
+    "scipy>=1.15; python_version >= '3.13'",
+    "scipy>=1.16.2; python_version >= '3.14'",
 ]
 docs = [
     "breathe>=4.36.0",
@@ -347,6 +347,5 @@ docs = [
 dev = [
     {include-group = "build"},
     {include-group = "test"},
-    {include-group = "typing"},
     "nox>=2025.11.12",
 ]
