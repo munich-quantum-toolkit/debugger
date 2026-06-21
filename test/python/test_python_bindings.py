@@ -60,7 +60,7 @@ def simulation_instance_classical() -> Generator[SimulationInstance, None, None]
     mqt.debugger.destroy_ddsim_simulation_state(simulation_state)
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def simulation_state_cleanup(
     simulation_instance_ghz: SimulationInstance,
     simulation_instance_jumps: SimulationInstance,
@@ -81,8 +81,10 @@ def load_fixture(request: pytest.FixtureRequest, name: str) -> tuple[mqt.debugge
     return cast("tuple[mqt.debugger.SimulationState, int]", request.getfixturevalue(name))
 
 
+@pytest.mark.usefixtures("simulation_state_cleanup")
 @pytest.mark.parametrize(
-    "simulation_instance", ["simulation_instance_ghz", "simulation_instance_jumps", "simulation_instance_classical"]
+    "simulation_instance",
+    ["simulation_instance_ghz", "simulation_instance_jumps", "simulation_instance_classical"],
 )
 def test_run(simulation_instance: str, request: pytest.FixtureRequest) -> None:
     """Tests the `run_simulation()` method."""
@@ -94,8 +96,10 @@ def test_run(simulation_instance: str, request: pytest.FixtureRequest) -> None:
     assert simulation_state.did_assertion_fail() == (state_id == 0)
 
 
+@pytest.mark.usefixtures("simulation_state_cleanup")
 @pytest.mark.parametrize(
-    "simulation_instance", ["simulation_instance_ghz", "simulation_instance_jumps", "simulation_instance_classical"]
+    "simulation_instance",
+    ["simulation_instance_ghz", "simulation_instance_jumps", "simulation_instance_classical"],
 )
 def test_current_instruction(simulation_instance: str, request: pytest.FixtureRequest) -> None:
     """Tests the `get_current_instruction()` method."""
@@ -113,6 +117,7 @@ def test_current_instruction(simulation_instance: str, request: pytest.FixtureRe
     assert simulation_state.get_current_instruction() == 1
 
 
+@pytest.mark.usefixtures("simulation_state_cleanup")
 def test_step_out(simulation_instance_jumps: SimulationInstance) -> None:
     """Tests the `step_out()` methods."""
     (simulation_state, _state_id) = simulation_instance_jumps
@@ -134,8 +139,10 @@ def test_step_out(simulation_instance_jumps: SimulationInstance) -> None:
     assert simulation_state.get_current_instruction() == 21
 
 
+@pytest.mark.usefixtures("simulation_state_cleanup")
 @pytest.mark.parametrize(
-    "simulation_instance", ["simulation_instance_ghz", "simulation_instance_jumps", "simulation_instance_classical"]
+    "simulation_instance",
+    ["simulation_instance_ghz", "simulation_instance_jumps", "simulation_instance_classical"],
 )
 def test_run_all(simulation_instance: str, request: pytest.FixtureRequest) -> None:
     """Tests the `run_all()` method."""
@@ -144,6 +151,7 @@ def test_run_all(simulation_instance: str, request: pytest.FixtureRequest) -> No
     assert failures == (2 if state_id == 0 else 0)
 
 
+@pytest.mark.usefixtures("simulation_state_cleanup")
 @pytest.mark.parametrize("simulation_instance", ["simulation_instance_ghz", "simulation_instance_jumps"])
 def test_run_backward(simulation_instance: str, request: pytest.FixtureRequest) -> None:
     """Tests the `run_simulation_backward()` method."""
@@ -159,8 +167,10 @@ def test_run_backward(simulation_instance: str, request: pytest.FixtureRequest) 
     assert simulation_state.get_current_instruction() == 0
 
 
+@pytest.mark.usefixtures("simulation_state_cleanup")
 @pytest.mark.parametrize(
-    "simulation_instance", ["simulation_instance_ghz", "simulation_instance_jumps", "simulation_instance_classical"]
+    "simulation_instance",
+    ["simulation_instance_ghz", "simulation_instance_jumps", "simulation_instance_classical"],
 )
 def test_instruction_count(simulation_instance: str, request: pytest.FixtureRequest) -> None:
     """Tests the `get_instruction_count()` method."""
@@ -169,6 +179,7 @@ def test_instruction_count(simulation_instance: str, request: pytest.FixtureRequ
     assert simulation_state.get_instruction_count() == true_counts[state_id]
 
 
+@pytest.mark.usefixtures("simulation_state_cleanup")
 def test_instruction_positions(simulation_instance_jumps: SimulationInstance) -> None:
     """Tests the `get_instruction_position(instruction)` method."""
     (simulation_state, _state_id) = simulation_instance_jumps
@@ -177,8 +188,10 @@ def test_instruction_positions(simulation_instance_jumps: SimulationInstance) ->
     assert simulation_state.get_instruction_position(16) == (241, 254)
 
 
+@pytest.mark.usefixtures("simulation_state_cleanup")
 @pytest.mark.parametrize(
-    "simulation_instance", ["simulation_instance_ghz", "simulation_instance_jumps", "simulation_instance_classical"]
+    "simulation_instance",
+    ["simulation_instance_ghz", "simulation_instance_jumps", "simulation_instance_classical"],
 )
 def test_get_num_qubits(simulation_instance: str, request: pytest.FixtureRequest) -> None:
     """Tests the `get_num_qubits()` method."""
@@ -186,6 +199,7 @@ def test_get_num_qubits(simulation_instance: str, request: pytest.FixtureRequest
     assert simulation_state.get_num_qubits() == (3 if state_id != 2 else 4)
 
 
+@pytest.mark.usefixtures("simulation_state_cleanup")
 def test_access_state(simulation_instance_jumps: SimulationInstance) -> None:
     """Tests the quantum-state-access methods."""
     (simulation_state, _state_id) = simulation_instance_jumps
@@ -219,6 +233,7 @@ def test_access_state(simulation_instance_jumps: SimulationInstance) -> None:
     assert abs(c.real) < 1e-6
 
 
+@pytest.mark.usefixtures("simulation_state_cleanup")
 def test_change_amplitude_value(simulation_instance_ghz: SimulationInstance) -> None:
     """Tests manipulating amplitudes through the bindings."""
     (simulation_state, _state_id) = simulation_instance_ghz
@@ -231,6 +246,7 @@ def test_change_amplitude_value(simulation_instance_ghz: SimulationInstance) -> 
     assert updated.imaginary == pytest.approx(0.0, abs=1e-9)
 
 
+@pytest.mark.usefixtures("simulation_state_cleanup")
 def test_change_amplitude_value_rescales_other_states(simulation_instance_ghz: SimulationInstance) -> None:
     """Ensure rewriting a single amplitude rescales the remaining state."""
     (simulation_state, _state_id) = simulation_instance_ghz
@@ -269,6 +285,7 @@ def test_change_amplitude_value_rescales_other_states(simulation_instance_ghz: S
         assert current.imaginary == pytest.approx(original.imaginary * expected_scale, abs=1e-9)
 
 
+@pytest.mark.usefixtures("simulation_state_cleanup")
 def test_change_amplitude_value_invalid_bitstring(simulation_instance_ghz: SimulationInstance) -> None:
     """Ensure invalid amplitude edit requests raise an error at the Python layer."""
     (simulation_state, _state_id) = simulation_instance_ghz
@@ -280,6 +297,7 @@ def test_change_amplitude_value_invalid_bitstring(simulation_instance_ghz: Simul
         simulation_state.change_amplitude_value("11a", desired)
 
 
+@pytest.mark.usefixtures("simulation_state_cleanup")
 def test_change_amplitude_value_rejects_over_normalized_target(simulation_instance_ghz: SimulationInstance) -> None:
     """Ensure overly large amplitudes are rejected and surface as Python errors."""
     (simulation_state, _state_id) = simulation_instance_ghz
@@ -289,6 +307,7 @@ def test_change_amplitude_value_rejects_over_normalized_target(simulation_instan
         simulation_state.change_amplitude_value("111", desired)
 
 
+@pytest.mark.usefixtures("simulation_state_cleanup")
 def test_change_amplitude_value_rejects_subnormalized_vacuum(simulation_instance_ghz: SimulationInstance) -> None:
     """Ensure we cannot lower the only populated basis state."""
     (simulation_state, _state_id) = simulation_instance_ghz
@@ -298,6 +317,7 @@ def test_change_amplitude_value_rejects_subnormalized_vacuum(simulation_instance
         simulation_state.change_amplitude_value("000", desired)
 
 
+@pytest.mark.usefixtures("simulation_state_cleanup")
 def test_get_state_vector_sub(simulation_instance_classical: SimulationInstance) -> None:
     """Tests the `get_state_vector_sub()` method."""
     (simulation_state, _state_id) = simulation_instance_classical
@@ -308,6 +328,7 @@ def test_get_state_vector_sub(simulation_instance_classical: SimulationInstance)
     assert sv.amplitudes[0].real == 1 or sv.amplitudes[-1].real == 1
 
 
+@pytest.mark.usefixtures("simulation_state_cleanup")
 def test_classical_get(simulation_instance_classical: SimulationInstance) -> None:
     """Tests the classical-state-access methods."""
     (simulation_state, _state_id) = simulation_instance_classical
