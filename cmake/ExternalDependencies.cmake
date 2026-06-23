@@ -43,17 +43,12 @@ FetchContent_Declare(
   Eigen3
   GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
   GIT_TAG ${EIGEN_VERSION}
-  GIT_SHALLOW TRUE)
+  GIT_SHALLOW TRUE
+  # null is a non-existent subdirectory in Eigen3's repository, so add_subdirectory() becomes a
+  # no-op. This stops Eigen3's own CMakeLists.txt from running, which is only relevant for its
+  # documentation and tests.
+  SOURCE_SUBDIR null)
 list(APPEND FETCH_PACKAGES Eigen3)
-set(EIGEN_BUILD_TESTING
-    OFF
-    CACHE BOOL "Disable testing for Eigen")
-set(BUILD_TESTING
-    OFF
-    CACHE BOOL "Disable general testing")
-set(EIGEN_BUILD_DOC
-    OFF
-    CACHE BOOL "Disable documentation build for Eigen")
 
 if(BUILD_MQT_DEBUGGER_TESTS)
   set(gtest_force_shared_crt
@@ -69,6 +64,9 @@ endif()
 
 # Make all declared dependencies available.
 FetchContent_MakeAvailable(${FETCH_PACKAGES})
+
+add_library(Eigen3::Eigen INTERFACE IMPORTED)
+set_target_properties(Eigen3::Eigen PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${eigen3_SOURCE_DIR}")
 
 # Hide Eigen3 warnings
 get_target_property(Eigen3_Includes Eigen3::Eigen INTERFACE_INCLUDE_DIRECTORIES)
