@@ -30,7 +30,7 @@ It is part of the [_Munich Quantum Toolkit (MQT)_](https://mqt.readthedocs.io).
 
 - Proposes an interface for the simulation of circuits and diagnosis of errors
 - Implementation built upon [MQT Core](https://github.com/munich-quantum-toolkit/core), the backbone of the MQT
-- Povides a Debugger Adapter Protocol (DAP) server that can be used to integrate the debugger into IDEs
+- Provides a Debugger Adapter Protocol (DAP) server that can be used to integrate the debugger into IDEs
 
 If you have any questions, feel free to create a [discussion](https://github.com/munich-quantum-toolkit/debugger/discussions) or an [issue](https://github.com/munich-quantum-toolkit/debugger/issues) on [GitHub](https://github.com/munich-quantum-toolkit/debugger).
 
