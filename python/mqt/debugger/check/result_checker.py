@@ -373,8 +373,8 @@ def check_result(
         )
         if not silent:
             if not res:
-                print(f"{COLOR_RED}Assertion {key} failed.{COLOR_RESET}")  # noqa: T201
+                print(f"{COLOR_RED}Assertion {key} failed.{COLOR_RESET}")  # ruff:ignore[print]
             else:
-                print(f"{COLOR_GREEN}Assertion {key} passed.{COLOR_RESET}")  # noqa: T201
+                print(f"{COLOR_GREEN}Assertion {key} passed.{COLOR_RESET}")  # ruff:ignore[print]
         ok &= res
     return ok

@@ -85,7 +85,7 @@ def sample_distribution(expected_distribution_under_noise: list[float], num_samp
     """
     samples: list[int] = [0 for _ in expected_distribution_under_noise]
     for _ in range(num_samples):
-        rnd = random.random()  # noqa: S311
+        rnd = random.random()  # ruff:ignore[suspicious-non-cryptographic-random-usage]
         for i, likelihood in enumerate(expected_distribution_under_noise):
             if rnd < likelihood:
                 samples[i] += 1
