@@ -76,4 +76,4 @@ def main() -> None:
         result = run_preparation.estimate_required_shots_from_path(
             args.slice, calibration_data, args.p, args.trials, args.accuracy
         )
-        print(f"Estimated required shots: {result}")  # noqa: T201
+        print(f"Estimated required shots: {result}")  # ruff:ignore[print]

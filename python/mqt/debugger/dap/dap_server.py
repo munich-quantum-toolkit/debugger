@@ -126,10 +126,10 @@ class DAPServer:
             try:
                 s.bind((self.host, self.port))
             except OSError:
-                print("Address already in use")  # noqa: T201
+                print("Address already in use")  # ruff:ignore[print]
                 return
 
-            print("Initialization complete")  # noqa: T201
+            print("Initialization complete")  # ruff:ignore[print]
             sys.stdout.flush()  # we need to flush stdout so  that the client can read the message
 
             s.listen()

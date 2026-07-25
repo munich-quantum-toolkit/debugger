@@ -41,7 +41,7 @@ class DAPMessage(ABC):
         Raises an exception if the message is invalid.
         """
 
-    def handle(self, server: DAPServer) -> dict[str, Any]:  # noqa: ARG002
+    def handle(self, server: DAPServer) -> dict[str, Any]:  # ruff:ignore[unused-method-argument]
         """Performs the action requested by the DAP request message and returns the response.
 
         Args:

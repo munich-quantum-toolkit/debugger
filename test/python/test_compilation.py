@@ -54,7 +54,7 @@ class GeneratedOutput:
         samples: list[dict[str, Any]] = []
 
         for _ in range(self.num_samples):
-            r = random.random()  # noqa: S311
+            r = random.random()  # ruff:ignore[suspicious-non-cryptographic-random-usage]
             found_index = -1
             for i, likelihood in enumerate(self.expected_distribution):
                 if r < likelihood:
@@ -62,8 +62,8 @@ class GeneratedOutput:
                     break
                 r -= likelihood
 
-            if random.random() > self.success_probability:  # noqa: S311
-                found_index = random.randrange(0, len(self.expected_distribution))  # noqa: S311
+            if random.random() > self.success_probability:  # ruff:ignore[suspicious-non-cryptographic-random-usage]
+                found_index = random.randrange(0, len(self.expected_distribution))  # ruff:ignore[suspicious-non-cryptographic-random-usage]
 
             result = {}
             for v in self.variables:
