@@ -17,8 +17,8 @@
 
 # MQT Debugger - A Quantum Circuit Debugging Tool
 
-MQT Debugger is a tool for debugging quantum circuits.
-It is part of the [_Munich Quantum Toolkit (MQT)_](https://mqt.readthedocs.io).
+MQT Debugger is a tool for debugging quantum circuits. It is part of the
+[_Munich Quantum Toolkit (MQT)_](https://mqt.readthedocs.io).
 
 <p align="center">
   <a href="https://mqt.readthedocs.io/projects/debugger">
@@ -29,15 +29,26 @@ It is part of the [_Munich Quantum Toolkit (MQT)_](https://mqt.readthedocs.io).
 ## Key Features
 
 - Proposes an interface for the simulation of circuits and diagnosis of errors
-- Implementation built upon [MQT Core](https://github.com/munich-quantum-toolkit/core), the backbone of the MQT
-- Provides a Debugger Adapter Protocol (DAP) server that can be used to integrate the debugger into IDEs
+- Implementation built upon
+  [MQT Core](https://github.com/munich-quantum-toolkit/core), the backbone of
+  the MQT
+- Provides a Debugger Adapter Protocol (DAP) server that can be used to
+  integrate the debugger into IDEs
 
-If you have any questions, feel free to create a [discussion](https://github.com/munich-quantum-toolkit/debugger/discussions) or an [issue](https://github.com/munich-quantum-toolkit/debugger/issues) on [GitHub](https://github.com/munich-quantum-toolkit/debugger).
+If you have any questions, feel free to create a
+[discussion](https://github.com/munich-quantum-toolkit/debugger/discussions) or
+an [issue](https://github.com/munich-quantum-toolkit/debugger/issues) on
+[GitHub](https://github.com/munich-quantum-toolkit/debugger).
 
 ## Contributors and Supporters
 
-The _[Munich Quantum Toolkit (MQT)](https://mqt.readthedocs.io)_ is developed by the [Chair for Design Automation](https://www.cda.cit.tum.de/) at the [Technical University of Munich](https://www.tum.de/) and supported by [MQSC](https://mq.sc).
-Among others, it is part of the [Munich Quantum Software Stack (MQSS)](https://www.munich-quantum-valley.de/research/research-areas/mqss) ecosystem, which is being developed as part of the [Munich Quantum Valley (MQV)](https://www.munich-quantum-valley.de) initiative.
+The _[Munich Quantum Toolkit (MQT)](https://mqt.readthedocs.io)_ is developed by
+the [Chair for Design Automation](https://www.cda.cit.tum.de/) at the
+[Technical University of Munich](https://www.tum.de/) and supported by
+[MQSC](https://mq.sc). Among others, it is part of the
+[Munich Quantum Software Stack (MQSS)](https://www.munich-quantum-valley.de/research/research-areas/mqss)
+ecosystem, which is being developed as part of the
+[Munich Quantum Valley (MQV)](https://www.munich-quantum-valley.de) initiative.
 
 <p align="center">
   <picture>
@@ -54,17 +65,21 @@ Thank you to all the contributors who have helped make MQT Debugger a reality!
   </a>
 </p>
 
-The MQT will remain free, open-source, and permissively licensed—now and in the future.
-We are firmly committed to keeping it open and actively maintained for the quantum computing community.
+The MQT will remain free, open-source, and permissively licensed—now and in the
+future. We are firmly committed to keeping it open and actively maintained for
+the quantum computing community.
 
 To support this endeavor, please consider:
 
-- Starring and sharing our repositories: https://github.com/munich-quantum-toolkit
-- Contributing code, documentation, tests, or examples via issues and pull requests
+- Starring and sharing our repositories:
+  <https://github.com/munich-quantum-toolkit>
+- Contributing code, documentation, tests, or examples via issues and pull
+  requests
 - Citing the MQT in your publications (see [Cite This](#cite-this))
-- Citing our research in your publications (see [References](https://mqt.readthedocs.io/projects/debugger/en/latest/references.html))
+- Citing our research in your publications (see
+  [References](https://mqt.readthedocs.io/projects/debugger/en/latest/references.html))
 - Using the MQT in research and teaching, and sharing feedback and use cases
-- Sponsoring us on GitHub: https://github.com/sponsors/munich-quantum-toolkit
+- Sponsoring us on GitHub: <https://github.com/sponsors/munich-quantum-toolkit>
 
 <p align="center">
   <a href="https://github.com/sponsors/munich-quantum-toolkit">
@@ -77,7 +92,7 @@ To support this endeavor, please consider:
 `mqt.debugger` is available via [PyPI](https://pypi.org/project/mqt.debugger/).
 
 ```console
-(.venv) $ pip install mqt.debugger
+uv pip install mqt.debugger
 ```
 
 The following code gives an example on the usage:
@@ -92,14 +107,18 @@ state.run_simulation()
 print(state.get_state_vector_full())
 ```
 
-**Detailed documentation and examples are available at [ReadTheDocs](https://mqt.readthedocs.io/projects/debugger).**
+**Detailed documentation and examples are available at
+[ReadTheDocs](https://mqt.readthedocs.io/projects/debugger).**
 
 ## System Requirements
 
-Building the project requires a C++ compiler with support for C++20 and CMake 3.26 or newer.
-For details on how to build the project, please refer to the [documentation](https://mqt.readthedocs.io/projects/debugger).
-Building (and running) is continuously tested under Linux, macOS, and Windows using the [latest available system versions for GitHub Actions](https://github.com/actions/runner-images).
-MQT Debugger is compatible with all [officially supported Python versions](https://devguide.python.org/versions/).
+Building the project requires a C++ compiler with support for C++20 and CMake
+3.26 or newer. For details on how to build the project, please refer to the
+[documentation](https://mqt.readthedocs.io/projects/debugger). Building (and
+running) is continuously tested under Linux, macOS, and Windows using the
+[latest available system versions for GitHub Actions](https://github.com/actions/runner-images).
+MQT Debugger is compatible with all
+[officially supported Python versions](https://devguide.python.org/versions/).
 
 ## Cite This
 
@@ -107,7 +126,8 @@ Please cite the work that best fits your use case.
 
 ### MQT Debugger (the tool)
 
-When citing the software itself or results produced with it, cite the MQT Debugger paper:
+When citing the software itself or results produced with it, cite the MQT
+Debugger paper:
 
 ```bibtex
 @misc{rovara2024debugging,
@@ -139,25 +159,29 @@ When discussing the overall MQT project or its ecosystem, cite the MQT Handbook:
 
 ### Peer-Reviewed Research
 
-When citing the underlying methods and research, please reference the most relevant peer-reviewed publications from the list below:
+When citing the underlying methods and research, please reference the most
+relevant peer-reviewed publications from the list below:
 
-[[1]](https://arxiv.org/abs/2412.12269)
-D. Rovara, L. Burgholzer, and R. Wille.
+[[1]](https://arxiv.org/abs/2412.12269) D. Rovara, L. Burgholzer, and R. Wille.
 A Framework for Debugging Quantum Programs.
 
-[[2]](https://arxiv.org/abs/2412.14252)
-D. Rovara, L. Burgholzer, and R. Wille.
+[[2]](https://arxiv.org/abs/2412.14252) D. Rovara, L. Burgholzer, and R. Wille.
 Automatically Refining Assertions for Efficient Debugging of Quantum Programs.
 
-[[3]](https://arxiv.org/abs/2505.03885)
-D. Rovara, L. Burgholzer, and R. Wille.
-A Framework for the Efficient Evaluation of Runtime Assertions on Quantum Computers.
+[[3]](https://arxiv.org/abs/2505.03885) D. Rovara, L. Burgholzer, and R. Wille.
+A Framework for the Efficient Evaluation of Runtime Assertions on Quantum
+Computers.
 
 ---
 
 ## Acknowledgements
 
-The Munich Quantum Toolkit has been supported by the European Research Council (ERC) under the European Union's Horizon 2020 research and innovation program (grant agreement No. 101001318), the Bavarian State Ministry for Science and Arts through the Distinguished Professorship Program, as well as the Munich Quantum Valley, which is supported by the Bavarian state government with funds from the Hightech Agenda Bayern Plus.
+The Munich Quantum Toolkit has been supported by the European Research Council
+(ERC) under the European Union's Horizon 2020 research and innovation program
+(grant agreement No. 101001318), the Bavarian State Ministry for Science and
+Arts through the Distinguished Professorship Program, as well as the Munich
+Quantum Valley, which is supported by the Bavarian state government with funds
+from the Hightech Agenda Bayern Plus.
 
 <p align="center">
   <picture>
