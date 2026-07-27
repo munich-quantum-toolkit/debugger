@@ -4,9 +4,8 @@
 # Installation
 
 MQT Debugger is primarily developed as a C++20 library with Python bindings. The
-Python package is available on
-[PyPI](https://pypi.org/project/mqt.debugger/) and can be installed on all
-major operating systems with all
+Python package is available on [PyPI](https://pypi.org/project/mqt.debugger/)
+and can be installed on all major operating systems with all
 [officially supported Python versions](https://devguide.python.org/versions/).
 
 :::::{tip}
@@ -66,6 +65,7 @@ python -m pip install mqt.debugger
 :::
 
 ::::
+
 In most cases, no compilation is required; a platform-specific prebuilt wheel is
 downloaded and installed.
 
