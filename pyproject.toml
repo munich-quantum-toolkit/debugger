@@ -278,14 +278,10 @@ mqt-debugger = { workspace = true }
 
 [tool.cibuildwheel]
 build = "cp3*"
-skip = ["*-musllinux_*", "cp313t-*"]
+skip = ["*-musllinux_*"]
 archs = "auto64"
 test-command = "python -c \"from mqt import debugger\""
 build-frontend = "uv"
-manylinux-x86_64-image = "manylinux_2_28"
-manylinux-aarch64-image = "manylinux_2_28"
-manylinux-ppc64le-image = "manylinux_2_28"
-manylinux-s390x-image = "manylinux_2_28"
 test-skip = [
   "cp3??t-*", # no freethreading qiskit wheels
   "cp*-win_arm64", # no numpy, qiskit, ... wheels
@@ -299,12 +295,6 @@ environment = { MACOSX_DEPLOYMENT_TARGET = "11.0" }
 
 [tool.cibuildwheel.windows]
 repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel} --namespace-pkg mqt --ignore-existing"
-
-[[tool.cibuildwheel.overrides]]
-select = "cp312-*"
-inherit.repair-wheel-command = "append"
-repair-wheel-command = "uvx abi3audit --strict --report {wheel}"
-
 
 [dependency-groups]
 build = [
