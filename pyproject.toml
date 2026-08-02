@@ -139,6 +139,8 @@ filterwarnings = [
 
 [tool.coverage]
 run.source = ["mqt.debugger"]
+run.core = "sysmon"
+run.parallel = true
 report.exclude_also = [
     '\.\.\.',
     'if TYPE_CHECKING:',
@@ -304,7 +306,7 @@ build = [
 ]
 test = [
     "pytest>=9.0.1",
-    "pytest-cov>=7.0.0",
+    "pytest-cov>=7.1.0",
     "pytest-console-scripts>=1.4.1",
     "pytest-sugar>=1.1.1",
     "pytest-xdist>=3.8.0",
@@ -327,6 +329,7 @@ docs = [
     "sphinx>=8.2.3; python_version >= '3.11'",
     "sphinx-copybutton>=0.5.2",
     "sphinx-design>=0.6.1",
+    "sphinx-llm",
     "sphinx-hoverxref>=1.4.2",
     "sphinxcontrib-bibtex>=2.6.5",
     "sphinxcontrib-svg2pdfconverter>=1.3.0",
