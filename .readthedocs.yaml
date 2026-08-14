@@ -12,8 +12,12 @@ build:
     python: "3.14"
   apt_packages:
     - cmake
-    - graphviz
-    - inkscape
+    - doxygen
+  jobs:
+    pre_build:
+      # Build the C++ API docs before Sphinx starts
+      - cd docs && doxygen
+      - cd docs && mkdir -p api/cpp && uv run --no-sync --no-dev breathe-apidoc -o api/cpp -m -f -g namespace doxygen/xml/
 
 python:
   install:
