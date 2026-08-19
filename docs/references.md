@@ -1,8 +1,8 @@
 # References
 
-_MQT Debugger_ has a strong foundation in peer‑reviewed research. Many of its
+MQT Debugger has a strong foundation in peer‑reviewed research. Many of its
 built‑in algorithms are based on methods published in scientific journals and
-conferences. For an overview of _MQT Debugger_ and its features, see
+conferences. For an overview of MQT Debugger and its features, see
 {cite:p}`rovara2024debugging`. If you want to cite this article, please use the
 following BibTeX entry:
 
@@ -16,7 +16,7 @@ following BibTeX entry:
 }
 ```
 
-_MQT Debugger_ is part of the Munich Quantum Toolkit, which is described in
+MQT Debugger is part of the Munich Quantum Toolkit, which is described in
 {cite:p}`mqt`. If you want to cite the Munich Quantum Toolkit, please use the
 following BibTeX entry:
 
