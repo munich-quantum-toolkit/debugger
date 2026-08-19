@@ -1864,8 +1864,8 @@ provides-extras = ["check"]
 [package.metadata.requires-dev]
 build = [
     { name = "nanobind", specifier = "~=2.14.0" },
-    { name = "scikit-build-core", specifier = "~=1.0.3" },
-    { name = "vcs-versioning", specifier = "~=2.3.0" },
+    { name = "scikit-build-core", specifier = ">=1.0.3" },
+    { name = "vcs-versioning", specifier = ">=2.3.0" },
 ]
 dev = [
     { name = "nanobind", specifier = "~=2.14.0" },
@@ -1878,11 +1878,11 @@ dev = [
     { name = "pytest-sugar", specifier = ">=1.1.1" },
     { name = "pytest-xdist", specifier = ">=3.8.0" },
     { name = "qiskit", specifier = ">=1.2.4" },
-    { name = "scikit-build-core", specifier = "~=1.0.3" },
+    { name = "scikit-build-core", specifier = ">=1.0.3" },
     { name = "scipy", specifier = ">=1.13.1" },
     { name = "scipy", marker = "python_full_version >= '3.13'", specifier = ">=1.15" },
     { name = "scipy", marker = "python_full_version >= '3.14'", specifier = ">=1.16.2" },
-    { name = "vcs-versioning", specifier = "~=2.3.0" },
+    { name = "vcs-versioning", specifier = ">=2.3.0" },
 ]
 docs = [
     { name = "breathe", specifier = ">=4.36.0" },

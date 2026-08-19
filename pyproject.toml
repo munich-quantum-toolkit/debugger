@@ -9,8 +9,8 @@
 [build-system]
 requires = [
   "nanobind~=2.14.0",
-  "vcs-versioning~=2.3.0",
-  "scikit-build-core~=1.0.3",
+  "vcs-versioning>=2.3.0",
+  "scikit-build-core>=1.0.3",
 ]
 build-backend = "scikit_build_core.build"
 
@@ -304,8 +304,8 @@ repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel} --namespace-pkg 
 [dependency-groups]
 build = [
     "nanobind~=2.14.0",
-    "vcs-versioning~=2.3.0",
-    "scikit-build-core~=1.0.3",
+    "vcs-versioning>=2.3.0",
+    "scikit-build-core>=1.0.3",
 ]
 test = [
     "pytest>=9.0.1",
