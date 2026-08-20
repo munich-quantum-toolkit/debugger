@@ -8,7 +8,7 @@
 
 [build-system]
 requires = [
-  "nanobind~=2.14.0",
+  "nanobind~=2.15.0",
   "vcs-versioning>=2.3.0",
   "scikit-build-core>=1.0.3",
 ]
@@ -239,7 +239,7 @@ known-first-party = ["mqt.debugger"]
 "test/python/**" = ["T20", "ANN"]
 "docs/**" = ["T20"]
 "noxfile.py" = ["T20", "TID251"]
-"*.pyi" = ["D418", "E501", "PYI021"]
+"*.pyi" = ["D301", "D418", "E501", "PYI021"]
 "*.ipynb" = [
     "D",    # pydocstyle
     "E402", # Allow imports to appear anywhere in Jupyter notebooks
@@ -303,7 +303,7 @@ repair-wheel-command = "delvewheel repair -w {dest_dir} {wheel} --namespace-pkg 
 
 [dependency-groups]
 build = [
-    "nanobind~=2.14.0",
+    "nanobind~=2.15.0",
     "vcs-versioning>=2.3.0",
     "scikit-build-core>=1.0.3",
 ]

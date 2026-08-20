@@ -5,7 +5,7 @@
 #
 # Licensed under the MIT License
 
-add_mqt_python_binding_nanobind(
+add_mqt_python_binding(
   DEBUGGER
   ${MQT_DEBUGGER_TARGET_NAME}-bindings
   bindings.cpp
