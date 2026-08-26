@@ -32,7 +32,7 @@
 #include "dd/Package.hpp"
 #include "dd/StateGeneration.hpp"
 #include "ir/Definitions.hpp"
-#include "ir/Register.hpp"
+#include "ir/OpenQASMSerializer.hpp"
 #include "ir/operations/IfElseOperation.hpp"
 #include "ir/operations/OpType.hpp"
 #include "qasm3/Importer.hpp"
@@ -585,9 +585,9 @@ void compileProjectiveMeasurement(
     qubitIndexToRegisterMap.try_emplace(i, reg, originalVariable);
   }
 
+  const qc::OpenQASMSerializer serializer(stream, qc::Format::OpenQASM2);
   for (auto& it : std::ranges::reverse_view(newQc)) {
-    auto inverted = it->getInverted();
-    it->dumpOpenQASM2(stream, qubitIndexToRegisterMap, {});
+    serializer.serialize(*it->getInverted(), qubitIndexToRegisterMap, {});
   }
 
   for (const auto& [qbit, cbit] : targetNames) {
@@ -595,7 +595,7 @@ void compileProjectiveMeasurement(
   }
 
   for (auto& it : newQc) {
-    it->dumpOpenQASM2(stream, qubitIndexToRegisterMap, {});
+    serializer.serialize(*it, qubitIndexToRegisterMap, {});
   }
 }
 
