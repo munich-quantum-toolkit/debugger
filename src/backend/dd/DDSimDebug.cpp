@@ -18,7 +18,6 @@
 #include "backend/dd/DDSimDiagnostics.hpp"
 #include "backend/debug.h"
 #include "backend/diagnostics.h"
-#include "circuit_optimizer/CircuitOptimizer.hpp"
 #include "common.h"
 #include "common/ComplexMathematics.hpp"
 #include "common/Span.hpp"
@@ -704,7 +703,7 @@ LoadResult ddsimLoadCode(SimulationState* self, const char* code) {
     std::stringstream ss{preprocessAssertionCode(code, ddsim)};
     const auto imported = qasm3::Importer::import(ss);
     ddsim->qc = std::make_unique<qc::QuantumComputation>(imported);
-    qc::CircuitOptimizer::flattenOperations(*ddsim->qc, true);
+    ddsim->qc->flattenOperations(true);
   } catch (const ParsingError& e) {
     return makeLoadResult(LOAD_PARSE_ERROR, e.line(), e.column(), e.detail());
   } catch (const std::exception& e) {
