@@ -96,6 +96,31 @@ struct DDSimulationStateGuard {
 };
 
 /**
+ * @brief Apply a classical comparison operator between two unsigned values.
+ * @param lhs The left-hand side of the comparison.
+ * @param rhs The right-hand side of the comparison.
+ * @param kind The comparison operator to apply.
+ * @return The boolean result of `lhs <kind> rhs`.
+ */
+bool applyComparison(size_t lhs, size_t rhs, qc::ComparisonKind kind) {
+  switch (kind) {
+  case qc::Eq:
+    return lhs == rhs;
+  case qc::Neq:
+    return lhs != rhs;
+  case qc::Lt:
+    return lhs < rhs;
+  case qc::Leq:
+    return lhs <= rhs;
+  case qc::Gt:
+    return lhs > rhs;
+  case qc::Geq:
+    return lhs >= rhs;
+  }
+  return false;
+}
+
+/**
  * @brief Evaluate a classic-controlled condition from the original code.
  * @param ddsim The simulation state.
  * @param instructionIndex The instruction index to inspect.
@@ -133,7 +158,7 @@ std::optional<bool> evaluateClassicConditionFromCode(DDSimulationState* ddsim,
     }
   }
 
-  return registerValue == parsed->expectedValue;
+  return applyComparison(registerValue, parsed->expectedValue, parsed->kind);
 }
 
 /**
@@ -1104,10 +1129,6 @@ Result ddsimStepForward(SimulationState* self) {
     // register first.
     const auto* op =
         dynamic_cast<qc::IfElseOperation*>((*ddsim->iterator).get());
-    if (op->getComparisonKind() != qc::Eq) {
-      throw std::runtime_error("If-else operations with non-equality "
-                               "comparisons are currently not supported");
-    }
     const auto condition =
         evaluateClassicConditionFromCode(ddsim, currentInstruction);
     bool conditionMet = false;
@@ -1130,7 +1151,8 @@ Result ddsimStepForward(SimulationState* self) {
           registerValue |= (value ? 1ULL : 0ULL) << i;
         }
       }
-      conditionMet = (registerValue == exp);
+      conditionMet =
+          applyComparison(registerValue, exp, op->getComparisonKind());
     }
     if (conditionMet) {
       auto* thenOp = op->getThenOp();
@@ -1202,10 +1224,6 @@ Result ddsimStepBackward(SimulationState* self) {
   if ((*ddsim->iterator)->isIfElseOperation()) {
     const auto* op =
         dynamic_cast<qc::IfElseOperation*>((*ddsim->iterator).get());
-    if (op->getComparisonKind() != qc::Eq) {
-      throw std::runtime_error("If-else operations with non-equality "
-                               "comparisons are currently not supported");
-    }
     const auto condition =
         evaluateClassicConditionFromCode(ddsim, ddsim->currentInstruction);
     bool conditionMet = false;
@@ -1228,7 +1246,8 @@ Result ddsimStepBackward(SimulationState* self) {
           registerValue |= (value ? 1ULL : 0ULL) << i;
         }
       }
-      conditionMet = (registerValue == exp);
+      conditionMet =
+          applyComparison(registerValue, exp, op->getComparisonKind());
     }
     if (conditionMet) {
       auto* thenOp = op->getThenOp();

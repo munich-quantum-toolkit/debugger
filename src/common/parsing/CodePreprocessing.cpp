@@ -20,6 +20,7 @@
 #include "common/parsing/Utils.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <cstddef>
 #include <exception>
@@ -30,6 +31,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -410,12 +412,31 @@ parseClassicConditionExpression(const std::string& condition) {
   if (!normalized.empty() && normalized.front() == '(') {
     normalized.erase(0, 1);
   }
-  const auto eqPos = normalized.find("==");
-  if (eqPos == std::string::npos) {
+
+  // Operators must be scanned longest-first so that "<=" is not misread as "<".
+  struct OperatorMatch {
+    std::string_view text;
+    qc::ComparisonKind kind;
+  };
+  static constexpr std::array<OperatorMatch, 6> operators{{
+      {"<=", qc::Leq},
+      {">=", qc::Geq},
+      {"==", qc::Eq},
+      {"!=", qc::Neq},
+      {"<", qc::Lt},
+      {">", qc::Gt},
+  }};
+
+  const auto found =
+      std::ranges::find_if(operators, [&normalized](const auto& op) {
+        return normalized.find(op.text) != std::string::npos;
+      });
+  if (found == operators.end()) {
     return std::nullopt;
   }
-  const auto lhs = normalized.substr(0, eqPos);
-  const auto rhs = normalized.substr(eqPos + 2);
+  const auto opPos = normalized.find(found->text);
+  const auto lhs = normalized.substr(0, opPos);
+  const auto rhs = normalized.substr(opPos + found->text.size());
   if (lhs.empty() || rhs.empty()) {
     return std::nullopt;
   }
@@ -453,12 +474,16 @@ parseClassicConditionExpression(const std::string& condition) {
     } catch (const std::out_of_range&) {
       return std::nullopt;
     }
-    return ClassicCondition{
-        .registerName = base, .bitIndex = bitIndex, .expectedValue = expected};
+    return ClassicCondition{.registerName = base,
+                            .bitIndex = bitIndex,
+                            .expectedValue = expected,
+                            .kind = found->kind};
   }
 
-  return ClassicCondition{
-      .registerName = lhs, .bitIndex = std::nullopt, .expectedValue = expected};
+  return ClassicCondition{.registerName = lhs,
+                          .bitIndex = std::nullopt,
+                          .expectedValue = expected,
+                          .kind = found->kind};
 }
 
 std::optional<ClassicCondition>

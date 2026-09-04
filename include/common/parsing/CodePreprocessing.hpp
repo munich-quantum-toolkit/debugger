@@ -17,6 +17,7 @@
 #pragma once
 
 #include "AssertionParsing.hpp"
+#include "ir/operations/IfElseOperation.hpp"
 
 #include <cstddef>
 #include <map>
@@ -228,6 +229,10 @@ struct ClassicCondition {
    * @brief The expected value in the condition comparison.
    */
   size_t expectedValue;
+  /**
+   * @brief The comparison operator used in the condition.
+   */
+  qc::ComparisonKind kind = qc::Eq;
 };
 
 /**
