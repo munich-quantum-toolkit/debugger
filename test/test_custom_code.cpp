@@ -96,6 +96,28 @@ TEST_F(CustomCodeTest, IfElseOperationMulti) {
 }
 
 /**
+ * @test Same behaviour as `IfElseOperationMulti`, but with the `if` body
+ * written as a real multi-line block.
+ * Ensures the parser handles line breaks inside a classic-controlled body,
+ * not only the single-line form.
+ */
+TEST_F(CustomCodeTest, IfElseOperationMultiMultilineBlock) {
+  loadCode(2, 1,
+           "x q[0];\n"
+           "measure q[0] -> c[0];\n"
+           "if(c==1) {\n"
+           "  x q[0];\n"
+           "  x q[1];\n"
+           "}\n");
+  ASSERT_EQ(state->runSimulation(state), OK);
+
+  std::array<Complex, 4> amplitudes{};
+  Statevector sv{2, 4, amplitudes.data()};
+  state->getStateVectorFull(state, &sv);
+  ASSERT_TRUE(complexEquality(amplitudes[2], 1, 0.0));
+}
+
+/**
  * @test Test the `reset` instruction.
  */
 TEST_F(CustomCodeTest, ResetGate) {
