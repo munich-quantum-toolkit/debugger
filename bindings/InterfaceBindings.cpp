@@ -96,7 +96,7 @@ void bindFramework(nb::module_& m) {
               "The column number of the error location, or 0 if unknown.")
       .def_prop_ro(
           "message",
-          [](const LoadResult& self) {
+          [](const LoadResult& self) -> nb::object {
             const auto* data = std::data(self.message);
             const std::string_view messageView(
                 data, boundedStrnlen(data, LOAD_RESULT_MESSAGE_MAX));
