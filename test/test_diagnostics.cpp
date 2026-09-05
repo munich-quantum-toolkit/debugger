@@ -164,7 +164,7 @@ TEST_F(DiagnosticsTest, MaximumMultipleCauses) {
           {4,
            {MissingInteraction, MissingInteraction, MissingInteraction,
             MissingInteraction}},
-      };
+  };
   for (size_t i = 0; i < maxErrors.size(); i++) {
     const auto [expectedCount, types] = expectedTypes[i];
     ASSERT_EQ(diagnostics->potentialErrorCauses(diagnostics, problems.data(),

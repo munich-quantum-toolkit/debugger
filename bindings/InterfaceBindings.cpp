@@ -194,7 +194,7 @@ Args:
     opt: The optimization level that should be used.
     slice_index: The index of the slice that should be compiled (defaults to 0).)")
       .def_rw(
-          "opt", &CompilationSettings ::opt,
+          "opt", &CompilationSettings::opt,
           "The optimization level that should be used. Exact meaning depends "
           "on the implementation, but typically 0 means no optimization.")
       .def_rw("slice_index", &CompilationSettings::sliceIndex,
@@ -705,10 +705,10 @@ void bindDiagnostics(nb::module_& m) {
   // Bind the ErrorCause struct
   nb::class_<ErrorCause>(m, "ErrorCause")
       .def(nb::init<>())
-      .def_rw("instruction", &ErrorCause ::instruction,
+      .def_rw("instruction", &ErrorCause::instruction,
               "The instruction where the error may originate from or "
               "where the error can be detected.")
-      .def_rw("type_", &ErrorCause ::type,
+      .def_rw("type_", &ErrorCause::type,
               "The type of the potential error cause.")
       .doc() = "Represents a potential cause of an assertion error.";
 

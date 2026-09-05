@@ -43,7 +43,7 @@ std::vector<std::string> splitString(const std::string& text,
   std::vector<std::string> result;
   size_t pos = 0;
   while (true) {
-    size_t min = std::string ::npos;
+    size_t min = std::string::npos;
     for (const auto del : delimiters) {
       const size_t newPos = text.find(del, pos);
       min = newPos < min ? newPos : min;
