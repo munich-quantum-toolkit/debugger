@@ -18,6 +18,7 @@
 #include "common/parsing/AssertionParsing.hpp"
 #include "common/parsing/ParsingError.hpp"
 #include "common/parsing/Utils.hpp"
+#include "ir/operations/IfElseOperation.hpp"
 
 #include <algorithm>
 #include <array>
@@ -418,20 +419,20 @@ parseClassicConditionExpression(const std::string& condition) {
     std::string_view text;
     qc::ComparisonKind kind;
   };
-  static constexpr std::array<OperatorMatch, 6> operators{{
-      {"<=", qc::Leq},
-      {">=", qc::Geq},
-      {"==", qc::Eq},
-      {"!=", qc::Neq},
-      {"<", qc::Lt},
-      {">", qc::Gt},
+  static constexpr std::array<OperatorMatch, 6> OPERATORS{{
+      {.text = "<=", .kind = qc::Leq},
+      {.text = ">=", .kind = qc::Geq},
+      {.text = "==", .kind = qc::Eq},
+      {.text = "!=", .kind = qc::Neq},
+      {.text = "<", .kind = qc::Lt},
+      {.text = ">", .kind = qc::Gt},
   }};
 
-  const auto found =
-      std::ranges::find_if(operators, [&normalized](const auto& op) {
+  const auto* const found =
+      std::ranges::find_if(OPERATORS, [&normalized](const auto& op) {
         return normalized.find(op.text) != std::string::npos;
       });
-  if (found == operators.end()) {
+  if (found == OPERATORS.end()) {
     return std::nullopt;
   }
   const auto opPos = normalized.find(found->text);
