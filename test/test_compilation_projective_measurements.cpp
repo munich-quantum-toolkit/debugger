@@ -38,10 +38,10 @@ class ProjectiveMeasurementsCompilationTest : public CompilationTest {};
  */
 TEST_F(ProjectiveMeasurementsCompilationTest, ProjectiveSingleOperation) {
   loadCode("qreg q[1];\n"
-           "x q[0];\n"
+           "s q[0];\n"
            "assert-eq q[0] { "
            "qreg p[1];\n"
-           "x p[0];\n"
+           "s p[0];\n"
            "}\n");
 
   PreambleVector preamble;
@@ -49,11 +49,11 @@ TEST_F(ProjectiveMeasurementsCompilationTest, ProjectiveSingleOperation) {
 
   checkCompilation(makeSettings(/*opt=*/0, /*slice=*/0),
                    "qreg q[1];\n"
-                   "x q[0];\n"
+                   "s q[0];\n"
                    "creg test_q0[1];\n"
-                   "x q[0];\n"
+                   "sdg q[0];\n"
                    "measure q[0] -> test_q0[0];\n"
-                   "x q[0];\n",
+                   "s q[0];\n",
                    preamble);
 
   checkNoCompilation(makeSettings(0, 1));

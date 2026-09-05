@@ -18,7 +18,6 @@
 #include "backend/dd/DDSimDiagnostics.hpp"
 #include "backend/debug.h"
 #include "backend/diagnostics.h"
-#include "circuit_optimizer/CircuitOptimizer.hpp"
 #include "common.h"
 #include "common/ComplexMathematics.hpp"
 #include "common/Span.hpp"
@@ -32,10 +31,10 @@
 #include "dd/Package.hpp"
 #include "dd/StateGeneration.hpp"
 #include "ir/Definitions.hpp"
-#include "ir/Register.hpp"
 #include "ir/operations/IfElseOperation.hpp"
 #include "ir/operations/OpType.hpp"
 #include "qasm3/Importer.hpp"
+#include "qasm3/Serializer.hpp"
 
 #include <Eigen/Dense>
 #include <algorithm>
@@ -578,16 +577,16 @@ void compileProjectiveMeasurement(
 
   newQc.unifyQuantumRegisters("assert_qubit");
 
-  qc::QubitIndexToRegisterMap qubitIndexToRegisterMap{};
+  qasm3::QubitIndexToRegisterMap qubitIndexToRegisterMap{};
   const auto reg = newQc.getQuantumRegisters().begin()->second;
   for (qc::Qubit i = 0; i < assertion.getTargetQubits().size(); i++) {
     const auto& originalVariable = assertion.getTargetQubits()[i];
     qubitIndexToRegisterMap.try_emplace(i, reg, originalVariable);
   }
 
+  const qasm3::Serializer serializer(stream, qc::Format::OpenQASM2);
   for (auto& it : std::ranges::reverse_view(newQc)) {
-    auto inverted = it->getInverted();
-    it->dumpOpenQASM2(stream, qubitIndexToRegisterMap, {});
+    serializer.serialize(*it->getInverted(), qubitIndexToRegisterMap, {});
   }
 
   for (const auto& [qbit, cbit] : targetNames) {
@@ -595,7 +594,7 @@ void compileProjectiveMeasurement(
   }
 
   for (auto& it : newQc) {
-    it->dumpOpenQASM2(stream, qubitIndexToRegisterMap, {});
+    serializer.serialize(*it, qubitIndexToRegisterMap, {});
   }
 }
 
@@ -704,7 +703,7 @@ LoadResult ddsimLoadCode(SimulationState* self, const char* code) {
     std::stringstream ss{preprocessAssertionCode(code, ddsim)};
     const auto imported = qasm3::Importer::import(ss);
     ddsim->qc = std::make_unique<qc::QuantumComputation>(imported);
-    qc::CircuitOptimizer::flattenOperations(*ddsim->qc, true);
+    ddsim->qc->flattenOperations(true);
   } catch (const ParsingError& e) {
     return makeLoadResult(LOAD_PARSE_ERROR, e.line(), e.column(), e.detail());
   } catch (const std::exception& e) {
