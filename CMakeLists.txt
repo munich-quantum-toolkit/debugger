@@ -5,9 +5,7 @@
 #
 # Licensed under the MIT License
 
-cmake_minimum_required(VERSION 3.26...4.4)
-cmake_policy(SET CMP0069 NEW)
-set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
+cmake_minimum_required(VERSION 3.28...4.4)
 
 project(
   mqt_debugger
@@ -19,6 +17,7 @@ option(BUILD_MQT_DEBUGGER_TESTS "Also build tests for the MQT Debugger project" 
 option(BUILD_MQT_DEBUGGER_APP "Also build the CLI app for the MQT Debugger project" ON)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
 include(CheckIPOSupported)
 
