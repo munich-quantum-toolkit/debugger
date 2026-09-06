@@ -21,13 +21,12 @@ add_library(
 # set include directories
 target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/include
                                                   ${PROJECT_BINARY_DIR}/include)
-target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC ${Eigen3_Includes})
 
 # link to the MQT::Core libraries
 target_link_libraries(${PROJECT_NAME} PUBLIC MQT::CoreDD MQT::CoreIR)
 target_link_libraries(${PROJECT_NAME} PRIVATE MQT::ProjectWarnings MQT::ProjectOptions
                                               MQT::CoreQASM)
-target_link_libraries(${PROJECT_NAME} PRIVATE Eigen3::Eigen)
+target_link_libraries(${PROJECT_NAME} PUBLIC Eigen3::Eigen)
 
 # add MQT alias
 add_library(MQT::Debugger ALIAS ${PROJECT_NAME})

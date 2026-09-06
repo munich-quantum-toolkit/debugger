@@ -31,7 +31,8 @@ set(MQT_CORE_REPO_OWNER "munich-quantum-toolkit"
 FetchContent_Declare(
   mqt-core
   GIT_REPOSITORY https://github.com/${MQT_CORE_REPO_OWNER}/core.git
-  GIT_TAG ${MQT_CORE_REV})
+  GIT_TAG ${MQT_CORE_REV}
+  EXCLUDE_FROM_ALL)
 list(APPEND FETCH_PACKAGES mqt-core)
 
 # ---------------------------------------------------------------------------------Fetch Eigen3
@@ -43,7 +44,8 @@ FetchContent_Declare(
   Eigen3
   GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
   GIT_TAG ${EIGEN_VERSION}
-  GIT_SHALLOW TRUE)
+  GIT_SHALLOW TRUE
+  SYSTEM)
 list(APPEND FETCH_PACKAGES Eigen3)
 set(EIGEN_BUILD_TESTING
     OFF
@@ -69,6 +71,3 @@ endif()
 
 # Make all declared dependencies available.
 FetchContent_MakeAvailable(${FETCH_PACKAGES})
-
-# Hide Eigen3 warnings
-get_target_property(Eigen3_Includes Eigen3::Eigen INTERFACE_INCLUDE_DIRECTORIES)
