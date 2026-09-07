@@ -96,6 +96,170 @@ TEST_F(CustomCodeTest, IfElseOperationMulti) {
 }
 
 /**
+ * @test Same behaviour as `IfElseOperationMulti`, but with the `if` body
+ * written as a real multi-line block.
+ * Ensures the parser handles line breaks inside a classic-controlled body,
+ * not only the single-line form.
+ */
+TEST_F(CustomCodeTest, IfElseOperationMultiMultilineBlock) {
+  loadCode(2, 1,
+           "x q[0];\n"
+           "measure q[0] -> c[0];\n"
+           "if(c==1) {\n"
+           "  x q[0];\n"
+           "  x q[1];\n"
+           "}\n");
+  ASSERT_EQ(state->runSimulation(state), OK);
+
+  std::array<Complex, 4> amplitudes{};
+  Statevector sv{2, 4, amplitudes.data()};
+  state->getStateVectorFull(state, &sv);
+  ASSERT_TRUE(complexEquality(amplitudes[2], 1, 0.0));
+}
+
+/**
+ * @test Test classic-controlled operations that use the `!=` comparator.
+ * The measured value of `c` is 1, so `c != 0` triggers and `c != 1` does not.
+ */
+TEST_F(CustomCodeTest, IfElseOperationNeq) {
+  loadCode(2, 1,
+           "x q[0];"
+           "cx q[0], q[1];"
+           "measure q[0] -> c[0];"
+           "if(c!=0) x q[1];"
+           "if(c!=1) z q[1];");
+  ASSERT_EQ(state->runSimulation(state), OK);
+
+  std::array<Complex, 4> amplitudes{};
+  Statevector sv{2, 4, amplitudes.data()};
+  state->getStateVectorFull(state, &sv);
+  ASSERT_TRUE(complexEquality(amplitudes[1], 1, 0.0));
+}
+
+/**
+ * @test Test classic-controlled operations that use the `<` comparator.
+ * The measured value of `c` is 1, so `c < 2` triggers and `c < 1` does not.
+ */
+TEST_F(CustomCodeTest, IfElseOperationLt) {
+  loadCode(2, 1,
+           "x q[0];"
+           "cx q[0], q[1];"
+           "measure q[0] -> c[0];"
+           "if(c<2) x q[1];"
+           "if(c<1) z q[1];");
+  ASSERT_EQ(state->runSimulation(state), OK);
+
+  std::array<Complex, 4> amplitudes{};
+  Statevector sv{2, 4, amplitudes.data()};
+  state->getStateVectorFull(state, &sv);
+  ASSERT_TRUE(complexEquality(amplitudes[1], 1, 0.0));
+}
+
+/**
+ * @test Test classic-controlled operations that use the `<=` comparator.
+ * The measured value of `c` is 1, so `c <= 1` triggers and `c <= 0` does not.
+ */
+TEST_F(CustomCodeTest, IfElseOperationLeq) {
+  loadCode(2, 1,
+           "x q[0];"
+           "cx q[0], q[1];"
+           "measure q[0] -> c[0];"
+           "if(c<=1) x q[1];"
+           "if(c<=0) z q[1];");
+  ASSERT_EQ(state->runSimulation(state), OK);
+
+  std::array<Complex, 4> amplitudes{};
+  Statevector sv{2, 4, amplitudes.data()};
+  state->getStateVectorFull(state, &sv);
+  ASSERT_TRUE(complexEquality(amplitudes[1], 1, 0.0));
+}
+
+/**
+ * @test Test classic-controlled operations that use the `>` comparator.
+ * The measured value of `c` is 1, so `c > 0` triggers and `c > 1` does not.
+ */
+TEST_F(CustomCodeTest, IfElseOperationGt) {
+  loadCode(2, 1,
+           "x q[0];"
+           "cx q[0], q[1];"
+           "measure q[0] -> c[0];"
+           "if(c>0) x q[1];"
+           "if(c>1) z q[1];");
+  ASSERT_EQ(state->runSimulation(state), OK);
+
+  std::array<Complex, 4> amplitudes{};
+  Statevector sv{2, 4, amplitudes.data()};
+  state->getStateVectorFull(state, &sv);
+  ASSERT_TRUE(complexEquality(amplitudes[1], 1, 0.0));
+}
+
+/**
+ * @test Test classic-controlled operations that use the `>=` comparator.
+ * The measured value of `c` is 1, so `c >= 1` triggers and `c >= 2` does not.
+ */
+TEST_F(CustomCodeTest, IfElseOperationGeq) {
+  loadCode(2, 1,
+           "x q[0];"
+           "cx q[0], q[1];"
+           "measure q[0] -> c[0];"
+           "if(c>=1) x q[1];"
+           "if(c>=2) z q[1];");
+  ASSERT_EQ(state->runSimulation(state), OK);
+
+  std::array<Complex, 4> amplitudes{};
+  Statevector sv{2, 4, amplitudes.data()};
+  state->getStateVectorFull(state, &sv);
+  ASSERT_TRUE(complexEquality(amplitudes[1], 1, 0.0));
+}
+
+/**
+ * @test Test classic-controlled operations that condition on a single bit
+ * of a classical register, using a non-equality comparator.
+ * The measured value of `c[0]` is 1, so `c[0] > 0` triggers and
+ * `c[0] > 1` does not.
+ */
+TEST_F(CustomCodeTest, IfElseOperationSingleBit) {
+  loadCode(2, 1,
+           "x q[0];"
+           "cx q[0], q[1];"
+           "measure q[0] -> c[0];"
+           "if(c[0]>0) x q[1];"
+           "if(c[0]>1) z q[1];");
+  ASSERT_EQ(state->runSimulation(state), OK);
+
+  std::array<Complex, 4> amplitudes{};
+  Statevector sv{2, 4, amplitudes.data()};
+  state->getStateVectorFull(state, &sv);
+  ASSERT_TRUE(complexEquality(amplitudes[1], 1, 0.0));
+}
+
+/**
+ * @test Exercise the backward-execution branch of the DD backend for a
+ * classic-controlled operation with a non-equality comparator.
+ * The measured value of `c` is 1, so `c > 0` triggers and `x q[1]` is
+ * applied on the forward pass; stepping backward undoes that `x q[1]`.
+ */
+TEST_F(CustomCodeTest, IfElseOperationBackwardStep) {
+  loadCode(2, 1,
+           "x q[0];"
+           "cx q[0], q[1];"
+           "measure q[0] -> c[0];"
+           "if(c>0) x q[1];");
+  ASSERT_EQ(state->runSimulation(state), OK);
+
+  std::array<Complex, 4> amplitudes{};
+  Statevector sv{2, 4, amplitudes.data()};
+  state->getStateVectorFull(state, &sv);
+  // q[1] = 0, q[0] = 1  after the `if` fires, so amplitude index 1.
+  ASSERT_TRUE(complexEquality(amplitudes[1], 1, 0.0));
+
+  ASSERT_EQ(state->stepBackward(state), OK);
+  state->getStateVectorFull(state, &sv);
+  // Undoing the `if`'s `x q[1]` restores q[1] = 1, q[0] = 1, i.e. index 3.
+  ASSERT_TRUE(complexEquality(amplitudes[3], 1, 0.0));
+}
+
+/**
  * @test Test the `reset` instruction.
  */
 TEST_F(CustomCodeTest, ResetGate) {
