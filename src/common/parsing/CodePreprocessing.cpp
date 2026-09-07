@@ -459,11 +459,6 @@ ClassicControlledGate parseClassicControlledGate(const std::string& code) {
 
 std::optional<ClassicCondition>
 parseClassicConditionExpression(const std::string& condition) {
-  auto normalized = removeWhitespace(condition);
-  if (!normalized.empty() && normalized.front() == '(') {
-    normalized.erase(0, 1);
-  }
-
   // Operators must be scanned longest-first so that "<=" is not misread as "<".
   struct OperatorMatch {
     std::string_view text;
@@ -479,6 +474,17 @@ parseClassicConditionExpression(const std::string& condition) {
       {.text = ">", .kind = qc::Gt},
   }};
 
+  auto normalized = removeWhitespace(condition);
+  if (!normalized.empty() && normalized.front() == '(') {
+    normalized.erase(0, 1);
+  }
+
+  // Default values for the bare form (`c`, `c[k]`): implicit `!= 0`.
+  std::string operand{ normalized };
+  size_t expected = 0;
+  qc::ComparisonKind kind = qc::Neq;
+
+  // Comparator form (`c` <op> integer).
   std::optional<OperatorMatch> match;
   for (const auto& op : OPERATORS) {
     if (normalized.find(op.text) != std::string::npos) {
@@ -486,45 +492,34 @@ parseClassicConditionExpression(const std::string& condition) {
       break;
     }
   }
-  if (!match.has_value()) {
-    // Bare register (`c`) or bit (`c[k]`).
-    // Treat it as an implicit `!= 0` check so the existing evaluator handles it
-    // unchanged.
-    if (const auto ref = parseBitRegisterRef(normalized); ref.has_value()) {
-      return ClassicCondition{.registerName = ref->name,
-                              .bitIndex = ref->bitIndex,
-                              .expectedValue = 0,
-                              .kind = qc::Neq};
+  if (match.has_value()) {
+    const auto opPos = normalized.find(match->text);
+    const auto lhs = normalized.substr(0, opPos);
+    const auto rhs = normalized.substr(opPos + match->text.size());
+    if (lhs.empty() || rhs.empty()) {
+      return std::nullopt;
     }
-    return std::nullopt;
-  }
-  const auto opPos = normalized.find(match->text);
-  const auto lhs = normalized.substr(0, opPos);
-  const auto rhs = normalized.substr(opPos + match->text.size());
-  if (lhs.empty() || rhs.empty()) {
-    return std::nullopt;
-  }
-
-  if (!isDigits(rhs)) {
-    return std::nullopt;
-  }
-  size_t expected = 0;
-  try {
-    expected = std::stoull(rhs);
-  } catch (const std::invalid_argument&) {
-    return std::nullopt;
-  } catch (const std::out_of_range&) {
-    return std::nullopt;
+    if (!isDigits(rhs)) {
+      return std::nullopt;
+    }
+    try {
+      expected = std::stoull(rhs);
+    } catch (const std::invalid_argument&) {
+      return std::nullopt;
+    } catch (const std::out_of_range&) {
+      return std::nullopt;
+    }
+    operand = lhs;
+    kind = match->kind;
   }
 
-  const auto ref = parseBitRegisterRef(lhs);
-  if (!ref.has_value()) {
-    return std::nullopt;
-  }
+  if (const auto ref = parseBitRegisterRef(operand); ref.has_value()) {
   return ClassicCondition{.registerName = ref->name,
                           .bitIndex = ref->bitIndex,
                           .expectedValue = expected,
-                          .kind = match->kind};
+                          .kind = kind};
+  }
+  return std::nullopt;
 }
 
 std::optional<ClassicCondition>
