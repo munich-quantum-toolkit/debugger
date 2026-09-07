@@ -487,6 +487,15 @@ parseClassicConditionExpression(const std::string& condition) {
     }
   }
   if (!match.has_value()) {
+    // Bare register (`c`) or bit (`c[k]`).
+    // Treat it as an implicit `!= 0` check so the existing evaluator handles it
+    // unchanged.
+    if (const auto ref = parseBitRegisterRef(normalized); ref.has_value()) {
+      return ClassicCondition{.registerName = ref->name,
+                              .bitIndex = ref->bitIndex,
+                              .expectedValue = 0,
+                              .kind = qc::Neq};
+    }
     return std::nullopt;
   }
   const auto opPos = normalized.find(match->text);
