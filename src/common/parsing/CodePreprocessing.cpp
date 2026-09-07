@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <charconv>
 #include <cstddef>
 #include <exception>
 #include <iterator>
@@ -33,6 +34,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <utility>
 #include <vector>
 
@@ -51,6 +53,27 @@ bool isDigits(const std::string& text) {
   }
   return std::ranges::all_of(
       text, [](unsigned char c) { return std::isdigit(c) != 0; });
+}
+
+/**
+ * @brief Parse the entire text as an unsigned integer.
+ *
+ * The text must contain only characters accepted by `std::from_chars` for the
+ * target type (digits, no leading sign, no whitespace, no trailing garbage).
+ * Anything else, including partial matches, fails.
+ * @param text The text to parse.
+ * @return The parsed value, or `std::nullopt` if parsing fails or does not
+ *         consume the whole input.
+ */
+std::optional<size_t> parseUnsignedInt(std::string_view text) {
+  size_t value = 0;
+  const char* const begin = std::to_address(text.begin());
+  const char* const end = std::to_address(text.end());
+  const auto result = std::from_chars(begin, end, value);
+  if (result.ec != std::errc{} || result.ptr != end) {
+    return std::nullopt;
+  }
+  return value;
 }
 
 /**
@@ -89,18 +112,11 @@ std::optional<BitRegisterRef> parseBitRegisterRef(const std::string& text) {
   }
   auto base = text.substr(0, bracketPos);
   const auto indexText = text.substr(bracketPos + 1, closePos - bracketPos - 1);
-  if (!isDigits(indexText)) {
-    return std::nullopt;
+
+  if (const auto bitIndex = parseUnsignedInt(indexText); bitIndex.has_value()) {
+    return BitRegisterRef{.name = std::move(base), .bitIndex = *bitIndex};
   }
-  size_t bitIndex = 0;
-  try {
-    bitIndex = std::stoull(indexText);
-  } catch (const std::invalid_argument&) {
-    return std::nullopt;
-  } catch (const std::out_of_range&) {
-    return std::nullopt;
-  }
-  return BitRegisterRef{.name = std::move(base), .bitIndex = bitIndex};
+  return std::nullopt;
 }
 
 /**
@@ -499,16 +515,11 @@ parseClassicConditionExpression(const std::string& condition) {
     if (lhs.empty() || rhs.empty()) {
       return std::nullopt;
     }
-    if (!isDigits(rhs)) {
+    const auto parsed = parseUnsignedInt(rhs);
+    if (!parsed.has_value()) {
       return std::nullopt;
     }
-    try {
-      expected = std::stoull(rhs);
-    } catch (const std::invalid_argument&) {
-      return std::nullopt;
-    } catch (const std::out_of_range&) {
-      return std::nullopt;
-    }
+    expected = *parsed;
     operand = lhs;
     kind = match->kind;
   }
