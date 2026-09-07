@@ -480,7 +480,7 @@ parseClassicConditionExpression(const std::string& condition) {
   }
 
   // Default values for the bare form (`c`, `c[k]`): implicit `!= 0`.
-  std::string operand{ normalized };
+  std::string operand{normalized};
   size_t expected = 0;
   qc::ComparisonKind kind = qc::Neq;
 
@@ -514,10 +514,10 @@ parseClassicConditionExpression(const std::string& condition) {
   }
 
   if (const auto ref = parseBitRegisterRef(operand); ref.has_value()) {
-  return ClassicCondition{.registerName = ref->name,
-                          .bitIndex = ref->bitIndex,
-                          .expectedValue = expected,
-                          .kind = kind};
+    return ClassicCondition{.registerName = ref->name,
+                            .bitIndex = ref->bitIndex,
+                            .expectedValue = expected,
+                            .kind = kind};
   }
   return std::nullopt;
 }
