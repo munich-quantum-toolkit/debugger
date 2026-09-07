@@ -54,6 +54,56 @@ bool isDigits(const std::string& text) {
 }
 
 /**
+ * @brief A reference into a classical bit register.
+ *
+ * `bitIndex` holds the index of a single bit within the register.
+ * When it is `std::nullopt`, the reference targets the whole register
+ * rather than an individual bit.
+ */
+struct BitRegisterRef {
+  std::string name;
+  std::optional<size_t> bitIndex;
+};
+
+/**
+ * @brief Parse a classical bit register reference from the given text.
+ *
+ * Accepts either the bare register name (`c`), which resolves to
+ * `{name = "c", bitIndex = std::nullopt}` and targets the whole register,
+ * or the indexed form (`c[k]`), which resolves to a single-bit reference.
+ * @param text The already-trimmed text to parse.
+ * @return The parsed reference, or `std::nullopt` if the shape is invalid.
+ */
+std::optional<BitRegisterRef> parseBitRegisterRef(const std::string& text) {
+  if (text.empty()) {
+    return std::nullopt;
+  }
+  const auto bracketPos = text.find('[');
+  if (bracketPos == std::string::npos) {
+    return BitRegisterRef{.name = text, .bitIndex = std::nullopt};
+  }
+  const auto closePos = text.find(']', bracketPos + 1);
+  if (bracketPos == 0 || closePos == std::string::npos ||
+      closePos != text.size() - 1) {
+    return std::nullopt;
+  }
+  auto base = text.substr(0, bracketPos);
+  const auto indexText = text.substr(bracketPos + 1, closePos - bracketPos - 1);
+  if (!isDigits(indexText)) {
+    return std::nullopt;
+  }
+  size_t bitIndex = 0;
+  try {
+    bitIndex = std::stoull(indexText);
+  } catch (const std::invalid_argument&) {
+    return std::nullopt;
+  } catch (const std::out_of_range&) {
+    return std::nullopt;
+  }
+  return BitRegisterRef{.name = std::move(base), .bitIndex = bitIndex};
+}
+
+/**
  * @brief 1-based line/column location within source text.
  */
 struct LineColumn {
@@ -458,35 +508,12 @@ parseClassicConditionExpression(const std::string& condition) {
     return std::nullopt;
   }
 
-  const auto bracketPos = lhs.find('[');
-  if (bracketPos != std::string::npos) {
-    const auto closePos = lhs.find(']', bracketPos + 1);
-    if (bracketPos == 0 || closePos == std::string::npos ||
-        closePos != lhs.size() - 1) {
-      return std::nullopt;
-    }
-    const auto base = lhs.substr(0, bracketPos);
-    const auto indexText =
-        lhs.substr(bracketPos + 1, closePos - bracketPos - 1);
-    if (!isDigits(indexText)) {
-      return std::nullopt;
-    }
-    size_t bitIndex = 0;
-    try {
-      bitIndex = std::stoull(indexText);
-    } catch (const std::invalid_argument&) {
-      return std::nullopt;
-    } catch (const std::out_of_range&) {
-      return std::nullopt;
-    }
-    return ClassicCondition{.registerName = base,
-                            .bitIndex = bitIndex,
-                            .expectedValue = expected,
-                            .kind = match->kind};
+  const auto ref = parseBitRegisterRef(lhs);
+  if (!ref.has_value()) {
+    return std::nullopt;
   }
-
-  return ClassicCondition{.registerName = lhs,
-                          .bitIndex = std::nullopt,
+  return ClassicCondition{.registerName = ref->name,
+                          .bitIndex = ref->bitIndex,
                           .expectedValue = expected,
                           .kind = match->kind};
 }
