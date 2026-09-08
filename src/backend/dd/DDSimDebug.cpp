@@ -190,6 +190,11 @@ void resetSimulationState(DDSimulationState* ddsim) {
       dd::makeZeroState(ddsim->qc->getNqubits(), *(ddsim->dd));
   ddsim->dd->incRef(ddsim->simulationState);
   ddsim->paused = false;
+  // Return the classical side to its initial state (all bits false),
+  // matching the quantum state rebuilt above.
+  std::ranges::for_each(
+      ddsim->variables | std::views::values,
+      [](auto& variable) { variable.value.boolValue = false; });
 }
 
 /**
