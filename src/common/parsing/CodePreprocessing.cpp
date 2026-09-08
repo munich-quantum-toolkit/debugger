@@ -31,7 +31,6 @@
 #include <memory>
 #include <optional>
 #include <sstream>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -77,33 +76,34 @@ std::optional<size_t> parseUnsignedInt(std::string_view text) {
 }
 
 /**
- * @brief A reference into a classical bit register.
+ * @brief A reference to a register, or to a single element within a register.
  *
- * `bitIndex` holds the index of a single bit within the register.
- * When it is `std::nullopt`, the reference targets the whole register
- * rather than an individual bit.
+ * `index` can hold the following values:
+ * - `std::nullopt`, when the reference targets the whole register (`c`, `q`).
+ * - the position within the register, when the reference targets a single
+ *   element (`c[k]`, `q[k]`).
  */
-struct BitRegisterRef {
+struct RegisterRef {
   std::string name;
-  std::optional<size_t> bitIndex;
+  std::optional<size_t> index;
 };
 
 /**
- * @brief Parse a classical bit register reference from the given text.
+ * @brief Parse a register reference from the given text.
  *
- * Accepts either the bare register name (`c`), which resolves to
- * `{name = "c", bitIndex = std::nullopt}` and targets the whole register,
- * or the indexed form (`c[k]`), which resolves to a single-bit reference.
+ * Accepts either the bare register name (`c`, `q`), which resolves to
+ * `{name = "c", index = std::nullopt}` and targets the whole register,
+ * or the indexed form (`c[k]`), which resolves to a single-element reference.
  * @param text The already-trimmed text to parse.
  * @return The parsed reference, or `std::nullopt` if the shape is invalid.
  */
-std::optional<BitRegisterRef> parseBitRegisterRef(const std::string& text) {
+std::optional<RegisterRef> parseRegisterRef(const std::string& text) {
   if (text.empty()) {
     return std::nullopt;
   }
   const auto bracketPos = text.find('[');
   if (bracketPos == std::string::npos) {
-    return BitRegisterRef{.name = text, .bitIndex = std::nullopt};
+    return RegisterRef{.name = text, .index = std::nullopt};
   }
   const auto closePos = text.find(']', bracketPos + 1);
   if (bracketPos == 0 || closePos == std::string::npos ||
@@ -113,8 +113,8 @@ std::optional<BitRegisterRef> parseBitRegisterRef(const std::string& text) {
   auto base = text.substr(0, bracketPos);
   const auto indexText = text.substr(bracketPos + 1, closePos - bracketPos - 1);
 
-  if (const auto bitIndex = parseUnsignedInt(indexText); bitIndex.has_value()) {
-    return BitRegisterRef{.name = std::move(base), .bitIndex = bitIndex};
+  if (const auto index = parseUnsignedInt(indexText); index.has_value()) {
+    return RegisterRef{.name = std::move(base), .index = index};
   }
   return std::nullopt;
 }
@@ -239,37 +239,20 @@ void validateTargets(const std::string& code, size_t instructionStart,
       detail += ".";
       throw makeParseError(code, instructionStart, detail);
     }
-    const auto open = target.find('[');
-    if (open == std::string::npos) {
+    const auto ref = parseRegisterRef(target);
+    if (!ref.has_value()) {
+      throw makeParseError(code, instructionStart,
+                           invalidTargetDetail(target, context), target);
+    }
+    if (!ref->index.has_value()) {
       continue;
     }
-    const auto close = target.find(']', open + 1);
-    if (open == 0 || close == std::string::npos || close != target.size() - 1) {
-      throw makeParseError(code, instructionStart,
-                           invalidTargetDetail(target, context), target);
-    }
-    const auto registerName = target.substr(0, open);
-    const auto indexText = target.substr(open + 1, close - open - 1);
-    if (!isDigits(indexText)) {
-      throw makeParseError(code, instructionStart,
-                           invalidTargetDetail(target, context), target);
-    }
-    size_t registerIndex = 0;
-    try {
-      registerIndex = std::stoul(indexText);
-    } catch (const std::invalid_argument&) {
-      throw makeParseError(code, instructionStart,
-                           invalidTargetDetail(target, context), target);
-    } catch (const std::out_of_range&) {
-      throw makeParseError(code, instructionStart,
-                           invalidTargetDetail(target, context), target);
-    }
-    if (std::ranges::find(shadowedRegisters, registerName) !=
+    if (std::ranges::find(shadowedRegisters, ref->name) !=
         shadowedRegisters.end()) {
       continue;
     }
-    const auto found = definedRegisters.find(registerName);
-    if (found == definedRegisters.end() || found->second <= registerIndex) {
+    const auto found = definedRegisters.find(ref->name);
+    if (found == definedRegisters.end() || found->second <= *ref->index) {
       throw makeParseError(code, instructionStart,
                            invalidTargetDetail(target, context), target);
     }
@@ -524,9 +507,9 @@ parseClassicConditionExpression(const std::string& condition) {
     kind = match->kind;
   }
 
-  if (const auto ref = parseBitRegisterRef(operand); ref.has_value()) {
+  if (const auto ref = parseRegisterRef(operand); ref.has_value()) {
     return ClassicCondition{.registerName = ref->name,
-                            .bitIndex = ref->bitIndex,
+                            .bitIndex = ref->index,
                             .expectedValue = expected,
                             .kind = kind};
   }
