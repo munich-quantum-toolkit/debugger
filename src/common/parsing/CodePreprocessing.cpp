@@ -114,7 +114,7 @@ std::optional<BitRegisterRef> parseBitRegisterRef(const std::string& text) {
   const auto indexText = text.substr(bracketPos + 1, closePos - bracketPos - 1);
 
   if (const auto bitIndex = parseUnsignedInt(indexText); bitIndex.has_value()) {
-    return BitRegisterRef{.name = std::move(base), .bitIndex = *bitIndex};
+    return BitRegisterRef{.name = std::move(base), .bitIndex = bitIndex};
   }
   return std::nullopt;
 }
