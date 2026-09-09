@@ -37,28 +37,9 @@ constexpr char ESC = 0x1b;
 constexpr char CR = '\r';
 constexpr char LF = '\n';
 
+/// @brief Locale-agnostic whitespace check that avoids UB on signed `char`.
 bool isSpace(char c) {
   return std::isspace(static_cast<unsigned char>(c)) != 0;
-}
-
-/**
- * @brief Rewrite the current input line in place on `out`.
- *
- * Moves the cursor to the start of the current line, clears to end of line,
- * prints the prompt followed by the buffer, then repositions the cursor via
- * the `CSI n G` (Cursor Horizontal Absolute) escape sequence.
- *
- * @param out    Output stream to write to.
- * @param prompt Prompt to display before the buffer.
- * @param buffer Current input line contents.
- * @param cursor 0-based cursor position within the buffer.
- */
-void redraw(std::ostream& out, std::string_view prompt,
-            const std::string& buffer, std::size_t cursor) {
-  out << '\r' << "\x1b[K" << prompt << buffer;
-  const std::size_t targetColumn = prompt.size() + cursor + 1;
-  out << '\r' << "\x1b[" << targetColumn << 'G';
-  out.flush();
 }
 
 /**
@@ -133,17 +114,202 @@ std::size_t findNextWordEnd(const std::string& buffer, std::size_t cursor) {
 
 } // namespace
 
-LineEditor::LineEditor(std::istream& in, std::ostream& out)
-    : input(in), output(out) {}
+/**
+ * @brief Mutable state of one `readLine` call.
+ *
+ * Local to a single call so each invocation starts from a clean slate.
+ */
+struct LineEditor::ReadLineState {
+  /// Text of the line being edited right now.
+  std::string buffer;
 
-std::optional<std::string> LineEditor::readLine(std::string_view prompt) {
+  /// 0-based position within `buffer` where the next typed character will be
+  /// inserted.
+  /// Valid range is `[0, buffer.size()]` (inclusive at the end so that
+  /// appending past the last character is possible).
+  std::size_t cursor{0};
+
+  /// History-navigation mode.
+  /// `nullopt` means "not in history, typing fresh text".
+  /// When engaged, the value is the index inside `history` of the entry
+  /// currently displayed: Up decrements it (older), Down increments it (newer);
+  /// crossing past the newest entry resets it back to `nullopt`.
+  std::optional<std::size_t> historyIndex;
+
+  /// Snapshot of `buffer` taken the first time the user pressed Up in this
+  /// call. Restored when Down navigates past the newest history entry, so the
+  /// text the user was typing before entering history is not lost.
+  std::string savedTypedBuffer;
+};
+
+LineEditor::LineEditor(std::istream& in, std::ostream& out, std::string_view p)
+    : input(in), output(out), prompt(p) {}
+
+/// @brief Rewrite the current input line in place and reposition the cursor.
+void LineEditor::redraw(const ReadLineState& state) const {
+  output << '\r' << "\x1b[K" << prompt << state.buffer;
+  const std::size_t targetColumn = prompt.size() + state.cursor + 1;
+  output << '\r' << "\x1b[" << targetColumn << 'G';
+  output.flush();
+}
+
+/// @brief Delete the character to the left of the cursor, if any.
+void LineEditor::handleBackspace(ReadLineState& state) const {
+  if (state.cursor > 0) {
+    state.buffer.erase(state.cursor - 1, 1);
+    --state.cursor;
+    redraw(state);
+  }
+}
+
+/// @brief Wipe the current line and place the cursor at column 0 (Ctrl+U).
+void LineEditor::handleClearLine(ReadLineState& state) const {
+  state.buffer.clear();
+  state.cursor = 0;
+  redraw(state);
+}
+
+/// @brief Delete the character under the cursor, if any (forward delete).
+void LineEditor::handleDelete(ReadLineState& state) const {
+  if (state.cursor < state.buffer.size()) {
+    state.buffer.erase(state.cursor, 1);
+    redraw(state);
+  }
+}
+
+/// @brief Move the cursor one position to the left, if not already at 0.
+void LineEditor::moveLeft(ReadLineState& state) const {
+  if (state.cursor > 0) {
+    --state.cursor;
+    redraw(state);
+  }
+}
+
+/// @brief Move the cursor one position to the right, if not past the end.
+void LineEditor::moveRight(ReadLineState& state) const {
+  if (state.cursor < state.buffer.size()) {
+    ++state.cursor;
+    redraw(state);
+  }
+}
+
+/// @brief Move the cursor to the start of the line.
+void LineEditor::moveHome(ReadLineState& state) const {
+  state.cursor = 0;
+  redraw(state);
+}
+
+/// @brief Move the cursor just past the last character of the line.
+void LineEditor::moveEnd(ReadLineState& state) const {
+  state.cursor = state.buffer.size();
+  redraw(state);
+}
+
+/// @brief Move the cursor to the start of the previous word (Ctrl+Left).
+void LineEditor::moveWordLeft(ReadLineState& state) const {
+  state.cursor = findPreviousWordStart(state.buffer, state.cursor);
+  redraw(state);
+}
+
+/// @brief Move the cursor to the end of the current or next word (Ctrl+Right).
+void LineEditor::moveWordRight(ReadLineState& state) const {
+  state.cursor = findNextWordEnd(state.buffer, state.cursor);
+  redraw(state);
+}
+
+/// @brief Insert a printable character at the cursor position.
+void LineEditor::insertChar(char c, ReadLineState& state) const {
+  state.buffer.insert(state.cursor, 1, c);
+  ++state.cursor;
+  redraw(state);
+}
+
+/// @brief Recall the previous history entry into the buffer (Up).
+/// The very first Up in a call snapshots the current typed buffer into
+/// `savedTypedBuffer` so it can be restored later.
+void LineEditor::recallOlder(ReadLineState& state) const {
+  if (history.empty()) {
+    return;
+  }
+  if (!state.historyIndex.has_value()) {
+    state.savedTypedBuffer = state.buffer;
+    state.historyIndex = history.size() - 1;
+    state.buffer = history[*state.historyIndex];
+  } else if (*state.historyIndex > 0) {
+    --*state.historyIndex;
+    state.buffer = history[*state.historyIndex];
+  }
+  state.cursor = state.buffer.size();
+  redraw(state);
+}
+
+/// @brief Recall the next history entry into the buffer (Down).
+/// Stepping past the newest entry restores `savedTypedBuffer` and leaves
+/// history-navigation mode.
+void LineEditor::recallNewer(ReadLineState& state) const {
+  if (!state.historyIndex.has_value()) {
+    return;
+  }
+  if (*state.historyIndex + 1 < history.size()) {
+    ++*state.historyIndex;
+    state.buffer = history[*state.historyIndex];
+  } else {
+    state.historyIndex.reset();
+    state.buffer = state.savedTypedBuffer;
+  }
+  state.cursor = state.buffer.size();
+  redraw(state);
+}
+
+/// @brief Consume a CSI escape sequence and dispatch to the matching handler.
+/// Called after an `ESC` byte has been read from the input stream.
+void LineEditor::handleEscape(ReadLineState& state) const {
+  std::string params;
+  char final = 0;
+  if (!readCsi(input, params, final)) {
+    return;
+  }
+
+  if (params.empty()) {
+    switch (final) {
+    case 'A': // Up
+      recallOlder(state);
+      break;
+    case 'B': // Down
+      recallNewer(state);
+      break;
+    case 'C': // Right
+      moveRight(state);
+      break;
+    case 'D': // Left
+      moveLeft(state);
+      break;
+    case 'H': // Home
+      moveHome(state);
+      break;
+    case 'F': // End
+      moveEnd(state);
+      break;
+    default:
+      break;
+    }
+    return;
+  }
+
+  if (params == "3" && final == '~') { // Delete
+    handleDelete(state);
+  } else if (params == "1;5" && final == 'D') { // Ctrl+Left
+    moveWordLeft(state);
+  } else if (params == "1;5" && final == 'C') { // Ctrl+Right
+    moveWordRight(state);
+  }
+}
+
+std::optional<std::string> LineEditor::readLine() {
   output << prompt;
   output.flush();
 
-  std::string buffer;
-  std::size_t cursor = 0;
-  std::optional<std::size_t> historyIndex;
-  std::string savedTypedBuffer;
+  ReadLineState state;
 
   while (true) {
     const int rawByte = input.get();
@@ -155,103 +321,25 @@ std::optional<std::string> LineEditor::readLine(std::string_view prompt) {
     if (c == LF || c == CR) {
       output << '\n';
       output.flush();
-      return buffer;
+      return state.buffer;
     }
 
     if (c == BACKSPACE_DEL || c == BACKSPACE_BS) {
-      if (cursor > 0) {
-        buffer.erase(cursor - 1, 1);
-        --cursor;
-        redraw(output, prompt, buffer, cursor);
-      }
+      handleBackspace(state);
       continue;
     }
 
     if (c == CTRL_U) {
-      buffer.clear();
-      cursor = 0;
-      redraw(output, prompt, buffer, cursor);
+      handleClearLine(state);
       continue;
     }
 
     if (c == ESC) {
-      std::string params;
-      char final = 0;
-      if (!readCsi(input, params, final)) {
-        continue;
-      }
-
-      if (params.empty()) {
-        switch (final) {
-        case 'A': // Up
-          if (!history.empty()) {
-            if (!historyIndex.has_value()) {
-              savedTypedBuffer = buffer;
-              historyIndex = history.size() - 1;
-              buffer = history[*historyIndex];
-            } else if (*historyIndex > 0) {
-              --*historyIndex;
-              buffer = history[*historyIndex];
-            }
-            cursor = buffer.size();
-            redraw(output, prompt, buffer, cursor);
-          }
-          break;
-        case 'B': // Down
-          if (historyIndex.has_value()) {
-            if (*historyIndex + 1 < history.size()) {
-              ++*historyIndex;
-              buffer = history[*historyIndex];
-            } else {
-              historyIndex.reset();
-              buffer = savedTypedBuffer;
-            }
-            cursor = buffer.size();
-            redraw(output, prompt, buffer, cursor);
-          }
-          break;
-        case 'C': // Right
-          if (cursor < buffer.size()) {
-            ++cursor;
-            redraw(output, prompt, buffer, cursor);
-          }
-          break;
-        case 'D': // Left
-          if (cursor > 0) {
-            --cursor;
-            redraw(output, prompt, buffer, cursor);
-          }
-          break;
-        case 'H': // Home
-          cursor = 0;
-          redraw(output, prompt, buffer, cursor);
-          break;
-        case 'F': // End
-          cursor = buffer.size();
-          redraw(output, prompt, buffer, cursor);
-          break;
-        default:
-          break;
-        }
-      } else if (params == "3" && final == '~') { // Delete
-        if (cursor < buffer.size()) {
-          buffer.erase(cursor, 1);
-          redraw(output, prompt, buffer, cursor);
-        }
-      } else if (params == "1;5" && final == 'D') { // Ctrl+Left
-        cursor = findPreviousWordStart(buffer, cursor);
-        redraw(output, prompt, buffer, cursor);
-      } else if (params == "1;5" && final == 'C') { // Ctrl+Right
-        cursor = findNextWordEnd(buffer, cursor);
-        redraw(output, prompt, buffer, cursor);
-      }
+      handleEscape(state);
       continue;
     }
 
-    // Regular character: insert at cursor position.
-    buffer.insert(cursor, 1, c);
-    ++cursor;
-    redraw(output, prompt, buffer, cursor);
+    insertChar(c, state);
   }
 }
 
