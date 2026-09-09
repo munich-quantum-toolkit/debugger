@@ -1,0 +1,178 @@
+/*
+ * Copyright (c) 2024 - 2026 Chair for Design Automation, TUM
+ * Copyright (c) 2025 - 2026 Munich Quantum Software Company GmbH
+ * All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Licensed under the MIT License
+ */
+
+/**
+ * @file test_line_editor.cpp
+ * @brief Unit tests for the `LineEditor` CLI helper.
+ *
+ * The editor is driven from in-memory `std::stringstream` buffers so that
+ * every case can be described as an input byte sequence and an expected
+ * output line, with no dependency on a real terminal.
+ */
+
+#include "frontend/cli/LineEditor.hpp"
+
+#include <gtest/gtest.h>
+#include <optional>
+#include <sstream>
+#include <string>
+#include <string_view>
+
+namespace mqt::debugger::test {
+
+namespace {
+
+constexpr std::string_view DEFAULT_PROMPT = "> ";
+
+/**
+ * @brief Read one line with a fresh editor and a given input string.
+ */
+std::optional<std::string>
+readLineWith(const std::string& inputBytes,
+             std::string_view prompt = DEFAULT_PROMPT) {
+  std::stringstream input(inputBytes);
+  std::stringstream output;
+  LineEditor editor{input, output};
+  return editor.readLine(prompt);
+}
+
+} // namespace
+
+//
+// Basic reading
+//
+
+TEST(LineEditorTest, ReadsPlainLineTerminatedByNewline) {
+  EXPECT_EQ(readLineWith("hello\n"), "hello");
+}
+
+TEST(LineEditorTest, ReadsPlainLineTerminatedByCarriageReturn) {
+  EXPECT_EQ(readLineWith("hello\r"), "hello");
+}
+
+TEST(LineEditorTest, EmptyLineOnJustEnter) {
+  EXPECT_EQ(readLineWith("\n"), "");
+}
+
+TEST(LineEditorTest, NulloptOnEof) {
+  EXPECT_EQ(readLineWith(""), std::nullopt);
+}
+
+TEST(LineEditorTest, WritesPromptToOutput) {
+  std::stringstream input("hello\n");
+  std::stringstream output;
+  LineEditor editor{input, output};
+  editor.readLine(DEFAULT_PROMPT);
+  EXPECT_TRUE(output.str().starts_with(DEFAULT_PROMPT));
+}
+
+//
+// Backspace and clear-line
+//
+
+TEST(LineEditorTest, BackspaceRemovesPreviousCharacter) {
+  EXPECT_EQ(readLineWith("he\x7fllo\n"), "hllo");
+}
+
+TEST(LineEditorTest, BackspaceOnEmptyBufferIsNoop) {
+  EXPECT_EQ(readLineWith("\x7f\x7fhi\n"), "hi");
+}
+
+TEST(LineEditorTest, CtrlUClearsTheLine) {
+  EXPECT_EQ(readLineWith("abc\x15xyz\n"), "xyz");
+}
+
+//
+// Cursor navigation
+//
+
+TEST(LineEditorTest, CursorLeftAllowsInsertionInTheMiddle) {
+  EXPECT_EQ(readLineWith("ab\x1b[DX\n"), "aXb");
+}
+
+TEST(LineEditorTest, CursorRightMovesTowardsEnd) {
+  EXPECT_EQ(readLineWith("ab\x1b[D\x1b[D\x1b[CX\n"), "aXb");
+}
+
+TEST(LineEditorTest, HomeMovesToStart) {
+  EXPECT_EQ(readLineWith("abc\x1b[HX\n"), "Xabc");
+}
+
+TEST(LineEditorTest, EndMovesToPastLast) {
+  EXPECT_EQ(readLineWith("abc\x1b[H\x1b[FX\n"), "abcX");
+}
+
+TEST(LineEditorTest, DeleteRemovesCharacterUnderCursor) {
+  EXPECT_EQ(readLineWith("abc\x1b[D\x1b[D\x1b[3~\n"), "ac");
+}
+
+//
+// Word navigation (Ctrl+Left / Ctrl+Right)
+//
+
+TEST(LineEditorTest, CtrlLeftJumpsToPreviousWord) {
+  // "hello world" + Ctrl+Left + "X" + Enter -> "hello Xworld"
+  EXPECT_EQ(readLineWith("hello world\x1b[1;5DX\n"), "hello Xworld");
+}
+
+TEST(LineEditorTest, CtrlRightJumpsToNextWord) {
+  // "hello world" + Home + Ctrl+Right + "X" + Enter -> "helloX world"
+  EXPECT_EQ(readLineWith("hello world\x1b[H\x1b[1;5CX\n"), "helloX world");
+}
+
+//
+// History (Up / Down)
+//
+
+TEST(LineEditorTest, UpArrowRecallsPreviousHistoryEntry) {
+  std::stringstream input("\x1b[A\n");
+  std::stringstream output;
+  LineEditor editor{input, output};
+  editor.addToHistory("previous");
+  EXPECT_EQ(editor.readLine(DEFAULT_PROMPT), "previous");
+}
+
+TEST(LineEditorTest, UpAndDownArrowsNavigateHistory) {
+  std::stringstream input("\x1b[A\x1b[A\x1b[B\n");
+  std::stringstream output;
+  LineEditor editor{input, output};
+  editor.addToHistory("first");
+  editor.addToHistory("second");
+  // Up -> "second", Up -> "first", Down -> "second".
+  EXPECT_EQ(editor.readLine(DEFAULT_PROMPT), "second");
+}
+
+TEST(LineEditorTest, UpArrowOnEmptyHistoryIsNoop) {
+  EXPECT_EQ(readLineWith("\x1b[Ahi\n"), "hi");
+}
+
+TEST(LineEditorTest, UpArrowStopsAtOldestEntry) {
+  // Only one entry: many Ups still yield that same entry.
+  std::stringstream input("\x1b[A\x1b[A\x1b[A\n");
+  std::stringstream output;
+  LineEditor editor{input, output};
+  editor.addToHistory("only");
+  EXPECT_EQ(editor.readLine(DEFAULT_PROMPT), "only");
+}
+
+TEST(LineEditorTest, DownArrowOnEmptyHistoryIsNoop) {
+  EXPECT_EQ(readLineWith("\x1b[Bhi\n"), "hi");
+}
+
+TEST(LineEditorTest, DownArrowBeyondNewestReturnsToTypedBuffer) {
+  // Type "typed", Up (recalls "old"), Down (goes back to "typed"), Enter.
+  std::stringstream input("typed\x1b[A\x1b[B\n");
+  std::stringstream output;
+  LineEditor editor{input, output};
+  editor.addToHistory("old");
+  EXPECT_EQ(editor.readLine(DEFAULT_PROMPT), "typed");
+}
+
+} // namespace mqt::debugger::test
