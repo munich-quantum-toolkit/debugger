@@ -39,8 +39,8 @@ readLineWith(const std::string& inputBytes,
              std::string_view prompt = DEFAULT_PROMPT) {
   std::stringstream input(inputBytes);
   std::stringstream output;
-  LineEditor editor{input, output};
-  return editor.readLine(prompt);
+  LineEditor editor{input, output, prompt};
+  return editor.readLine();
 }
 
 } // namespace
@@ -68,8 +68,8 @@ TEST(LineEditorTest, NulloptOnEof) {
 TEST(LineEditorTest, WritesPromptToOutput) {
   std::stringstream input("hello\n");
   std::stringstream output;
-  LineEditor editor{input, output};
-  editor.readLine(DEFAULT_PROMPT);
+  LineEditor editor{input, output, DEFAULT_PROMPT};
+  editor.readLine();
   EXPECT_TRUE(output.str().starts_with(DEFAULT_PROMPT));
 }
 
@@ -134,19 +134,19 @@ TEST(LineEditorTest, CtrlRightJumpsToNextWord) {
 TEST(LineEditorTest, UpArrowRecallsPreviousHistoryEntry) {
   std::stringstream input("\x1b[A\n");
   std::stringstream output;
-  LineEditor editor{input, output};
+  LineEditor editor{input, output, DEFAULT_PROMPT};
   editor.addToHistory("previous");
-  EXPECT_EQ(editor.readLine(DEFAULT_PROMPT), "previous");
+  EXPECT_EQ(editor.readLine(), "previous");
 }
 
 TEST(LineEditorTest, UpAndDownArrowsNavigateHistory) {
   std::stringstream input("\x1b[A\x1b[A\x1b[B\n");
   std::stringstream output;
-  LineEditor editor{input, output};
+  LineEditor editor{input, output, DEFAULT_PROMPT};
   editor.addToHistory("first");
   editor.addToHistory("second");
   // Up -> "second", Up -> "first", Down -> "second".
-  EXPECT_EQ(editor.readLine(DEFAULT_PROMPT), "second");
+  EXPECT_EQ(editor.readLine(), "second");
 }
 
 TEST(LineEditorTest, UpArrowOnEmptyHistoryIsNoop) {
@@ -157,9 +157,9 @@ TEST(LineEditorTest, UpArrowStopsAtOldestEntry) {
   // Only one entry: many Ups still yield that same entry.
   std::stringstream input("\x1b[A\x1b[A\x1b[A\n");
   std::stringstream output;
-  LineEditor editor{input, output};
+  LineEditor editor{input, output, DEFAULT_PROMPT};
   editor.addToHistory("only");
-  EXPECT_EQ(editor.readLine(DEFAULT_PROMPT), "only");
+  EXPECT_EQ(editor.readLine(), "only");
 }
 
 TEST(LineEditorTest, DownArrowOnEmptyHistoryIsNoop) {
@@ -170,9 +170,9 @@ TEST(LineEditorTest, DownArrowBeyondNewestReturnsToTypedBuffer) {
   // Type "typed", Up (recalls "old"), Down (goes back to "typed"), Enter.
   std::stringstream input("typed\x1b[A\x1b[B\n");
   std::stringstream output;
-  LineEditor editor{input, output};
+  LineEditor editor{input, output, DEFAULT_PROMPT};
   editor.addToHistory("old");
-  EXPECT_EQ(editor.readLine(DEFAULT_PROMPT), "typed");
+  EXPECT_EQ(editor.readLine(), "typed");
 }
 
 } // namespace mqt::debugger::test

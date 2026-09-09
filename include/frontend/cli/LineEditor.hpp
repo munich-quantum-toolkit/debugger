@@ -31,23 +31,25 @@ namespace mqt::debugger {
  * The editor is agnostic to whether the underlying streams are backed by a
  * real terminal (in raw mode) or by in-memory buffers used from tests.
  * It parses the common CSI escape sequences (`Left`, `Right`, `Ctrl+Left`,
- * `Ctrl+Right`, `Home`, `End`, `Delete`, `Up`, `Down`) and handles
- * `Backspace` and `Ctrl+U`.
+ * `Ctrl+Right`, `Home`, `End`, `Delete`, `Up`, `Down`) and handles `Backspace`
+ * and `Ctrl+U`.
  * An in-memory history is available via `Up`/`Down` after entries are added
  * with `addToHistory`.
  *
- * Terminal setup (raw mode / VT sequences) is the responsibility of the
- * caller. In production, pair this class with a `RawModeTerminal` scope.
+ * Terminal setup (raw mode / VT sequences) is the responsibility of the caller.
+ * In production, pair this class with a `RawModeTerminal` scope.
  */
 class LineEditor {
 public:
   /**
-   * @brief Construct the editor with input and output streams.
-   * @param input The source of user input (typically `std::cin`).
+   * @brief Construct the editor with input and output streams and a prompt.
+   * @param input  The source of user input (typically `std::cin`).
    * @param output The sink for echoed characters and redraws (typically
    *               `std::cout`).
+   * @param prompt The prompt to display before the input area.
    */
-  LineEditor(std::istream& input, std::ostream& output);
+  LineEditor(std::istream& input, std::ostream& output,
+             std::string_view prompt);
 
   ~LineEditor() = default;
 
@@ -58,13 +60,12 @@ public:
 
   /**
    * @brief Read one line from the input stream, echoing the prompt first.
-   * @param prompt The prompt to display before the input area.
-   * @return The line entered by the user, without a trailing newline, or
-   *         `std::nullopt` if end of input was reached before any newline.
-   *         An engaged optional holding an empty string means the user
-   *         pressed Enter on an empty buffer.
+   * @returns The line entered by the user, without a trailing newline, or
+   *          `std::nullopt` if end of input was reached before any newline.
+   *          An engaged optional holding an empty string means the user
+   *          pressed Enter on an empty buffer.
    */
-  std::optional<std::string> readLine(std::string_view prompt);
+  std::optional<std::string> readLine();
 
   /**
    * @brief Add a line to the in-memory history, accessible via `Up`/`Down`.
@@ -73,8 +74,27 @@ public:
   void addToHistory(std::string_view line);
 
 private:
+  struct ReadLineState;
+
+  void redraw(const ReadLineState& state) const;
+
+  void handleBackspace(ReadLineState& state) const;
+  void handleClearLine(ReadLineState& state) const;
+  void handleDelete(ReadLineState& state) const;
+  void moveLeft(ReadLineState& state) const;
+  void moveRight(ReadLineState& state) const;
+  void moveHome(ReadLineState& state) const;
+  void moveEnd(ReadLineState& state) const;
+  void moveWordLeft(ReadLineState& state) const;
+  void moveWordRight(ReadLineState& state) const;
+  void insertChar(char c, ReadLineState& state) const;
+  void recallOlder(ReadLineState& state) const;
+  void recallNewer(ReadLineState& state) const;
+  void handleEscape(ReadLineState& state) const;
+
   std::istream& input;
   std::ostream& output;
+  std::string prompt;
   std::vector<std::string> history;
 };
 
