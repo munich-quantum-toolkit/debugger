@@ -22,13 +22,16 @@
 
 #include <algorithm>
 #include <array>
+#include <charconv>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <iostream>
+#include <memory>
 #include <set>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <utility>
 #include <vector>
 
@@ -170,10 +173,17 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
     } else if (command.starts_with("breakpoint ") ||
                command.starts_with("b ")) {
       const auto param = command.substr(command.find(' ') + 1);
-      const auto position = std::stoul(param);
-      size_t instr = 0;
-      state->setBreakpoint(state, position, &instr);
-      std::cout << "Breakpoint set at instruction " << instr << "\n";
+      const auto* const paramBegin = std::to_address(param.begin());
+      const auto* const paramEnd = std::to_address(param.end());
+      size_t position = 0;
+      const auto [ptr, ec] = std::from_chars(paramBegin, paramEnd, position);
+      if (ec != std::errc{} || ptr != paramEnd) {
+        wasError = true;
+      } else {
+        size_t instr = 0;
+        state->setBreakpoint(state, position, &instr);
+        std::cout << "Breakpoint set at instruction " << instr << "\n";
+      }
     } else if (command == "diagnose" || command == "d") {
       std::vector<ErrorCause> problems(10);
       const auto count = state->getDiagnostics(state)->potentialErrorCauses(
