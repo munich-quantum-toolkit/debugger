@@ -44,9 +44,9 @@ class LineEditor {
 public:
   /**
    * @brief Construct the editor with input and output streams and a prompt.
-   * @param input  The source of user input (typically `std::cin`).
+   * @param input The source of user input (typically `std::cin`).
    * @param output The sink for echoed characters and redraws (typically
-   *               `std::cout`).
+   * `std::cout`).
    * @param prompt The prompt to display before the input area.
    */
   LineEditor(std::istream& input, std::ostream& output,
@@ -61,10 +61,10 @@ public:
 
   /**
    * @brief Read one line from the input stream, echoing the prompt first.
-   * @returns The line entered by the user, without a trailing newline, or
-   *          `std::nullopt` if end of input was reached before any newline.
-   *          An engaged optional holding an empty string means the user
-   *          pressed Enter on an empty buffer.
+   * @return The line entered by the user, without a trailing newline, or
+   * `std::nullopt` if end of input was reached before any newline. An engaged
+   * optional holding an empty string means the user pressed Enter on an empty
+   * buffer.
    */
   std::optional<std::string> readLine();
 
@@ -86,9 +86,9 @@ public:
    * commands.
    *
    * @param csiSequence Parameter bytes followed by the final byte of the CSI
-   *                    sequence (for example `"15~"` for `F5`).
-   * @param command     The command string to auto-submit when the sequence
-   *                    is received.
+   * sequence (for example `"15~"` for `F5`).
+   * @param command The command string to auto-submit when the sequence is
+   * received.
    */
   void bindKey(std::string_view csiSequence, std::string_view command);
 

@@ -50,11 +50,11 @@ bool isSpace(char c) {
  * parameter bytes (may be empty) and `final` is a letter or `~` that
  * identifies the command.
  *
- * @param in     Input stream, positioned just after the `ESC` byte.
+ * @param in Input stream, positioned just after the `ESC` byte.
  * @param params Out parameter: parameter bytes of the sequence.
- * @param final  Out parameter: final byte of the sequence.
- * @returns true on a well-formed sequence; false if it is malformed or the
- *          stream ends mid-sequence.
+ * @param final Out parameter: final byte of the sequence.
+ * @return true on a well-formed sequence; false if it is malformed or the
+ * stream ends mid-sequence.
  */
 bool readCsi(std::istream& in, std::string& params, char& final) {
   const int next = in.get();
@@ -83,7 +83,7 @@ bool readCsi(std::istream& in, std::string& params, char& final) {
  *
  * @param buffer Input buffer to scan.
  * @param cursor Current 0-based cursor position.
- * @returns 0-based index of the start of the previous word.
+ * @return 0-based index of the start of the previous word.
  */
 std::size_t findPreviousWordStart(const std::string& buffer,
                                   std::size_t cursor) {
@@ -102,7 +102,7 @@ std::size_t findPreviousWordStart(const std::string& buffer,
  *
  * @param buffer Input buffer to scan.
  * @param cursor Current 0-based cursor position.
- * @returns 0-based index just past the end of the current or next word.
+ * @return 0-based index just past the end of the current or next word.
  */
 std::size_t findNextWordEnd(const std::string& buffer, std::size_t cursor) {
   const auto begin = buffer.begin() + static_cast<std::ptrdiff_t>(cursor);
