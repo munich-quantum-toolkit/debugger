@@ -5,6 +5,12 @@
 #
 # Licensed under the MIT License
 
+if(WIN32)
+  set(RAW_MODE_TERMINAL_SRC frontend/cli/RawModeTerminalWindows.cpp)
+else()
+  set(RAW_MODE_TERMINAL_SRC frontend/cli/RawModeTerminalPosix.cpp)
+endif()
+
 add_library(
   ${PROJECT_NAME}
   backend/dd/DDSimDebug.cpp
@@ -17,7 +23,8 @@ add_library(
   common/parsing/ParsingError.cpp
   common/parsing/Utils.cpp
   frontend/cli/CliFrontEnd.cpp
-  frontend/cli/LineEditor.cpp)
+  frontend/cli/LineEditor.cpp
+  ${RAW_MODE_TERMINAL_SRC})
 
 # set include directories
 target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/include
