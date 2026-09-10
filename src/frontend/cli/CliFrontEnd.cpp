@@ -99,40 +99,46 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
 
   const RawModeTerminal rawMode;
   LineEditor editor{std::cin, std::cout, "Enter command: "};
+  editor.bindKey("15~", "run");       // F5
+  editor.bindKey("17~", "step");      // F6
+  editor.bindKey("18~", "step over"); // F7
+  editor.bindKey("20~", "run back");  // F9
+  editor.bindKey("21~", "back");      // F10
+  editor.bindKey("23~", "back over"); // F11
 
-  while (command != "exit") {
+  while (command != "quit" && command != "q") {
     clearScreen();
     if (wasError) {
       std::cout << "Invalid command. Choose one of:\n";
-      std::cout << "run\t";
-      std::cout << "run back [rb]\t";
-      std::cout << "step [enter]\t";
-      std::cout << "step over [o]\t";
-      std::cout << "back [b]\t";
-      std::cout << "back over [bo]\t";
-      std::cout << "get <variable>\t";
-      std::cout << "reset\t";
-      std::cout << "inspect\t";
-      std::cout << "assertions\t";
-      std::cout << "exit\n\n";
+      std::cout << "run [F5]\t";
+      std::cout << "step [F6 | Enter]\t";
+      std::cout << "step over [F7]\t";
+      std::cout << "run back [F9]\t";
+      std::cout << "back [F10]\t";
+      std::cout << "back over [F11]\t";
+      std::cout << "assertions [a]\t";
+      std::cout << "breakpoint <N> [b <N>]\t";
+      std::cout << "diagnose [d]\t";
+      std::cout << "get <variable> [g <variable>]\t";
+      std::cout << "inspect [i]\t";
+      std::cout << "reset [r]\t";
+      std::cout << "state [s]\t";
+      std::cout << "quit [q]\n\n";
       wasError = false;
     }
     if (wasGet) {
+      const auto varName = command.substr(command.find(' ') + 1);
       Variable v;
-      if (state->getClassicalVariable(
-              state, command.substr(4, command.length() - 4).c_str(), &v) ==
-          ERROR) {
-        std::cout << "Variable " << command << " not found\n";
+      if (state->getClassicalVariable(state, varName.c_str(), &v) == ERROR) {
+        std::cout << "Variable " << varName << " not found\n";
       } else {
         if (v.type == VarBool) {
-          std::cout << command.substr(4, command.length() - 4) << " = "
+          std::cout << varName << " = "
                     << (v.value.boolValue ? "true" : "false") << "\n";
         } else if (v.type == VarInt) {
-          std::cout << command.substr(4, command.length() - 4) << " = "
-                    << v.value.intValue << "\n";
+          std::cout << varName << " = " << v.value.intValue << "\n";
         } else if (v.type == VarFloat) {
-          std::cout << command.substr(4, command.length() - 4) << " = "
-                    << v.value.floatValue << "\n";
+          std::cout << varName << " = " << v.value.floatValue << "\n";
         }
       }
       wasGet = false;
@@ -149,36 +155,37 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
     }
     if (command == "run") {
       state->runSimulation(state);
-    } else if (command == "run back" || command == "rb") {
+    } else if (command == "run back") {
       state->runSimulationBackward(state);
     } else if (command == "step" || command.empty()) {
       state->stepForward(state);
-    } else if (command == "step over" || command == "o") {
+    } else if (command == "step over") {
       state->stepOverForward(state);
-    } else if (command == "back" || command == "b") {
+    } else if (command == "back") {
       state->stepBackward(state);
-    } else if (command == "back over" || command == "bo") {
+    } else if (command == "back over") {
       state->stepOverBackward(state);
-    } else if (command == "reset") {
-      state->resetSimulation(state);
-    } else if (command.starts_with("get ")) {
-      wasGet = true;
-    } else if (command == "inspect") {
-      inspecting = state->getCurrentInstruction(state);
-    } else if (command == "diagnose") {
+    } else if (command == "assertions" || command == "a") {
+      suggestUpdatedAssertions(state);
+    } else if (command.starts_with("breakpoint ") ||
+               command.starts_with("b ")) {
+      const auto param = command.substr(command.find(' ') + 1);
+      const auto position = std::stoul(param);
+      size_t instr = 0;
+      state->setBreakpoint(state, position, &instr);
+      std::cout << "Breakpoint set at instruction " << instr << "\n";
+    } else if (command == "diagnose" || command == "d") {
       std::vector<ErrorCause> problems(10);
       const auto count = state->getDiagnostics(state)->potentialErrorCauses(
           state->getDiagnostics(state), problems.data(), problems.size());
       std::cout << count << " potential problems found\n";
-    } else if (command.starts_with("breakpoint")) {
-      const auto param = command.substr(11, command.length() - 11);
-      const auto breakpoint = std::stoul(param);
-      size_t instr = 0;
-      state->setBreakpoint(state, breakpoint, &instr);
-      std::cout << "Breakpoint set at instruction " << instr << "\n";
-    } else if (command == "assertions") {
-      suggestUpdatedAssertions(state);
-    } else if (command == "state") {
+    } else if (command.starts_with("get ") || command.starts_with("g ")) {
+      wasGet = true;
+    } else if (command == "inspect" || command == "i") {
+      inspecting = state->getCurrentInstruction(state);
+    } else if (command == "reset" || command == "r") {
+      state->resetSimulation(state);
+    } else if (command == "state" || command == "s") {
       for (size_t i = 0; i < 1ULL << state->getNumQubits(state); i++) {
         Complex c;
         state->getAmplitudeIndex(state, i, &c);

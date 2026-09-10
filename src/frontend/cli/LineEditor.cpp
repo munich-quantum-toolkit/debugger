@@ -140,6 +140,10 @@ struct LineEditor::ReadLineState {
   /// call. Restored when Down navigates past the newest history entry, so the
   /// text the user was typing before entering history is not lost.
   std::string savedTypedBuffer;
+
+  /// Set to `true` by a bound-key handler to request that `readLine` return
+  /// immediately with `buffer` as the result, without waiting for Enter.
+  bool submitted{false};
 };
 
 LineEditor::LineEditor(std::istream& in, std::ostream& out, std::string_view p)
@@ -298,10 +302,23 @@ void LineEditor::handleEscape(ReadLineState& state) const {
 
   if (params == "3" && final == '~') { // Delete
     handleDelete(state);
-  } else if (params == "1;5" && final == 'D') { // Ctrl+Left
+    return;
+  }
+  if (params == "1;5" && final == 'D') { // Ctrl+Left
     moveWordLeft(state);
-  } else if (params == "1;5" && final == 'C') { // Ctrl+Right
+    return;
+  }
+  if (params == "1;5" && final == 'C') { // Ctrl+Right
     moveWordRight(state);
+    return;
+  }
+
+  // Check the user-installed bindings (function keys, ...).
+  const std::string key = params + final;
+  if (const auto it = keyBindings.find(key); it != keyBindings.end()) {
+    state.buffer = it->second;
+    state.cursor = state.buffer.size();
+    state.submitted = true;
   }
 }
 
@@ -336,6 +353,11 @@ std::optional<std::string> LineEditor::readLine() {
 
     if (c == ESC) {
       handleEscape(state);
+      if (state.submitted) {
+        output << '\n';
+        output.flush();
+        return state.buffer;
+      }
       continue;
     }
 
@@ -345,6 +367,11 @@ std::optional<std::string> LineEditor::readLine() {
 
 void LineEditor::addToHistory(std::string_view line) {
   history.emplace_back(line);
+}
+
+void LineEditor::bindKey(std::string_view csiSequence,
+                         std::string_view command) {
+  keyBindings.emplace(csiSequence, command);
 }
 
 } // namespace mqt::debugger

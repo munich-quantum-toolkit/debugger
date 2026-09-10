@@ -175,4 +175,36 @@ TEST(LineEditorTest, DownArrowBeyondNewestReturnsToTypedBuffer) {
   EXPECT_EQ(editor.readLine(), "typed");
 }
 
+//
+// Key bindings (function keys)
+//
+
+TEST(LineEditorTest, BoundKeyAutoSubmitsWithoutEnter) {
+  // F5 is CSI 15~; no Enter is sent.
+  std::stringstream input("\x1b[15~");
+  std::stringstream output;
+  LineEditor editor{input, output, DEFAULT_PROMPT};
+  editor.bindKey("15~", "run");
+  EXPECT_EQ(editor.readLine(), "run");
+}
+
+TEST(LineEditorTest, BoundKeyReplacesTypedBuffer) {
+  // User types "get x" then presses F5, which is bound to "run".
+  std::stringstream input("get x\x1b[15~");
+  std::stringstream output;
+  LineEditor editor{input, output, DEFAULT_PROMPT};
+  editor.bindKey("15~", "run");
+  EXPECT_EQ(editor.readLine(), "run");
+}
+
+TEST(LineEditorTest, UnboundCsiSequenceIsIgnored) {
+  // F1 (CSI 11~) has no binding, so the editor keeps waiting;
+  // the "hi\n" that follows is what actually terminates the line.
+  std::stringstream input("\x1b[11~hi\n");
+  std::stringstream output;
+  LineEditor editor{input, output, DEFAULT_PROMPT};
+  editor.bindKey("15~", "run"); // unrelated binding, must not fire on F1
+  EXPECT_EQ(editor.readLine(), "hi");
+}
+
 } // namespace mqt::debugger::test
