@@ -29,6 +29,7 @@
 #include <iostream>
 #include <memory>
 #include <set>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -59,6 +60,24 @@ void clearScreen() {
   std::cout << "\033[2J\033[1;1H";
 }
 
+/// @brief On-error help line listing every command with its shortcut.
+constexpr std::string_view USAGE_TEXT = "Invalid command. "
+                                        "Choose one of:\n"
+                                        "run [F5]\t"
+                                        "step [F6 | Enter]\t"
+                                        "step over [F7]\t"
+                                        "run back [F9]\t"
+                                        "back [F10]\t"
+                                        "back over [F11]\t"
+                                        "assertions [a]\t"
+                                        "breakpoint <N> [b <N>]\t"
+                                        "diagnose [d]\t"
+                                        "get <variable> [g <variable>]\t"
+                                        "inspect [i]\t"
+                                        "reset [r]\t"
+                                        "state [s]\t"
+                                        "quit [q]\n";
+
 /**
  * @brief Get all possible bit strings for a given number of qubits.
  * @param numQubits The number of qubits.
@@ -83,7 +102,6 @@ void CliFrontEnd::initCode(const char* code) { currentCode = code; }
 void CliFrontEnd::run(const char* code, SimulationState* state) {
   initCode(code);
 
-  std::string command;
   const auto result = state->loadCode(state, code);
   state->resetSimulation(state);
   if (result.status != LOAD_OK) {
@@ -96,10 +114,6 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
     return;
   }
 
-  bool wasError = false;
-  bool wasGet = false;
-  size_t inspecting = -1ULL;
-
   const RawModeTerminal rawMode;
   LineEditor editor{std::cin, std::cout, "Enter command: "};
   editor.bindKey("15~", "run");       // F5
@@ -109,42 +123,16 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
   editor.bindKey("21~", "back");      // F10
   editor.bindKey("23~", "back over"); // F11
 
+  std::string command;
+  std::string response;
+  size_t inspecting = -1ULL;
+
   while (command != "quit" && command != "q") {
     clearScreen();
-    if (wasError) {
-      std::cout << "Invalid command. Choose one of:\n";
-      std::cout << "run [F5]\t";
-      std::cout << "step [F6 | Enter]\t";
-      std::cout << "step over [F7]\t";
-      std::cout << "run back [F9]\t";
-      std::cout << "back [F10]\t";
-      std::cout << "back over [F11]\t";
-      std::cout << "assertions [a]\t";
-      std::cout << "breakpoint <N> [b <N>]\t";
-      std::cout << "diagnose [d]\t";
-      std::cout << "get <variable> [g <variable>]\t";
-      std::cout << "inspect [i]\t";
-      std::cout << "reset [r]\t";
-      std::cout << "state [s]\t";
-      std::cout << "quit [q]\n\n";
-      wasError = false;
-    }
-    if (wasGet) {
-      const auto varName = command.substr(command.find(' ') + 1);
-      Variable v;
-      if (state->getClassicalVariable(state, varName.c_str(), &v) == ERROR) {
-        std::cout << "Variable " << varName << " not found\n";
-      } else {
-        if (v.type == VarBool) {
-          std::cout << varName << " = "
-                    << (v.value.boolValue ? "true" : "false") << "\n";
-        } else if (v.type == VarInt) {
-          std::cout << varName << " = " << v.value.intValue << "\n";
-        } else if (v.type == VarFloat) {
-          std::cout << varName << " = " << v.value.floatValue << "\n";
-        }
-      }
-      wasGet = false;
+
+    if (!response.empty()) {
+      std::cout << response << "\n";
+      response.clear();
     }
     printState(state, inspecting, state->getNumQubits(state) >= 7);
 
@@ -178,32 +166,45 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
       size_t position = 0;
       const auto [ptr, ec] = std::from_chars(paramBegin, paramEnd, position);
       if (ec != std::errc{} || ptr != paramEnd) {
-        wasError = true;
+        response = "Invalid breakpoint position: " + param;
       } else {
         size_t instr = 0;
         state->setBreakpoint(state, position, &instr);
-        std::cout << "Breakpoint set at instruction " << instr << "\n";
+        response = "Breakpoint set at instruction " + std::to_string(instr);
       }
     } else if (command == "diagnose" || command == "d") {
       std::vector<ErrorCause> problems(10);
       const auto count = state->getDiagnostics(state)->potentialErrorCauses(
           state->getDiagnostics(state), problems.data(), problems.size());
-      std::cout << count << " potential problems found\n";
+      response = std::to_string(count) + " potential problems found";
     } else if (command.starts_with("get ") || command.starts_with("g ")) {
-      wasGet = true;
+      const auto varName = command.substr(command.find(' ') + 1);
+      Variable v;
+      std::ostringstream oss;
+      if (state->getClassicalVariable(state, varName.c_str(), &v) == ERROR) {
+        oss << "Variable " << varName << " not found";
+      } else if (v.type == VarBool) {
+        oss << std::boolalpha << varName << " = " << v.value.boolValue;
+      } else if (v.type == VarInt) {
+        oss << varName << " = " << v.value.intValue;
+      } else if (v.type == VarFloat) {
+        oss << varName << " = " << v.value.floatValue;
+      }
+      response = oss.str();
     } else if (command == "inspect" || command == "i") {
       inspecting = state->getCurrentInstruction(state);
     } else if (command == "reset" || command == "r") {
       state->resetSimulation(state);
     } else if (command == "state" || command == "s") {
+      std::ostringstream oss;
       for (size_t i = 0; i < 1ULL << state->getNumQubits(state); i++) {
         Complex c;
         state->getAmplitudeIndex(state, i, &c);
-        std::cout << c.real << " + " << c.imaginary << "i\n";
+        oss << c.real << " + " << c.imaginary << "i\n";
       }
-      LineEditor{std::cin, std::cout, "Press Enter to continue: "}.readLine();
+      response = oss.str();
     } else {
-      wasError = true;
+      response = USAGE_TEXT;
     }
   }
 }
