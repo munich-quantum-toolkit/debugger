@@ -16,6 +16,7 @@
 #pragma once
 
 #include <istream>
+#include <map>
 #include <optional>
 #include <ostream>
 #include <string>
@@ -73,6 +74,24 @@ public:
    */
   void addToHistory(std::string_view line);
 
+  /**
+   * @brief Bind a CSI escape sequence to a command string.
+   *
+   * When the terminal delivers a CSI sequence whose parameter bytes and final
+   * byte match the ones registered here, `readLine` replaces the current buffer
+   * with @p command and returns immediately, as if the user had typed
+   * @p command and pressed Enter.
+   *
+   * Typical use is binding function keys (`F5`, `F6`, ...) to debugger
+   * commands.
+   *
+   * @param csiSequence Parameter bytes followed by the final byte of the CSI
+   *                    sequence (for example `"15~"` for `F5`).
+   * @param command     The command string to auto-submit when the sequence
+   *                    is received.
+   */
+  void bindKey(std::string_view csiSequence, std::string_view command);
+
 private:
   struct ReadLineState;
 
@@ -96,6 +115,7 @@ private:
   std::ostream& output;
   std::string prompt;
   std::vector<std::string> history;
+  std::map<std::string, std::string> keyBindings;
 };
 
 } // namespace mqt::debugger
