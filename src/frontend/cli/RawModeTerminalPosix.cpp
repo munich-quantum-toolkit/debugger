@@ -13,6 +13,8 @@
  * @brief POSIX implementation of `RawModeTerminal` using `termios`.
  */
 
+#ifndef _WIN32
+
 #include "frontend/cli/RawModeTerminal.hpp"
 
 #include <memory>
@@ -74,3 +76,5 @@ RawModeTerminal::~RawModeTerminal() {
 }
 
 } // namespace mqt::debugger
+
+#endif // !_WIN32
