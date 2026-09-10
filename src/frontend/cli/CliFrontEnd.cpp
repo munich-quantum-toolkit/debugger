@@ -17,6 +17,8 @@
 #include "backend/debug.h"
 #include "backend/diagnostics.h"
 #include "common.h"
+#include "frontend/cli/LineEditor.hpp"
+#include "frontend/cli/RawModeTerminal.hpp"
 
 #include <algorithm>
 #include <array>
@@ -27,6 +29,7 @@
 #include <set>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace mqt::debugger {
@@ -94,6 +97,9 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
   bool wasGet = false;
   size_t inspecting = -1ULL;
 
+  const RawModeTerminal rawMode;
+  LineEditor editor{std::cin, std::cout, "Enter command: "};
+
   while (command != "exit") {
     clearScreen();
     if (wasError) {
@@ -133,8 +139,14 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
     }
     printState(state, inspecting, state->getNumQubits(state) >= 7);
 
-    std::cout << "Enter command: ";
-    std::getline(std::cin, command);
+    auto line = editor.readLine();
+    if (!line.has_value()) {
+      break;
+    }
+    command = std::move(*line);
+    if (!command.empty()) {
+      editor.addToHistory(command);
+    }
     if (command == "run") {
       state->runSimulation(state);
     } else if (command == "run back" || command == "rb") {
@@ -172,7 +184,7 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
         state->getAmplitudeIndex(state, i, &c);
         std::cout << c.real << " + " << c.imaginary << "i\n";
       }
-      std::cin >> command;
+      LineEditor{std::cin, std::cout, "Press Enter to continue: "}.readLine();
     } else {
       wasError = true;
     }
@@ -250,9 +262,9 @@ void CliFrontEnd::suggestUpdatedAssertions(SimulationState* state) {
 
   state->resetSimulation(state);
 
-  std::cout << "Accept? [y/n]: ";
-  std::string command;
-  std::getline(std::cin, command);
+  LineEditor confirmEditor{std::cin, std::cout, "Accept? [y/n]: "};
+  const auto reply = confirmEditor.readLine();
+  const std::string command = reply.value_or("");
 
   if (command == "y") {
     currentCode = newCode;
