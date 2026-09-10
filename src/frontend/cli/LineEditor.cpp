@@ -57,8 +57,7 @@ bool isSpace(char c) {
  * stream ends mid-sequence.
  */
 bool readCsi(std::istream& in, std::string& params, char& final) {
-  const int next = in.get();
-  if (next != '[') {
+  if (const int next = in.get(); next != '[') {
     return false;
   }
   params.clear();
@@ -238,11 +237,11 @@ void LineEditor::recallOlder(ReadLineState& state) const {
   if (!state.historyIndex.has_value()) {
     state.savedTypedBuffer = state.buffer;
     state.historyIndex = history.size() - 1;
-    state.buffer = history[*state.historyIndex];
   } else if (*state.historyIndex > 0) {
     --*state.historyIndex;
-    state.buffer = history[*state.historyIndex];
   }
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
+  state.buffer = history[*state.historyIndex];
   state.cursor = state.buffer.size();
   redraw(state);
 }
@@ -256,6 +255,7 @@ void LineEditor::recallNewer(ReadLineState& state) const {
   }
   if (*state.historyIndex + 1 < history.size()) {
     ++*state.historyIndex;
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-avoid-unchecked-container-access)
     state.buffer = history[*state.historyIndex];
   } else {
     state.historyIndex.reset();
@@ -322,7 +322,7 @@ void LineEditor::handleEscape(ReadLineState& state) const {
   }
 }
 
-std::optional<std::string> LineEditor::readLine() {
+std::optional<std::string> LineEditor::readLine() const {
   output << prompt;
   output.flush();
 

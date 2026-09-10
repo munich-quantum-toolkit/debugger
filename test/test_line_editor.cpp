@@ -39,7 +39,7 @@ readLineWith(const std::string& inputBytes,
              std::string_view prompt = DEFAULT_PROMPT) {
   std::stringstream input(inputBytes);
   std::stringstream output;
-  LineEditor editor{input, output, prompt};
+  const LineEditor editor{input, output, prompt};
   return editor.readLine();
 }
 
@@ -68,8 +68,8 @@ TEST(LineEditorTest, NulloptOnEof) {
 TEST(LineEditorTest, WritesPromptToOutput) {
   std::stringstream input("hello\n");
   std::stringstream output;
-  LineEditor editor{input, output, DEFAULT_PROMPT};
-  editor.readLine();
+  const LineEditor editor{input, output, DEFAULT_PROMPT};
+  static_cast<void>(editor.readLine());
   EXPECT_TRUE(output.str().starts_with(DEFAULT_PROMPT));
 }
 

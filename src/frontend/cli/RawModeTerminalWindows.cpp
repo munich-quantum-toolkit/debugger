@@ -13,6 +13,8 @@
  * @brief Windows implementation of `RawModeTerminal` using `SetConsoleMode`.
  */
 
+#ifdef _WIN32
+
 #include "frontend/cli/RawModeTerminal.hpp"
 
 #include <memory>
@@ -80,3 +82,5 @@ RawModeTerminal::~RawModeTerminal() {
 }
 
 } // namespace mqt::debugger
+
+#endif // _WIN32

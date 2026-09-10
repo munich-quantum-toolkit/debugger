@@ -15,10 +15,9 @@
 
 #pragma once
 
-#include <istream>
+#include <iosfwd>
 #include <map>
 #include <optional>
-#include <ostream>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -66,7 +65,7 @@ public:
    * optional holding an empty string means the user pressed Enter on an empty
    * buffer.
    */
-  std::optional<std::string> readLine();
+  [[nodiscard]] std::optional<std::string> readLine() const;
 
   /**
    * @brief Add a line to the in-memory history, accessible via `Up`/`Down`.
