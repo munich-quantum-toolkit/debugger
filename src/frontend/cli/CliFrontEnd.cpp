@@ -30,6 +30,7 @@
 #include <iostream>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <ranges>
 #include <set>
 #include <sstream>
@@ -123,6 +124,47 @@ std::string addLineNumbers(std::string_view text) {
 }
 
 /**
+ * @brief Return the character offset of the start of a given line in @p code.
+ *
+ * Used to translate the user-facing line number of `breakpoint <N>` into the
+ * character-offset position that the simulator's `setBreakpoint` API expects.
+ *
+ * @param code The source code to scan.
+ * @param lineNumber 1-based line number to look up.
+ * @return The 0-based character offset of the start of the requested line.
+ * Or `std::nullopt` if the line number is out of range.
+ */
+std::optional<size_t> lineToCharOffset(std::string_view code,
+                                       size_t lineNumber) {
+  if (lineNumber == 0) {
+    return std::nullopt;
+  }
+  size_t currentLine = 1;
+  for (const auto& line : code | std::views::split('\n')) {
+    if (currentLine == lineNumber) {
+      return static_cast<size_t>(line.begin() - code.begin());
+    }
+    ++currentLine;
+  }
+  return std::nullopt;
+}
+
+/**
+ * @brief Return the 1-based line number that contains @p offset in @p code.
+ *
+ * Used to translate the character offset the simulator reports for a breakpoint
+ * back into a user-facing line number. Inverse of `lineToCharOffset`.
+ *
+ * @param code The source code to scan.
+ * @param offset A 0-based character offset into @p code.
+ * @return The 1-based line number containing @p offset.
+ */
+size_t charOffsetToLine(std::string_view code, size_t offset) {
+  const auto prefix = code.substr(0, std::min(offset, code.size()));
+  return static_cast<size_t>(std::ranges::count(prefix, '\n')) + 1;
+}
+
+/**
  * @brief Get all possible bit strings for a given number of qubits.
  * @param numQubits The number of qubits.
  * @return The list of bit strings.
@@ -159,7 +201,7 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
   }
 
   const RawModeTerminal rawMode;
-  LineEditor editor{std::cin, std::cout, "Enter command: "};
+  LineEditor editor{std::cin, std::cout, "$ "};
   editor.bindKey("15~", "run");       // F5
   editor.bindKey("17~", "step");      // F6
   editor.bindKey("18~", "step over"); // F7
@@ -207,14 +249,21 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
       const auto param = command.substr(command.find(' ') + 1);
       const auto* const paramBegin = std::to_address(param.begin());
       const auto* const paramEnd = std::to_address(param.end());
-      size_t position = 0;
-      const auto [ptr, ec] = std::from_chars(paramBegin, paramEnd, position);
+      size_t lineNumber = 0;
+      const auto [ptr, ec] = std::from_chars(paramBegin, paramEnd, lineNumber);
       if (ec != std::errc{} || ptr != paramEnd) {
-        response = "Invalid breakpoint position: " + param;
+        response = "Invalid breakpoint line: " + param;
+      } else if (const auto offset = lineToCharOffset(currentCode, lineNumber);
+                 !offset.has_value()) {
+        response = "Line number out of range: " + param;
       } else {
         size_t instr = 0;
-        state->setBreakpoint(state, position, &instr);
-        response = "Breakpoint set at instruction " + std::to_string(instr);
+        state->setBreakpoint(state, *offset, &instr);
+        size_t start = 0;
+        size_t end = 0;
+        state->getInstructionPosition(state, instr, &start, &end);
+        const auto bpLine = charOffsetToLine(currentCode, start);
+        response = "Breakpoint set at line " + std::to_string(bpLine);
       }
     } else if (command == "diagnose" || command == "d") {
       std::vector<ErrorCause> problems(10);
@@ -400,17 +449,57 @@ void CliFrontEnd::printState(SimulationState* state, size_t inspecting,
   std::cout << addLineNumbers(code.str());
 
   if (!codeOnly) {
-    const auto bitStrings = getBitStrings(state->getNumQubits(state));
-    Complex c;
-    for (const auto& bitString : bitStrings) {
-      state->getAmplitudeBitstring(state, bitString.c_str(), &c);
-      std::cout << bitString << " " << c.real << "\t||\t";
-    }
-    std::cout << "\n";
+    printAmplitudes(state);
   }
   if (state->didAssertionFail(state)) {
     std::cout << "THIS LINE FAILED AN ASSERTION\n";
   }
+}
+
+void CliFrontEnd::printAmplitudes(SimulationState* state) {
+  const auto bitStrings = getBitStrings(state->getNumQubits(state));
+
+  std::vector<std::string> amplitudes;
+  amplitudes.reserve(bitStrings.size());
+  for (const auto& bitString : bitStrings) {
+    Complex c;
+    state->getAmplitudeBitstring(state, bitString.c_str(), &c);
+    std::ostringstream oss;
+    oss << c.real;
+    amplitudes.push_back(oss.str());
+  }
+
+  std::vector<size_t> widths;
+  widths.reserve(bitStrings.size());
+  std::ranges::transform(bitStrings, amplitudes, std::back_inserter(widths),
+                         [](const auto& bitString, const auto& amplitude) {
+                           return std::max(bitString.size(), amplitude.size());
+                         });
+
+  constexpr std::string_view labelQubit = "Qubit";
+  constexpr std::string_view labelAmpl = "Amplitudes";
+  const auto labelWidth =
+      static_cast<int>(std::max(labelQubit.size(), labelAmpl.size()));
+
+  // Row 1: "Qubit" label (white chip) + bitstrings (light-blue chips).
+  std::cout << "\x1b[47m\x1b[30m \x1b[1m" << std::setw(labelWidth) << labelQubit
+            << "\x1b[22m \x1b[0m";
+  for (size_t i = 0; i < bitStrings.size(); ++i) {
+    std::cout << "\x1b[48;5;153m\x1b[30m" << (i > 0 ? "|" : "") << " "
+              << std::setw(static_cast<int>(widths[i])) << bitStrings[i]
+              << " \x1b[0m";
+  }
+  std::cout << "\n";
+
+  // Row 2: "Amplitudes" label (white chip) + values (dark-blue chips).
+  std::cout << "\x1b[47m\x1b[30m \x1b[1m" << std::setw(labelWidth) << labelAmpl
+            << "\x1b[22m \x1b[0m";
+  for (size_t i = 0; i < bitStrings.size(); ++i) {
+    std::cout << "\x1b[44m\x1b[97m" << (i > 0 ? "|" : "") << " "
+              << std::setw(static_cast<int>(widths[i])) << amplitudes[i]
+              << " \x1b[0m";
+  }
+  std::cout << "\n";
 }
 
 } // namespace mqt::debugger
