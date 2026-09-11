@@ -260,6 +260,84 @@ TEST_F(CustomCodeTest, IfElseOperationBackwardStep) {
 }
 
 /**
+ * @test Test classic-controlled operations that use a bare classical register
+ * as the condition (no explicit comparator).
+ * The measured value of `c` is 1, so `if (c)` triggers and `x q[1]` is applied.
+ */
+TEST_F(CustomCodeTest, IfElseOperationBareRegisterTrue) {
+  loadCode(2, 1,
+           "x q[0];"
+           "cx q[0], q[1];"
+           "measure q[0] -> c[0];"
+           "if(c) x q[1];");
+  ASSERT_EQ(state->runSimulation(state), OK);
+
+  std::array<Complex, 4> amplitudes{};
+  Statevector sv{2, 4, amplitudes.data()};
+  state->getStateVectorFull(state, &sv);
+  // q[0] = 1, q[1] = 0 after the `if` flips q[1] from 1 to 0.
+  ASSERT_TRUE(complexEquality(amplitudes[1], 1, 0.0));
+}
+
+/**
+ * @test Same as `IfElseOperationBareRegisterTrue` but with the measurement
+ * producing 0, so `if (c)` does not trigger.
+ */
+TEST_F(CustomCodeTest, IfElseOperationBareRegisterFalse) {
+  loadCode(2, 1,
+           "measure q[0] -> c[0];"
+           "if(c) x q[1];");
+  ASSERT_EQ(state->runSimulation(state), OK);
+
+  std::array<Complex, 4> amplitudes{};
+  Statevector sv{2, 4, amplitudes.data()};
+  state->getStateVectorFull(state, &sv);
+  // Both qubits stay at |0>; the `if` is skipped.
+  ASSERT_TRUE(complexEquality(amplitudes[0], 1, 0.0));
+}
+
+/**
+ * @test Same as `IfElseOperationBareRegisterTrue` but using a single-bit
+ * reference (`c[0]`) as the bare condition.
+ */
+TEST_F(CustomCodeTest, IfElseOperationBareBit) {
+  loadCode(2, 1,
+           "x q[0];"
+           "cx q[0], q[1];"
+           "measure q[0] -> c[0];"
+           "if(c[0]) x q[1];");
+  ASSERT_EQ(state->runSimulation(state), OK);
+
+  std::array<Complex, 4> amplitudes{};
+  Statevector sv{2, 4, amplitudes.data()};
+  state->getStateVectorFull(state, &sv);
+  ASSERT_TRUE(complexEquality(amplitudes[1], 1, 0.0));
+}
+
+/**
+ * @test Exercise the backward-execution branch for a bare-register condition.
+ * Stepping back should undo the `x q[1]` that fired on the forward pass.
+ */
+TEST_F(CustomCodeTest, IfElseOperationBareRegisterBackwardStep) {
+  loadCode(2, 1,
+           "x q[0];"
+           "cx q[0], q[1];"
+           "measure q[0] -> c[0];"
+           "if(c) x q[1];");
+  ASSERT_EQ(state->runSimulation(state), OK);
+
+  std::array<Complex, 4> amplitudes{};
+  Statevector sv{2, 4, amplitudes.data()};
+  state->getStateVectorFull(state, &sv);
+  ASSERT_TRUE(complexEquality(amplitudes[1], 1, 0.0));
+
+  ASSERT_EQ(state->stepBackward(state), OK);
+  state->getStateVectorFull(state, &sv);
+  // Undoing the `if(c) x q[1]` restores q[0] = 1, q[1] = 1, i.e. index 3.
+  ASSERT_TRUE(complexEquality(amplitudes[3], 1, 0.0));
+}
+
+/**
  * @test Test the `reset` instruction.
  */
 TEST_F(CustomCodeTest, ResetGate) {

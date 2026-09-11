@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <charconv>
 #include <cstddef>
 #include <exception>
 #include <iterator>
@@ -30,9 +31,9 @@
 #include <memory>
 #include <optional>
 #include <sstream>
-#include <stdexcept>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <utility>
 #include <vector>
 
@@ -51,6 +52,71 @@ bool isDigits(const std::string& text) {
   }
   return std::ranges::all_of(
       text, [](unsigned char c) { return std::isdigit(c) != 0; });
+}
+
+/**
+ * @brief Parse the entire text as an unsigned integer.
+ *
+ * The text must contain only characters accepted by `std::from_chars` for the
+ * target type (digits, no leading sign, no whitespace, no trailing garbage).
+ * Anything else, including partial matches, fails.
+ * @param text The text to parse.
+ * @return The parsed value, or `std::nullopt` if parsing fails or does not
+ *         consume the whole input.
+ */
+std::optional<size_t> parseUnsignedInt(std::string_view text) {
+  size_t value = 0;
+  const char* const begin = std::to_address(text.begin());
+  const char* const end = std::to_address(text.end());
+  const auto result = std::from_chars(begin, end, value);
+  if (result.ec != std::errc{} || result.ptr != end) {
+    return std::nullopt;
+  }
+  return value;
+}
+
+/**
+ * @brief A reference to a register, or to a single element within a register.
+ *
+ * `index` can hold the following values:
+ * - `std::nullopt`, when the reference targets the whole register (`c`, `q`).
+ * - the position within the register, when the reference targets a single
+ *   element (`c[k]`, `q[k]`).
+ */
+struct RegisterRef {
+  std::string name;
+  std::optional<size_t> index;
+};
+
+/**
+ * @brief Parse a register reference from the given text.
+ *
+ * Accepts either the bare register name (`c`, `q`), which resolves to
+ * `{name = "c", index = std::nullopt}` and targets the whole register,
+ * or the indexed form (`c[k]`), which resolves to a single-element reference.
+ * @param text The already-trimmed text to parse.
+ * @return The parsed reference, or `std::nullopt` if the shape is invalid.
+ */
+std::optional<RegisterRef> parseRegisterRef(const std::string& text) {
+  if (text.empty()) {
+    return std::nullopt;
+  }
+  const auto bracketPos = text.find('[');
+  if (bracketPos == std::string::npos) {
+    return RegisterRef{.name = text, .index = std::nullopt};
+  }
+  const auto closePos = text.find(']', bracketPos + 1);
+  if (bracketPos == 0 || closePos == std::string::npos ||
+      closePos != text.size() - 1) {
+    return std::nullopt;
+  }
+  auto base = text.substr(0, bracketPos);
+  const auto indexText = text.substr(bracketPos + 1, closePos - bracketPos - 1);
+
+  if (const auto index = parseUnsignedInt(indexText); index.has_value()) {
+    return RegisterRef{.name = std::move(base), .index = index};
+  }
+  return std::nullopt;
 }
 
 /**
@@ -173,37 +239,20 @@ void validateTargets(const std::string& code, size_t instructionStart,
       detail += ".";
       throw makeParseError(code, instructionStart, detail);
     }
-    const auto open = target.find('[');
-    if (open == std::string::npos) {
+    const auto ref = parseRegisterRef(target);
+    if (!ref.has_value()) {
+      throw makeParseError(code, instructionStart,
+                           invalidTargetDetail(target, context), target);
+    }
+    if (!ref->index.has_value()) {
       continue;
     }
-    const auto close = target.find(']', open + 1);
-    if (open == 0 || close == std::string::npos || close != target.size() - 1) {
-      throw makeParseError(code, instructionStart,
-                           invalidTargetDetail(target, context), target);
-    }
-    const auto registerName = target.substr(0, open);
-    const auto indexText = target.substr(open + 1, close - open - 1);
-    if (!isDigits(indexText)) {
-      throw makeParseError(code, instructionStart,
-                           invalidTargetDetail(target, context), target);
-    }
-    size_t registerIndex = 0;
-    try {
-      registerIndex = std::stoul(indexText);
-    } catch (const std::invalid_argument&) {
-      throw makeParseError(code, instructionStart,
-                           invalidTargetDetail(target, context), target);
-    } catch (const std::out_of_range&) {
-      throw makeParseError(code, instructionStart,
-                           invalidTargetDetail(target, context), target);
-    }
-    if (std::ranges::find(shadowedRegisters, registerName) !=
+    if (std::ranges::find(shadowedRegisters, ref->name) !=
         shadowedRegisters.end()) {
       continue;
     }
-    const auto found = definedRegisters.find(registerName);
-    if (found == definedRegisters.end() || found->second <= registerIndex) {
+    const auto found = definedRegisters.find(ref->name);
+    if (found == definedRegisters.end() || found->second <= *ref->index) {
       throw makeParseError(code, instructionStart,
                            invalidTargetDetail(target, context), target);
     }
@@ -409,11 +458,6 @@ ClassicControlledGate parseClassicControlledGate(const std::string& code) {
 
 std::optional<ClassicCondition>
 parseClassicConditionExpression(const std::string& condition) {
-  auto normalized = removeWhitespace(condition);
-  if (!normalized.empty() && normalized.front() == '(') {
-    normalized.erase(0, 1);
-  }
-
   // Operators must be scanned longest-first so that "<=" is not misread as "<".
   struct OperatorMatch {
     std::string_view text;
@@ -429,6 +473,17 @@ parseClassicConditionExpression(const std::string& condition) {
       {.text = ">", .kind = qc::Gt},
   }};
 
+  auto normalized = removeWhitespace(condition);
+  if (!normalized.empty() && normalized.front() == '(') {
+    normalized.erase(0, 1);
+  }
+
+  // Default values for the bare form (`c`, `c[k]`): implicit `!= 0`.
+  std::string operand{normalized};
+  size_t expected = 0;
+  qc::ComparisonKind kind = qc::Neq;
+
+  // Comparator form (`c` <op> integer).
   std::optional<OperatorMatch> match;
   for (const auto& op : OPERATORS) {
     if (normalized.find(op.text) != std::string::npos) {
@@ -436,59 +491,29 @@ parseClassicConditionExpression(const std::string& condition) {
       break;
     }
   }
-  if (!match.has_value()) {
-    return std::nullopt;
-  }
-  const auto opPos = normalized.find(match->text);
-  const auto lhs = normalized.substr(0, opPos);
-  const auto rhs = normalized.substr(opPos + match->text.size());
-  if (lhs.empty() || rhs.empty()) {
-    return std::nullopt;
+  if (match.has_value()) {
+    const auto opPos = normalized.find(match->text);
+    const auto lhs = normalized.substr(0, opPos);
+    const auto rhs = normalized.substr(opPos + match->text.size());
+    if (lhs.empty() || rhs.empty()) {
+      return std::nullopt;
+    }
+    const auto parsed = parseUnsignedInt(rhs);
+    if (!parsed.has_value()) {
+      return std::nullopt;
+    }
+    expected = *parsed;
+    operand = lhs;
+    kind = match->kind;
   }
 
-  if (!isDigits(rhs)) {
-    return std::nullopt;
-  }
-  size_t expected = 0;
-  try {
-    expected = std::stoull(rhs);
-  } catch (const std::invalid_argument&) {
-    return std::nullopt;
-  } catch (const std::out_of_range&) {
-    return std::nullopt;
-  }
-
-  const auto bracketPos = lhs.find('[');
-  if (bracketPos != std::string::npos) {
-    const auto closePos = lhs.find(']', bracketPos + 1);
-    if (bracketPos == 0 || closePos == std::string::npos ||
-        closePos != lhs.size() - 1) {
-      return std::nullopt;
-    }
-    const auto base = lhs.substr(0, bracketPos);
-    const auto indexText =
-        lhs.substr(bracketPos + 1, closePos - bracketPos - 1);
-    if (!isDigits(indexText)) {
-      return std::nullopt;
-    }
-    size_t bitIndex = 0;
-    try {
-      bitIndex = std::stoull(indexText);
-    } catch (const std::invalid_argument&) {
-      return std::nullopt;
-    } catch (const std::out_of_range&) {
-      return std::nullopt;
-    }
-    return ClassicCondition{.registerName = base,
-                            .bitIndex = bitIndex,
+  if (const auto ref = parseRegisterRef(operand); ref.has_value()) {
+    return ClassicCondition{.registerName = ref->name,
+                            .bitIndex = ref->index,
                             .expectedValue = expected,
-                            .kind = match->kind};
+                            .kind = kind};
   }
-
-  return ClassicCondition{.registerName = lhs,
-                          .bitIndex = std::nullopt,
-                          .expectedValue = expected,
-                          .kind = match->kind};
+  return std::nullopt;
 }
 
 std::optional<ClassicCondition>
