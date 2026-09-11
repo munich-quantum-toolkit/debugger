@@ -22,6 +22,7 @@
 
 namespace mqt::debugger {
 
+/// @brief Platform-specific state stored via PIMPL; restored on destruction.
 struct RawModeTerminal::Impl {
   HANDLE hIn{INVALID_HANDLE_VALUE};
   HANDLE hOut{INVALID_HANDLE_VALUE};

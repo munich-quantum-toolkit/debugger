@@ -31,7 +31,8 @@ namespace mqt::debugger {
  * (so ANSI escape sequences emitted by the program are honoured).
  *
  * Output processing (line-ending conversion) is left untouched, so the rest
- * of the program can keep using `std::cout << '\n'` without emitting `\r`.
+ * of the program can keep using `std::cout` with a newline without emitting
+ * a carriage return.
  *
  * If stdin is not attached to a real terminal (e.g., redirected from a file
  * or a pipe), construction is a no-op and destruction restores nothing.
