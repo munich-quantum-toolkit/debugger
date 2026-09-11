@@ -23,6 +23,7 @@
 
 namespace mqt::debugger {
 
+/// @brief Platform-specific state stored via PIMPL; restored on destruction.
 struct RawModeTerminal::Impl {
   /// File descriptor put into raw mode; -1 means "no changes to restore".
   int fd{-1};
