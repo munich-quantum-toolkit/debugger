@@ -63,23 +63,36 @@ void clearScreen() {
   std::cout << "\033[2J\033[1;1H";
 }
 
-/// @brief On-error help line listing every command with its shortcut.
-constexpr std::string_view USAGE_TEXT = "Invalid command. "
-                                        "Choose one of:\n"
-                                        "run [F5]\t"
-                                        "step [F6 | Enter]\t"
-                                        "step over [F7]\t"
-                                        "run back [F9]\t"
-                                        "back [F10]\t"
-                                        "back over [F11]\t"
-                                        "assertions [a]\t"
-                                        "breakpoint <N> [b <N>]\t"
-                                        "diagnose [d]\t"
-                                        "get <variable> [g <variable>]\t"
-                                        "inspect [i]\t"
-                                        "reset [r]\t"
-                                        "state [s]\t"
-                                        "quit [q]\n";
+/// @brief Persistent help bar, top row: brand chips plus F-key shortcuts.
+/// White background for the brand, light-blue background for the F-keys.
+constexpr std::string_view HELP_BAR_LINE_1 =
+    "\x1b[47m\x1b[30m           \x1b[1mMQT\x1b[22m\x1b[0m"
+    "\x1b[47m\x1b[30m|\x1b[1mDebugger\x1b[22m      \x1b[0m"
+    "\x1b[48;5;153m\x1b[30m \x1b[1mF5\x1b[22m Run      \x1b[0m"
+    "\x1b[48;5;153m\x1b[30m| \x1b[1mF6\x1b[22m Step      \x1b[0m"
+    "\x1b[48;5;153m\x1b[30m| \x1b[1mF7\x1b[22m Step over \x1b[0m"
+    "\x1b[48;5;153m\x1b[30m| \x1b[1mF9\x1b[22m Run back \x1b[0m"
+    "\x1b[48;5;153m\x1b[30m| \x1b[1mF10\x1b[22m Back   \x1b[0m"
+    "\x1b[48;5;153m\x1b[30m| \x1b[1mF11\x1b[22m Back over \x1b[0m";
+
+/// @brief Persistent help bar, bottom row: single-letter aliases.
+/// Dark-blue background, white text.
+constexpr std::string_view HELP_BAR_LINE_2 =
+    "\x1b[44m\x1b[97m \x1b[1ma\x1b[22m Assertions \x1b[0m"
+    "\x1b[44m\x1b[97m| \x1b[1mb\x1b[22m Break \x1b[3m<N>\x1b[23m \x1b[0m"
+    "\x1b[44m\x1b[97m|  \x1b[1md\x1b[22m Diagnose \x1b[0m"
+    "\x1b[44m\x1b[97m|  \x1b[1mg\x1b[22m Get \x1b[3m<var>\x1b[23m \x1b[0m"
+    "\x1b[44m\x1b[97m|  \x1b[1mi\x1b[22m Inspect   \x1b[0m"
+    "\x1b[44m\x1b[97m|  \x1b[1mr\x1b[22m Reset    \x1b[0m"
+    "\x1b[44m\x1b[97m|   \x1b[1ms\x1b[22m State  \x1b[0m"
+    "\x1b[44m\x1b[97m|   \x1b[1mq\x1b[22m Quit      \x1b[0m";
+
+/**
+ * @brief Print the two-row persistent help bar.
+ */
+void printHelpBar() {
+  std::cout << HELP_BAR_LINE_1 << "\n" << HELP_BAR_LINE_2 << "\n";
+}
 
 /**
  * @brief Prefix each source line in @p text with a right-aligned 1-based
@@ -163,12 +176,12 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
 
   while (command != "quit" && command != "q") {
     clearScreen();
-
+    printHelpBar();
+    printState(state, inspecting, state->getNumQubits(state) >= 7);
     if (!response.empty()) {
       std::cout << response << "\n";
       response.clear();
     }
-    printState(state, inspecting, state->getNumQubits(state) >= 7);
 
     auto line = editor.readLine();
     if (!line.has_value()) {
@@ -238,7 +251,7 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
       }
       response = oss.str();
     } else {
-      response = USAGE_TEXT;
+      response = "Invalid command";
     }
   }
 }
