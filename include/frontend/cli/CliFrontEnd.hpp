@@ -63,6 +63,19 @@ private:
                   bool codeOnly = false);
 
   /**
+   * @brief Print the current state as a two-row table: bitstrings on top,
+   * their amplitudes on the bottom.
+   *
+   * Layout matches the persistent help bar: labels in a white brand-style
+   * chip, bitstring values in light-blue chips (F-keys row style), amplitude
+   * values in dark-blue chips (letters row style). Each column width is the
+   * wider of the bitstring and its amplitude string, so both rows align.
+   *
+   * @param state The simulation state to query for amplitudes.
+   */
+  static void printAmplitudes(SimulationState* state);
+
+  /**
    * @brief Initialize the code for running it at a later time.
    */
   void initCode(const char* code);
