@@ -21,7 +21,9 @@
 #include "backend/debug.h"
 
 #include <cstddef>
+#include <set>
 #include <string>
+#include <string_view>
 
 namespace mqt::debugger {
 
@@ -47,10 +49,54 @@ public:
 
 private:
   /**
-   * @brief The current code being executed. Used to display the code in the
-   * CLI.
+   * @brief The current code being executed.
+   *
+   * Used to display the code in the CLI.
    */
   std::string currentCode;
+
+  /**
+   * @brief 1-based line numbers that currently carry a breakpoint.
+   *
+   * Used to paint their gutter numbers on a red background in the source view.
+   */
+  std::set<size_t> breakpointLines;
+
+  /**
+   * @brief Persistent help bar, top row: brand chips plus F-key shortcuts.
+   *
+   * White background for the brand, light-blue background for the F-keys.
+   */
+  static constexpr std::string_view HELP_BAR_LINE_1 =
+      "\x1b[47m\x1b[30m           \x1b[1mMQT\x1b[22m\x1b[0m"
+      "\x1b[47m\x1b[30m|\x1b[1mDebugger\x1b[22m      \x1b[0m"
+      "\x1b[48;5;153m\x1b[30m \x1b[1mF5\x1b[22m Run      \x1b[0m"
+      "\x1b[48;5;153m\x1b[30m| \x1b[1mF6\x1b[22m Step      \x1b[0m"
+      "\x1b[48;5;153m\x1b[30m| \x1b[1mF7\x1b[22m Step over \x1b[0m"
+      "\x1b[48;5;153m\x1b[30m| \x1b[1mF9\x1b[22m Run back \x1b[0m"
+      "\x1b[48;5;153m\x1b[30m| \x1b[1mF10\x1b[22m Back   \x1b[0m"
+      "\x1b[48;5;153m\x1b[30m| \x1b[1mF11\x1b[22m Back over \x1b[0m";
+
+  /**
+   * @brief Persistent help bar, bottom row: single-letter aliases.
+   *
+   * Dark-blue background, white text.
+   */
+  static constexpr std::string_view HELP_BAR_LINE_2 =
+      "\x1b[44m\x1b[97m \x1b[1ma\x1b[22m Assertions \x1b[0m"
+      "\x1b[44m\x1b[97m| \x1b[1mb\x1b[22m Break \x1b[3m<N>\x1b[23m \x1b[0m"
+      "\x1b[44m\x1b[97m|  \x1b[1md\x1b[22m Diagnose \x1b[0m"
+      "\x1b[44m\x1b[97m|  \x1b[1mg\x1b[22m Get \x1b[3m<var>\x1b[23m \x1b[0m"
+      "\x1b[44m\x1b[97m|  \x1b[1mi\x1b[22m Inspect   \x1b[0m"
+      "\x1b[44m\x1b[97m|  \x1b[1mr\x1b[22m Reset    \x1b[0m"
+      "\x1b[44m\x1b[97m|   \x1b[1ms\x1b[22m State  \x1b[0m"
+      "\x1b[44m\x1b[97m|   \x1b[1mq\x1b[22m Quit      \x1b[0m";
+
+  /**
+   * @brief Print the two-row persistent help bar (F-keys on top, single-letter
+   * aliases below).
+   */
+  static void printHelpBar();
 
   /**
    * @brief Print the current state of the simulation.

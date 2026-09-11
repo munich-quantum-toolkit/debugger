@@ -64,48 +64,28 @@ void clearScreen() {
   std::cout << "\033[2J\033[1;1H";
 }
 
-/// @brief Persistent help bar, top row: brand chips plus F-key shortcuts.
-/// White background for the brand, light-blue background for the F-keys.
-constexpr std::string_view HELP_BAR_LINE_1 =
-    "\x1b[47m\x1b[30m           \x1b[1mMQT\x1b[22m\x1b[0m"
-    "\x1b[47m\x1b[30m|\x1b[1mDebugger\x1b[22m      \x1b[0m"
-    "\x1b[48;5;153m\x1b[30m \x1b[1mF5\x1b[22m Run      \x1b[0m"
-    "\x1b[48;5;153m\x1b[30m| \x1b[1mF6\x1b[22m Step      \x1b[0m"
-    "\x1b[48;5;153m\x1b[30m| \x1b[1mF7\x1b[22m Step over \x1b[0m"
-    "\x1b[48;5;153m\x1b[30m| \x1b[1mF9\x1b[22m Run back \x1b[0m"
-    "\x1b[48;5;153m\x1b[30m| \x1b[1mF10\x1b[22m Back   \x1b[0m"
-    "\x1b[48;5;153m\x1b[30m| \x1b[1mF11\x1b[22m Back over \x1b[0m";
-
-/// @brief Persistent help bar, bottom row: single-letter aliases.
-/// Dark-blue background, white text.
-constexpr std::string_view HELP_BAR_LINE_2 =
-    "\x1b[44m\x1b[97m \x1b[1ma\x1b[22m Assertions \x1b[0m"
-    "\x1b[44m\x1b[97m| \x1b[1mb\x1b[22m Break \x1b[3m<N>\x1b[23m \x1b[0m"
-    "\x1b[44m\x1b[97m|  \x1b[1md\x1b[22m Diagnose \x1b[0m"
-    "\x1b[44m\x1b[97m|  \x1b[1mg\x1b[22m Get \x1b[3m<var>\x1b[23m \x1b[0m"
-    "\x1b[44m\x1b[97m|  \x1b[1mi\x1b[22m Inspect   \x1b[0m"
-    "\x1b[44m\x1b[97m|  \x1b[1mr\x1b[22m Reset    \x1b[0m"
-    "\x1b[44m\x1b[97m|   \x1b[1ms\x1b[22m State  \x1b[0m"
-    "\x1b[44m\x1b[97m|   \x1b[1mq\x1b[22m Quit      \x1b[0m";
-
 /**
- * @brief Print the two-row persistent help bar.
- */
-void printHelpBar() {
-  std::cout << HELP_BAR_LINE_1 << "\n" << HELP_BAR_LINE_2 << "\n";
-}
-
-/**
- * @brief Prefix each source line in @p text with a right-aligned 1-based
- * line number.
+ * @brief Prefix each source line in @p text with a right-aligned 1-based line
+ * number.
  *
- * The gutter width is picked from the total line count so all separators
- * line up.
+ * The gutter width is picked from the total line count so all separators line
+ * up.
+ *
  * Preserves any ANSI color codes already present in @p text.
- * Only `'\n'` characters trigger a new gutter, so highlights that span newlines
- * still render correctly.
+ *
+ * Only newline characters trigger a new gutter, so highlights that span
+ * newlines still render correctly.
+ *
+ * Line numbers whose 1-based index is in @p breakpointLines are painted with a
+ * red background so the user sees at a glance where the active breakpoints are.
+ *
+ * @param text The source text to number.
+ * @param breakpointLines 1-based line numbers whose gutter number should be
+ * highlighted.
+ * @return The numbered text ready to send to stdout.
  */
-std::string addLineNumbers(std::string_view text) {
+std::string addLineNumbers(std::string_view text,
+                           const std::set<size_t>& breakpointLines) {
   if (text.empty()) {
     return {};
   }
@@ -118,7 +98,11 @@ std::string addLineNumbers(std::string_view text) {
   size_t lineNum = 1;
   for (const auto& line : lines) {
     const std::string_view sv{line.begin(), line.end()};
-    oss << std::setw(gutterWidth) << lineNum++ << " " << sv << "\n";
+    const auto* startBg = breakpointLines.contains(lineNum) ? "\x1b[41m" : "";
+    const auto* endBg = breakpointLines.contains(lineNum) ? "\x1b[49m" : "";
+    oss << startBg << std::setw(gutterWidth) << lineNum << endBg;
+    oss << " " << sv << "\n";
+    ++lineNum;
   }
   return oss.str();
 }
@@ -263,6 +247,7 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
         size_t end = 0;
         state->getInstructionPosition(state, instr, &start, &end);
         const auto bpLine = charOffsetToLine(currentCode, start);
+        breakpointLines.insert(bpLine);
         response = "Breakpoint set at line " + std::to_string(bpLine);
       }
     } else if (command == "diagnose" || command == "d") {
@@ -384,6 +369,10 @@ void CliFrontEnd::suggestUpdatedAssertions(SimulationState* state) {
   }
 }
 
+void CliFrontEnd::printHelpBar() {
+  std::cout << HELP_BAR_LINE_1 << "\n" << HELP_BAR_LINE_2 << "\n";
+}
+
 void CliFrontEnd::printState(SimulationState* state, size_t inspecting,
                              bool codeOnly) {
   std::vector<size_t> highlightIntervals;
@@ -446,7 +435,7 @@ void CliFrontEnd::printState(SimulationState* state, size_t inspecting,
     on = !on;
     currentPos = nextInterval;
   }
-  std::cout << addLineNumbers(code.str());
+  std::cout << addLineNumbers(code.str(), breakpointLines);
 
   if (!codeOnly) {
     printAmplitudes(state);
