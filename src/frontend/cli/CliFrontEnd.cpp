@@ -105,9 +105,6 @@ void printHelpBar() {
  * still render correctly.
  */
 std::string addLineNumbers(std::string_view text) {
-  while (!text.empty() && text.back() == '\n') {
-    text.remove_suffix(1);
-  }
   if (text.empty()) {
     return {};
   }
@@ -364,7 +361,13 @@ void CliFrontEnd::printState(SimulationState* state, size_t inspecting,
   if (highlightIntervals.empty()) {
     highlightIntervals.push_back(0);
   }
-  highlightIntervals.push_back(currentCode.length() + 1);
+  // Ignore trailing newlines when picking the sentinel: they would be copied
+  // into the printed code and later show up as empty numbered lines.
+  size_t trimmedLength = currentCode.size();
+  while (trimmedLength > 0 && currentCode[trimmedLength - 1] == '\n') {
+    --trimmedLength;
+  }
+  highlightIntervals.push_back(trimmedLength + 1);
   size_t currentStart = 0;
   size_t currentEnd = 0;
   const Result res = state->getInstructionPosition(
