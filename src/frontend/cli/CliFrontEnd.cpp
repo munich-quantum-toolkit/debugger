@@ -26,8 +26,11 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <iomanip>
 #include <iostream>
+#include <iterator>
 #include <memory>
+#include <ranges>
 #include <set>
 #include <sstream>
 #include <string>
@@ -77,6 +80,37 @@ constexpr std::string_view USAGE_TEXT = "Invalid command. "
                                         "reset [r]\t"
                                         "state [s]\t"
                                         "quit [q]\n";
+
+/**
+ * @brief Prefix each source line in @p text with a right-aligned 1-based
+ * line number.
+ *
+ * The gutter width is picked from the total line count so all separators
+ * line up.
+ * Preserves any ANSI color codes already present in @p text.
+ * Only `'\n'` characters trigger a new gutter, so highlights that span newlines
+ * still render correctly.
+ */
+std::string addLineNumbers(std::string_view text) {
+  while (!text.empty() && text.back() == '\n') {
+    text.remove_suffix(1);
+  }
+  if (text.empty()) {
+    return {};
+  }
+
+  auto lines = text | std::views::split('\n');
+  const auto lineCount = static_cast<size_t>(std::ranges::distance(lines));
+  const auto gutterWidth = static_cast<int>(std::to_string(lineCount).size());
+
+  std::ostringstream oss;
+  size_t lineNum = 1;
+  for (const auto& line : lines) {
+    const std::string_view sv{line.begin(), line.end()};
+    oss << std::setw(gutterWidth) << lineNum++ << " " << sv << "\n";
+  }
+  return oss.str();
+}
 
 /**
  * @brief Get all possible bit strings for a given number of qubits.
@@ -280,7 +314,7 @@ void CliFrontEnd::suggestUpdatedAssertions(SimulationState* state) {
 
   state->resetSimulation(state);
 
-  LineEditor confirmEditor{std::cin, std::cout, "Accept? [y/n]: "};
+  const LineEditor confirmEditor{std::cin, std::cout, "Accept? [y/n]: "};
   const auto reply = confirmEditor.readLine();
   const std::string command = reply.value_or("");
 
@@ -325,30 +359,29 @@ void CliFrontEnd::printState(SimulationState* state, size_t inspecting,
 
   size_t currentPos = 0;
   bool on = false;
+  std::ostringstream code;
   for (const auto nextInterval : highlightIntervals) {
     const auto* const textColor = on ? ANSI_BG_RESET : ANSI_COL_GRAY;
     if (res == OK && currentStart >= currentPos &&
         currentStart < nextInterval) {
-      std::cout << textColor
-                << currentCode.substr(currentPos, currentStart - currentPos)
-                << ANSI_BG_RESET;
-      std::cout << ANSI_BG_YELLOW
-                << currentCode.substr(currentStart,
-                                      currentEnd - currentStart + 1)
-                << ANSI_BG_RESET;
-      std::cout << textColor
-                << currentCode.substr(currentEnd + 1,
-                                      nextInterval - currentEnd - 1)
-                << ANSI_BG_RESET;
+      code << textColor
+           << currentCode.substr(currentPos, currentStart - currentPos)
+           << ANSI_BG_RESET;
+      code << ANSI_BG_YELLOW
+           << currentCode.substr(currentStart, currentEnd - currentStart + 1)
+           << ANSI_BG_RESET;
+      code << textColor
+           << currentCode.substr(currentEnd + 1, nextInterval - currentEnd - 1)
+           << ANSI_BG_RESET;
     } else {
-      std::cout << textColor
-                << currentCode.substr(currentPos, nextInterval - currentPos)
-                << ANSI_BG_RESET;
+      code << textColor
+           << currentCode.substr(currentPos, nextInterval - currentPos)
+           << ANSI_BG_RESET;
     }
     on = !on;
     currentPos = nextInterval;
   }
-  std::cout << "\n";
+  std::cout << addLineNumbers(code.str());
 
   if (!codeOnly) {
     const auto bitStrings = getBitStrings(state->getNumQubits(state));
