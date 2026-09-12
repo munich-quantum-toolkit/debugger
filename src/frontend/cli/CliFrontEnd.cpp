@@ -421,7 +421,7 @@ void CliFrontEnd::printState(SimulationState* state, size_t inspecting,
       code << textColor
            << currentCode.substr(currentPos, currentStart - currentPos)
            << ANSI_BG_RESET;
-      code << ANSI_BG_YELLOW
+      code << ANSI_HIGHLIGHT_CURRENT
            << currentCode.substr(currentStart, currentEnd - currentStart + 1)
            << ANSI_BG_RESET;
       code << textColor
@@ -465,14 +465,11 @@ void CliFrontEnd::printAmplitudes(SimulationState* state) {
                            return std::max(bitString.size(), amplitude.size());
                          });
 
-  constexpr std::string_view labelQubit = "Qubit";
   constexpr std::string_view labelAmpl = "Amplitudes";
-  const auto labelWidth =
-      static_cast<int>(std::max(labelQubit.size(), labelAmpl.size()));
+  const auto labelWidth = static_cast<int>(labelAmpl.size());
 
-  // Row 1: "Qubit" label (white chip) + bitstrings (light-blue chips).
-  std::cout << "\x1b[47m\x1b[30m \x1b[1m" << std::setw(labelWidth) << labelQubit
-            << "\x1b[22m \x1b[0m";
+  // Row 1: empty label chip + bitstrings (light-blue chips).
+  std::cout << "\x1b[47m" << std::string(labelWidth + 2, ' ') << "\x1b[0m";
   for (size_t i = 0; i < bitStrings.size(); ++i) {
     std::cout << "\x1b[48;5;153m\x1b[30m" << (i > 0 ? "|" : "") << " "
               << std::setw(static_cast<int>(widths[i])) << bitStrings[i]
