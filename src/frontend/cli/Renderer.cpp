@@ -10,16 +10,17 @@
 
 /**
  * @file Renderer.cpp
- * @brief Implementation of the CLI rendering primitives.
+ * @brief Implementation of the CLI rendering primitives and the `Renderer`
+ * output class.
  */
 
 #include "frontend/cli/Renderer.hpp"
 
 #include <algorithm>
 #include <cstddef>
-#include <iostream>
 #include <iterator>
 #include <numeric>
+#include <ostream>
 #include <ranges>
 #include <string>
 #include <string_view>
@@ -90,10 +91,16 @@ std::string join(const std::vector<std::string>& parts, std::string_view sep) {
                          });
 }
 
-void clearScreen() { std::cout << ANSI_CLEAR_SCREEN; }
+Renderer::Renderer(std::ostream& outStream) : out(outStream) {}
 
-void printTable(std::string_view header,
-                const std::vector<std::vector<std::string>>& rows) {
+void Renderer::clearScreen() { out << ANSI_CLEAR_SCREEN; }
+
+void Renderer::print(std::string_view s) { out << s; }
+
+void Renderer::println(std::string_view s) { out << s << '\n'; }
+
+void Renderer::printTable(std::string_view header,
+                          const std::vector<std::vector<std::string>>& rows) {
   if (rows.empty()) {
     return;
   }
@@ -106,9 +113,9 @@ void printTable(std::string_view header,
       [&rows](size_t col) { return colMaxWidth(rows, col); });
 
   // Header row.
-  std::cout << bgColor(fgColor(margins(bold(header)), ANSI_FG_BLACK),
-                       ANSI_BG_TABLE_HEADER)
-            << "\n";
+  out << bgColor(fgColor(margins(bold(header)), ANSI_FG_BLACK),
+                 ANSI_BG_TABLE_HEADER)
+      << '\n';
 
   // Data rows: alternate light/dark background, bold on even rows.
   for (size_t r = 0; r < rows.size(); ++r) {
@@ -122,7 +129,7 @@ void printTable(std::string_view header,
                            });
     const auto rowBg = even ? ANSI_BG_TABLE_ROW_EVEN : ANSI_BG_TABLE_ROW_ODD;
     const auto rowFg = even ? ANSI_FG_BLACK : ANSI_FG_WHITE;
-    std::cout << bgColor(fgColor(join(cells, "|"), rowFg), rowBg) << "\n";
+    out << bgColor(fgColor(join(cells, "|"), rowFg), rowBg) << '\n';
   }
 }
 

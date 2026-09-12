@@ -10,15 +10,14 @@
 
 /**
  * @file Renderer.hpp
- * @brief Small ANSI-aware rendering primitives used by the CLI front end.
- *
- * Exposes the ANSI escape constants and the string helpers that the CLI uses
- * to lay out its help bar, source view, and amplitude table.
+ * @brief ANSI-aware rendering primitives and a small class that funnels
+ * CLI output to a configurable stream.
  */
 
 #pragma once
 
 #include <cstddef>
+#include <iosfwd>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -110,25 +109,63 @@ size_t colMaxWidth(const std::vector<std::vector<std::string>>& rows,
 std::string join(const std::vector<std::string>& parts, std::string_view sep);
 
 /**
- * @brief Clear the terminal screen and place the cursor at the top-left.
+ * @brief Funnels all CLI output through a single `std::ostream`.
+ *
+ * Owns nothing: the referenced stream must outlive the `Renderer`.
+ * Constructed with `std::cout` in production and with an in-memory stream
+ * in tests, so tests can capture exactly what the CLI would print.
  */
-void clearScreen();
+class Renderer {
+public:
+  /**
+   * @brief Construct with the output stream to write to.
+   * @param out The stream the CLI will render to. Must outlive this object.
+   */
+  explicit Renderer(std::ostream& out);
 
-/**
- * @brief Print a two-part table: a header cell on the top-left and rows of
- * data cells to its right.
- *
- * The (row 0, col 0) cell shows @p header on a white background in bold; the
- * corresponding column-0 cells of the remaining rows are painted black as a
- * visual divider. Data rows alternate their background color: even rows go
- * on light blue and have their contents in bold, odd rows go on dark blue in
- * normal weight. Each data column is padded to the widest cell across all
- * rows.
- *
- * @param header Text placed in the header cell.
- * @param rows Data rows. All rows must have the same number of cells.
- */
-void printTable(std::string_view header,
-                const std::vector<std::vector<std::string>>& rows);
+  ~Renderer() = default;
+
+  Renderer(const Renderer&) = delete;
+  Renderer& operator=(const Renderer&) = delete;
+  Renderer(Renderer&&) = delete;
+  Renderer& operator=(Renderer&&) = delete;
+
+  /**
+   * @brief Clear the terminal screen and place the cursor at the top-left.
+   */
+  void clearScreen();
+
+  /**
+   * @brief Write @p s to the output stream verbatim.
+   * @param s The text to write.
+   */
+  void print(std::string_view s);
+
+  /**
+   * @brief Write @p s to the output stream followed by a newline.
+   * @param s The text to write before the newline.
+   */
+  void println(std::string_view s);
+
+  /**
+   * @brief Print a two-part table: a header cell on the top-left and rows of
+   * data cells to its right.
+   *
+   * The (row 0, col 0) cell shows @p header on a white background in bold; the
+   * corresponding column-0 cells of the remaining rows are painted black as a
+   * visual divider. Data rows alternate their background color: even rows go
+   * on light blue and have their contents in bold, odd rows go on dark blue in
+   * normal weight. Each data column is padded to the widest cell across all
+   * rows.
+   *
+   * @param header Text placed in the header cell.
+   * @param rows Data rows. All rows must have the same number of cells.
+   */
+  void printTable(std::string_view header,
+                  const std::vector<std::vector<std::string>>& rows);
+
+private:
+  std::ostream& out;
+};
 
 } // namespace mqt::debugger

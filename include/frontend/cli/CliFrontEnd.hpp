@@ -27,6 +27,8 @@
 
 namespace mqt::debugger {
 
+class Renderer;
+
 /**
  * @brief A command-line interface for the debugger.
  *
@@ -62,30 +64,34 @@ private:
    * @brief Print one full screen: help bar, source code, amplitudes (if
    * requested), assertion warning, and the response of the last command.
    *
+   * @param renderer The output sink.
    * @param state The simulation state.
    * @param inspecting The instruction being inspected (or -1ULL if nothing).
    * @param response Text shown just above the prompt; empty means nothing to
    * show.
    * @param codeOnly If true, the amplitudes row is skipped.
    */
-  void printScreen(SimulationState* state, size_t inspecting,
-                   std::string_view response, bool codeOnly);
+  void printScreen(Renderer& renderer, SimulationState* state,
+                   size_t inspecting, std::string_view response, bool codeOnly);
 
   /**
    * @brief Print the persistent help bar. Four rows: F-key shortcuts and
    * descriptions on the first two, single-letter aliases on the last two.
+   *
+   * @param renderer The output sink.
    */
-  static void printHelpBar();
+  static void printHelpBar(Renderer& renderer);
 
   /**
    * @brief Print the source code with line numbers, breakpoint markers, the
    * current-instruction highlight, and dimming of the lines that are not
    * data-dependencies of the inspected instruction.
    *
+   * @param renderer The output sink.
    * @param state The simulation state.
    * @param inspecting The instruction being inspected (or -1ULL if nothing).
    */
-  void printCode(SimulationState* state, size_t inspecting);
+  void printCode(Renderer& renderer, SimulationState* state, size_t inspecting);
 
   /**
    * @brief Print the current state as a two-row table: bitstrings on top,
@@ -96,9 +102,10 @@ private:
    * values in dark-blue chips (letters row style). Each column width is the
    * wider of the bitstring and its amplitude string, so both rows align.
    *
+   * @param renderer The output sink.
    * @param state The simulation state to query for amplitudes.
    */
-  static void printAmplitudes(SimulationState* state);
+  static void printAmplitudes(Renderer& renderer, SimulationState* state);
 
   /**
    * @brief Initialize the code for running it at a later time.
@@ -108,9 +115,10 @@ private:
   /**
    * @brief Output a new code with updated assertions based on the assertion
    * refinement rules.
+   * @param renderer The output sink.
    * @param state The simulation state.
    */
-  void suggestUpdatedAssertions(SimulationState* state);
+  void suggestUpdatedAssertions(Renderer& renderer, SimulationState* state);
 };
 
 } // namespace mqt::debugger
