@@ -91,6 +91,16 @@ public:
    */
   void bindKey(std::string_view csiSequence, std::string_view command);
 
+  /**
+   * @brief Whether the last `readLine` call returned because a registered
+   * binding fired, rather than because the user typed a line and pressed
+   * Enter.
+   *
+   * @return `true` if the last `readLine` finished via a binding, `false`
+   * otherwise (typed line, EOF, or no call yet).
+   */
+  [[nodiscard]] bool wasBound() const noexcept;
+
 private:
   struct ReadLineState;
 
@@ -115,6 +125,7 @@ private:
   std::string prompt;
   std::vector<std::string> history;
   std::map<std::string, std::string> keyBindings;
+  mutable bool lastBound{false};
 };
 
 } // namespace mqt::debugger
