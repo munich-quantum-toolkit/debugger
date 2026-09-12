@@ -66,7 +66,7 @@ def _run_tests(
     pytest_run_args: Sequence[str] = (),
 ) -> None:
     env = {"UV_PROJECT_ENVIRONMENT": session.virtualenv.location}
-    if shutil.which("cmake") is None and shutil.which("cmake3") is None:
+    if shutil.which("cmake") is None:
         session.install("cmake")
     if shutil.which("ninja") is None:
         session.install("ninja")
@@ -141,7 +141,7 @@ def qiskit(session: nox.Session) -> None:
         session.run("uv", "pip", "show", "qiskit", env=env)
 
 
-@nox.session(reuse_venv=True)
+@nox.session(reuse_venv=True, python="3.14")
 def docs(session: nox.Session) -> None:
     """Build the docs. Use "--non-interactive" to avoid serving. Pass "-b linkcheck" to check links."""
     parser = argparse.ArgumentParser()
