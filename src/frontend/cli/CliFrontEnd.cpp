@@ -157,10 +157,11 @@ std::vector<std::string> getBitStrings(size_t numQubits) {
 
 } // namespace
 
+CliFrontEnd::CliFrontEnd(std::ostream& out) : renderer(out) {}
+
 void CliFrontEnd::initCode(const char* code) { currentCode = code; }
 
 void CliFrontEnd::run(const char* code, SimulationState* state) {
-  Renderer renderer{std::cout};
   initCode(code);
 
   const auto result = state->loadCode(state, code);
@@ -190,8 +191,7 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
   size_t inspecting = -1ULL;
 
   while (command != "quit" && command != "q") {
-    printScreen(renderer, state, inspecting, response,
-                state->getNumQubits(state) >= 7);
+    printScreen(state, inspecting, response, state->getNumQubits(state) >= 7);
     // The editor is printing the prompt before reading the line
     auto line = editor.readLine();
     if (!line.has_value()) {
@@ -216,7 +216,7 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
     } else if (command == "back over") {
       state->stepOverBackward(state);
     } else if (command == "assertions" || command == "a") {
-      suggestUpdatedAssertions(renderer, state);
+      suggestUpdatedAssertions(state);
     } else if (command.starts_with("breakpoint ") ||
                command.starts_with("b ")) {
       const auto param = command.substr(command.find(' ') + 1);
@@ -276,8 +276,7 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
   }
 }
 
-void CliFrontEnd::suggestUpdatedAssertions(Renderer& renderer,
-                                           SimulationState* state) {
+void CliFrontEnd::suggestUpdatedAssertions(SimulationState* state) {
   auto* diagnostics = state->getDiagnostics(state);
   std::string newCode = currentCode;
   const size_t count = 10;
@@ -361,7 +360,7 @@ void CliFrontEnd::suggestUpdatedAssertions(Renderer& renderer,
   }
 }
 
-void CliFrontEnd::printHelpBar(Renderer& renderer) {
+void CliFrontEnd::printHelpBar() {
   renderer.printTable(
       "MQT Debugger",
       {
@@ -373,14 +372,13 @@ void CliFrontEnd::printHelpBar(Renderer& renderer) {
       });
 }
 
-void CliFrontEnd::printScreen(Renderer& renderer, SimulationState* state,
-                              size_t inspecting, std::string_view response,
-                              bool codeOnly) {
+void CliFrontEnd::printScreen(SimulationState* state, size_t inspecting,
+                              std::string_view response, bool codeOnly) {
   renderer.clearScreen();
-  printHelpBar(renderer);
-  printCode(renderer, state, inspecting);
+  printHelpBar();
+  printCode(state, inspecting);
   if (!codeOnly) {
-    printAmplitudes(renderer, state);
+    printAmplitudes(state);
   }
   if (state->didAssertionFail(state)) {
     renderer.println("THIS LINE FAILED AN ASSERTION");
@@ -390,8 +388,7 @@ void CliFrontEnd::printScreen(Renderer& renderer, SimulationState* state,
   }
 }
 
-void CliFrontEnd::printCode(Renderer& renderer, SimulationState* state,
-                            size_t inspecting) {
+void CliFrontEnd::printCode(SimulationState* state, size_t inspecting) {
   std::vector<size_t> highlightIntervals;
   if (inspecting != -1ULL) {
     std::vector<uint8_t> inspectingDependencies(
@@ -463,7 +460,7 @@ void CliFrontEnd::printCode(Renderer& renderer, SimulationState* state,
   renderer.print(addLineNumbers(code.str(), breakpointLines));
 }
 
-void CliFrontEnd::printAmplitudes(Renderer& renderer, SimulationState* state) {
+void CliFrontEnd::printAmplitudes(SimulationState* state) {
   const auto bitStrings = getBitStrings(state->getNumQubits(state));
 
   std::vector<std::string> amplitudes;
