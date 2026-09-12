@@ -27,7 +27,7 @@
 
 namespace mqt::debugger {
 
-#define ANSI_BG_YELLOW "\x1b[43m"
+#define ANSI_HIGHLIGHT_CURRENT "\x1b[48;5;227m\x1b[30m"
 #define ANSI_BG_RESET "\x1b[0m"
 #define ANSI_COL_GRAY "\x1b[90m"
 
