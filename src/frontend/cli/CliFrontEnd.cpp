@@ -26,10 +26,10 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <iomanip>
 #include <iostream>
 #include <iterator>
 #include <memory>
+#include <numeric>
 #include <optional>
 #include <ranges>
 #include <set>
@@ -43,6 +43,115 @@
 namespace mqt::debugger {
 
 namespace {
+
+// Style modifiers.
+constexpr std::string_view ANSI_RESET = "\x1b[0m";
+constexpr std::string_view ANSI_BOLD = "\x1b[1m";
+constexpr std::string_view ANSI_NORMAL = "\x1b[22m";
+
+// Foreground colors.
+constexpr std::string_view ANSI_FG_BLACK = "\x1b[30m";
+constexpr std::string_view ANSI_FG_WHITE = "\x1b[97m";
+constexpr std::string_view ANSI_FG_CODE_DIM = "\x1b[90m";
+constexpr std::string_view ANSI_FG_CODE_HL = ANSI_FG_BLACK;
+
+// Background colors.
+constexpr std::string_view ANSI_BG_BREAKPOINT = "\x1b[41m";
+constexpr std::string_view ANSI_BG_CODE_HL = "\x1b[48;5;227m";
+constexpr std::string_view ANSI_BG_TABLE_HEADER = "\x1b[47m";
+constexpr std::string_view ANSI_BG_TABLE_ROW_EVEN = "\x1b[48;5;153m";
+constexpr std::string_view ANSI_BG_TABLE_ROW_ODD = "\x1b[44m";
+
+/**
+ * @brief Wrap @p content between one space on each side.
+ */
+std::string margins(std::string_view content) {
+  std::string s = " ";
+  s.append(content);
+  s += ' ';
+  return s;
+}
+
+/**
+ * @brief Right-pad @p content with spaces up to @p width. Left-aligned.
+ */
+std::string leftAlign(std::string_view content, size_t width) {
+  std::string s{content};
+  if (content.size() < width) {
+    s.append(width - content.size(), ' ');
+  }
+  return s;
+}
+
+/**
+ * @brief Left-pad @p content with spaces up to @p width. Right-aligned.
+ */
+std::string rightAlign(std::string_view content, size_t width) {
+  const auto pad = content.size() < width ? width - content.size() : 0;
+  std::string s(pad, ' ');
+  s.append(content);
+  return s;
+}
+
+/**
+ * @brief Wrap @p content between bold on and bold off codes.
+ */
+std::string bold(std::string_view content) {
+  std::string s{ANSI_BOLD};
+  s.append(content);
+  s.append(ANSI_NORMAL);
+  return s;
+}
+
+/**
+ * @brief Wrap @p content between background color @p bg and a full reset.
+ */
+std::string bgColor(std::string_view content, std::string_view bg) {
+  std::string s{bg};
+  s.append(content);
+  s.append(ANSI_RESET);
+  return s;
+}
+
+/**
+ * @brief Wrap @p content between foreground color @p fg and a full reset.
+ */
+std::string fgColor(std::string_view content, std::string_view fg) {
+  std::string s{fg};
+  s.append(content);
+  s.append(ANSI_RESET);
+  return s;
+}
+
+/**
+ * @brief Return the widest cell in column @p col of @p rows.
+ */
+size_t colMaxWidth(const std::vector<std::vector<std::string>>& rows,
+                   size_t col) {
+  return std::ranges::max(rows | std::views::transform([col](const auto& row) {
+                            return row[col].size();
+                          }));
+}
+
+/**
+ * @brief Join @p parts with @p sep between adjacent parts.
+ *
+ * @param parts The strings to join.
+ * @param sep The separator to place between consecutive parts.
+ * @return The joined string, or an empty string if @p parts is empty.
+ */
+std::string join(const std::vector<std::string>& parts, std::string_view sep) {
+  if (parts.empty()) {
+    return {};
+  }
+  return std::accumulate(std::next(parts.begin()), parts.end(),
+                         std::string{parts.front()},
+                         [sep](std::string acc, std::string_view p) {
+                           acc.append(sep);
+                           acc.append(p);
+                           return acc;
+                         });
+}
 
 size_t boundedStrnlen(const char* data, size_t max) {
   const auto* end = static_cast<const char*>(std::memchr(data, '\0', max));
@@ -92,16 +201,17 @@ std::string addLineNumbers(std::string_view text,
 
   auto lines = text | std::views::split('\n');
   const auto lineCount = static_cast<size_t>(std::ranges::distance(lines));
-  const auto gutterWidth = static_cast<int>(std::to_string(lineCount).size());
+  const auto gutterWidth = std::to_string(lineCount).size();
 
   std::ostringstream oss;
   size_t lineNum = 1;
   for (const auto& line : lines) {
-    const std::string_view sv{line.begin(), line.end()};
-    const auto* startBg = breakpointLines.contains(lineNum) ? "\x1b[41m" : "";
-    const auto* endBg = breakpointLines.contains(lineNum) ? "\x1b[49m" : "";
-    oss << startBg << std::setw(gutterWidth) << lineNum << endBg;
-    oss << " " << sv << "\n";
+    const std::string_view code{line.begin(), line.end()};
+    auto gutter = rightAlign(std::to_string(lineNum), gutterWidth);
+    if (breakpointLines.contains(lineNum)) {
+      gutter = bgColor(gutter, ANSI_BG_BREAKPOINT);
+    }
+    oss << gutter << ' ' << code << "\n";
     ++lineNum;
   }
   return oss.str();
@@ -120,17 +230,16 @@ std::string addLineNumbers(std::string_view text,
  */
 std::optional<size_t> lineToCharOffset(std::string_view code,
                                        size_t lineNumber) {
-  if (lineNumber == 0) {
+  auto lines = code | std::views::split('\n');
+  const auto lineCount = static_cast<size_t>(std::ranges::distance(lines));
+  if (lineNumber == 0 || lineNumber > lineCount) {
     return std::nullopt;
   }
-  size_t currentLine = 1;
-  for (const auto& line : code | std::views::split('\n')) {
-    if (currentLine == lineNumber) {
-      return static_cast<size_t>(line.begin() - code.begin());
-    }
-    ++currentLine;
+  size_t offset = 0;
+  for (const auto& line : lines | std::views::take(lineNumber - 1)) {
+    offset += static_cast<size_t>(std::ranges::distance(line)) + 1;
   }
-  return std::nullopt;
+  return offset;
 }
 
 /**
@@ -163,6 +272,54 @@ std::vector<std::string> getBitStrings(size_t numQubits) {
     bitStrings.push_back(bitString);
   }
   return bitStrings;
+}
+
+/**
+ * @brief Print a two-part table: a header cell on the top-left and rows of
+ * data cells to its right.
+ *
+ * The (row 0, col 0) cell shows @p header on a white background in bold; the
+ * corresponding column-0 cells of the remaining rows are painted black as a
+ * visual divider. Data rows alternate their background color: even rows go
+ * on light blue and have their contents in bold, odd rows go on dark blue in
+ * normal weight. Each data column is padded to the widest cell across all
+ * rows.
+ *
+ * @param header Text placed in the header cell.
+ * @param rows Data rows. All rows must have the same number of cells.
+ */
+void printTable(std::string_view header,
+                const std::vector<std::vector<std::string>>& rows) {
+  if (rows.empty()) {
+    return;
+  }
+
+  // Column widths: max cell size across all rows per column.
+  const auto nCols = rows[0].size();
+  std::vector<size_t> widths(nCols);
+  std::ranges::transform(
+      std::views::iota(size_t{0}, nCols), widths.begin(),
+      [&rows](size_t col) { return colMaxWidth(rows, col); });
+
+  // Header row.
+  std::cout << bgColor(fgColor(margins(bold(header)), ANSI_FG_BLACK),
+                       ANSI_BG_TABLE_HEADER)
+            << "\n";
+
+  // Data rows: alternate light/dark background, bold on even rows.
+  for (size_t r = 0; r < rows.size(); ++r) {
+    const bool even = (r % 2 == 0);
+    std::vector<std::string> cells(nCols);
+    std::ranges::transform(rows[r], widths, cells.begin(),
+                           [even](std::string_view content, size_t width) {
+                             const auto cell =
+                                 margins(leftAlign(content, width));
+                             return even ? bold(cell) : cell;
+                           });
+    const auto rowBg = even ? ANSI_BG_TABLE_ROW_EVEN : ANSI_BG_TABLE_ROW_ODD;
+    const auto rowFg = even ? ANSI_FG_BLACK : ANSI_FG_WHITE;
+    std::cout << bgColor(fgColor(join(cells, "|"), rowFg), rowBg) << "\n";
+  }
 }
 
 } // namespace
@@ -198,22 +355,18 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
   size_t inspecting = -1ULL;
 
   while (command != "quit" && command != "q") {
-    clearScreen();
-    printHelpBar();
-    printState(state, inspecting, state->getNumQubits(state) >= 7);
-    if (!response.empty()) {
-      std::cout << response << "\n";
-      response.clear();
-    }
-
+    printScreen(state, inspecting, response, state->getNumQubits(state) >= 7);
+    // The editor is printing the prompt before reading the line
     auto line = editor.readLine();
     if (!line.has_value()) {
       break;
     }
     command = std::move(*line);
-    if (!command.empty()) {
+    const bool wasFKey = editor.wasBound();
+    if (!command.empty() && !wasFKey) {
       editor.addToHistory(command);
     }
+    response.clear();
     if (command == "run") {
       state->runSimulation(state);
     } else if (command == "run back") {
@@ -370,11 +523,34 @@ void CliFrontEnd::suggestUpdatedAssertions(SimulationState* state) {
 }
 
 void CliFrontEnd::printHelpBar() {
-  std::cout << HELP_BAR_LINE_1 << "\n" << HELP_BAR_LINE_2 << "\n";
+  printTable(
+      "MQT Debugger",
+      {
+          {"F5", "F6", "F7", "F9", "F10", "F11", "q"},
+          {"Run", "Step", "Step over", "Run back", "Back", "Back over", "Quit"},
+          {"a", "b     <N>", "d", "g   <var>", "i", "r", "s"},
+          {"Assertions", "Break <N>", "Diagnose", "Get <var>", "Inspect",
+           "Reset", "State"},
+      });
 }
 
-void CliFrontEnd::printState(SimulationState* state, size_t inspecting,
-                             bool codeOnly) {
+void CliFrontEnd::printScreen(SimulationState* state, size_t inspecting,
+                              std::string_view response, bool codeOnly) {
+  clearScreen();
+  printHelpBar();
+  printCode(state, inspecting);
+  if (!codeOnly) {
+    printAmplitudes(state);
+  }
+  if (state->didAssertionFail(state)) {
+    std::cout << "THIS LINE FAILED AN ASSERTION\n";
+  }
+  if (!response.empty()) {
+    std::cout << response << "\n";
+  }
+}
+
+void CliFrontEnd::printCode(SimulationState* state, size_t inspecting) {
   std::vector<size_t> highlightIntervals;
   if (inspecting != -1ULL) {
     std::vector<uint8_t> inspectingDependencies(
@@ -414,35 +590,36 @@ void CliFrontEnd::printState(SimulationState* state, size_t inspecting,
   size_t currentPos = 0;
   bool on = false;
   std::ostringstream code;
+  const auto plainCode = [](std::string_view text) {
+    return std::string{text};
+  };
+  const auto dimCode = [](std::string_view text) {
+    return fgColor(text, ANSI_FG_CODE_DIM);
+  };
+  const auto hlCode = [](std::string_view text) {
+    return bgColor(fgColor(text, ANSI_FG_CODE_HL), ANSI_BG_CODE_HL);
+  };
   for (const auto nextInterval : highlightIntervals) {
-    const auto* const textColor = on ? ANSI_BG_RESET : ANSI_COL_GRAY;
-    if (res == OK && currentStart >= currentPos &&
-        currentStart < nextInterval) {
-      code << textColor
-           << currentCode.substr(currentPos, currentStart - currentPos)
-           << ANSI_BG_RESET;
-      code << ANSI_HIGHLIGHT_CURRENT
-           << currentCode.substr(currentStart, currentEnd - currentStart + 1)
-           << ANSI_BG_RESET;
-      code << textColor
-           << currentCode.substr(currentEnd + 1, nextInterval - currentEnd - 1)
-           << ANSI_BG_RESET;
+    const auto nonHlCode = on ? plainCode : dimCode;
+    const bool containsHighlight =
+        currentStart >= currentPos && currentStart < nextInterval;
+    if (res == OK && containsHighlight) {
+      const auto preHl =
+          currentCode.substr(currentPos, currentStart - currentPos);
+      const auto hl =
+          currentCode.substr(currentStart, currentEnd - currentStart + 1);
+      const auto postHl =
+          currentCode.substr(currentEnd + 1, nextInterval - currentEnd - 1);
+      code << nonHlCode(preHl) << hlCode(hl) << nonHlCode(postHl);
     } else {
-      code << textColor
-           << currentCode.substr(currentPos, nextInterval - currentPos)
-           << ANSI_BG_RESET;
+      const auto section =
+          currentCode.substr(currentPos, nextInterval - currentPos);
+      code << nonHlCode(section);
     }
     on = !on;
     currentPos = nextInterval;
   }
   std::cout << addLineNumbers(code.str(), breakpointLines);
-
-  if (!codeOnly) {
-    printAmplitudes(state);
-  }
-  if (state->didAssertionFail(state)) {
-    std::cout << "THIS LINE FAILED AN ASSERTION\n";
-  }
 }
 
 void CliFrontEnd::printAmplitudes(SimulationState* state) {
@@ -458,34 +635,7 @@ void CliFrontEnd::printAmplitudes(SimulationState* state) {
     amplitudes.push_back(oss.str());
   }
 
-  std::vector<size_t> widths;
-  widths.reserve(bitStrings.size());
-  std::ranges::transform(bitStrings, amplitudes, std::back_inserter(widths),
-                         [](const auto& bitString, const auto& amplitude) {
-                           return std::max(bitString.size(), amplitude.size());
-                         });
-
-  constexpr std::string_view labelAmpl = "Amplitudes";
-  const auto labelWidth = static_cast<int>(labelAmpl.size());
-
-  // Row 1: empty label chip + bitstrings (light-blue chips).
-  std::cout << "\x1b[47m" << std::string(labelWidth + 2, ' ') << "\x1b[0m";
-  for (size_t i = 0; i < bitStrings.size(); ++i) {
-    std::cout << "\x1b[48;5;153m\x1b[30m" << (i > 0 ? "|" : "") << " "
-              << std::setw(static_cast<int>(widths[i])) << bitStrings[i]
-              << " \x1b[0m";
-  }
-  std::cout << "\n";
-
-  // Row 2: "Amplitudes" label (white chip) + values (dark-blue chips).
-  std::cout << "\x1b[47m\x1b[30m \x1b[1m" << std::setw(labelWidth) << labelAmpl
-            << "\x1b[22m \x1b[0m";
-  for (size_t i = 0; i < bitStrings.size(); ++i) {
-    std::cout << "\x1b[44m\x1b[97m" << (i > 0 ? "|" : "") << " "
-              << std::setw(static_cast<int>(widths[i])) << amplitudes[i]
-              << " \x1b[0m";
-  }
-  std::cout << "\n";
+  printTable("Amplitudes", {bitStrings, amplitudes});
 }
 
 } // namespace mqt::debugger

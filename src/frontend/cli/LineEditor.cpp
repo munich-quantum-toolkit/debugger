@@ -327,6 +327,7 @@ std::optional<std::string> LineEditor::readLine() const {
   output.flush();
 
   ReadLineState state;
+  lastBound = false;
 
   while (true) {
     const int rawByte = input.get();
@@ -354,6 +355,7 @@ std::optional<std::string> LineEditor::readLine() const {
     if (c == ESC) {
       handleEscape(state);
       if (state.submitted) {
+        lastBound = true;
         output << '\n';
         output.flush();
         return state.buffer;
@@ -373,5 +375,7 @@ void LineEditor::bindKey(std::string_view csiSequence,
                          std::string_view command) {
   keyBindings.emplace(csiSequence, command);
 }
+
+bool LineEditor::wasBound() const noexcept { return lastBound; }
 
 } // namespace mqt::debugger
