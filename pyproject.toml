@@ -61,7 +61,7 @@ email = "burgholzer@me.com"
 check = [
   "numpy>=2.1",
   "numpy>=2.3.2; python_version>='3.14'",
-  "qiskit>=1.2.4",
+  "qiskit>=2.1",
   "scipy>=1.13.1",
   "scipy>=1.15; python_version>='3.13'",
   "scipy>=1.16.2; python_version>='3.14'",
@@ -90,7 +90,7 @@ test = [
   "pytest-cov>=7.1",
   "pytest-sugar>=1.1.1",
   "pytest-xdist>=3.8",
-  "qiskit>=1.2.4",
+  "qiskit>=2.1",
   "scipy>=1.13.1",
 ]
 docs = [
@@ -99,7 +99,7 @@ docs = [
   "myst-nb>=1.4",
   "openqasm-pygments>=0.2",
   "pandas[output-formatting]>=2.1.2",
-  "qiskit[qasm3-import,visualization]>=1",
+  "qiskit[qasm3-import,visualization]>=2.1",
   "sphinx>=9",
   "sphinx-copybutton>=0.5.2",
   "sphinx-design>=0.7",
@@ -173,11 +173,6 @@ wheel.py-api = "cp315t"
 
 [tool.uv]
 required-version = ">=0.5.20"
-# symengine>=0.11,<0.14 (optional dependency of qiskit) is incompatible with Python 3.14
-override-dependencies = [
-  "symengine>=0.11,<0.14; python_version < '3.14'",
-  "symengine>=0.14.1; python_version >= '3.14'",
-]
 cache-keys = [
   { file = "pyproject.toml" },
   { git = { commit = true, tags = true } },
