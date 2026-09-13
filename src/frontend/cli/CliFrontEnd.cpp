@@ -160,7 +160,13 @@ std::vector<std::string> getBitStrings(size_t numQubits) {
 
 CliFrontEnd::CliFrontEnd(std::ostream& out) : renderer(out) {}
 
-void CliFrontEnd::initCode(const char* code) { currentCode = code; }
+void CliFrontEnd::initCode(const char* code) {
+  currentCode = code;
+  // Trim trailing newlines so downstream consumers can rely on the invariant.
+  while (!currentCode.empty() && currentCode.back() == '\n') {
+    currentCode.pop_back();
+  }
+}
 
 void CliFrontEnd::run(const char* code, SimulationState* state) {
   initCode(code);
@@ -189,7 +195,7 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
 
   std::string command;
   std::string response;
-  size_t inspecting = -1ULL;
+  std::optional<size_t> inspecting;
 
   while (command != "quit" && command != "q") {
     printScreen(state, inspecting, response, state->getNumQubits(state) >= 7);
@@ -263,6 +269,7 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
       inspecting = state->getCurrentInstruction(state);
     } else if (command == "reset" || command == "r") {
       state->resetSimulation(state);
+      inspecting.reset();
     } else if (command == "state" || command == "s") {
       const auto n = 1ULL << state->getNumQubits(state);
       std::vector<std::string> lines;
@@ -401,7 +408,8 @@ void CliFrontEnd::printHelpBar() {
                            ansi::BG_TABLE_BOTTOM_ROW));
 }
 
-void CliFrontEnd::printScreen(SimulationState* state, size_t inspecting,
+void CliFrontEnd::printScreen(SimulationState* state,
+                              std::optional<size_t> inspecting,
                               std::string_view response, bool codeOnly) {
   renderer.clearScreen();
   printHelpBar();
@@ -417,15 +425,16 @@ void CliFrontEnd::printScreen(SimulationState* state, size_t inspecting,
   }
 }
 
-void CliFrontEnd::printCode(SimulationState* state, size_t inspecting) {
+void CliFrontEnd::printCode(SimulationState* state,
+                            std::optional<size_t> inspecting) {
   std::vector<size_t> highlightIntervals;
-  if (inspecting != -1ULL) {
+  if (inspecting.has_value()) {
     std::vector<uint8_t> inspectingDependencies(
         state->getInstructionCount(state));
     auto* deps = inspectingDependencies.data();
     // NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
     state->getDiagnostics(state)->getDataDependencies(
-        state->getDiagnostics(state), inspecting, true,
+        state->getDiagnostics(state), *inspecting, true,
         reinterpret_cast<bool*>(deps));
     // NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast)
     uint8_t on = 0;
@@ -442,32 +451,25 @@ void CliFrontEnd::printCode(SimulationState* state, size_t inspecting) {
   if (highlightIntervals.empty()) {
     highlightIntervals.push_back(0);
   }
-  // Ignore trailing newlines when picking the sentinel: they would be copied
-  // into the printed code and later show up as empty numbered lines.
-  size_t trimmedLength = currentCode.size();
-  while (trimmedLength > 0 && currentCode[trimmedLength - 1] == '\n') {
-    --trimmedLength;
-  }
-  highlightIntervals.push_back(trimmedLength + 1);
+  highlightIntervals.push_back(currentCode.size());
   size_t currentStart = 0;
   size_t currentEnd = 0;
   const Result res = state->getInstructionPosition(
       state, state->getCurrentInstruction(state), &currentStart, &currentEnd);
 
   size_t currentPos = 0;
-  bool on = false;
+  // Default (not inspected) code renders as plain.
+  bool on = !inspecting.has_value();
   std::ostringstream code;
-  const auto plainCode = [](std::string_view text) {
-    return std::string{text};
+  const auto nonHlCode = [&on](std::string_view text) {
+    return on ? bold(fgColor(text, ansi::FG_WHITE)) : std::string{text};
   };
-  const auto dimCode = [](std::string_view text) {
-    return fgColor(text, ansi::FG_CODE_DIM);
-  };
-  const auto hlCode = [](std::string_view text) {
-    return bgColor(fgColor(text, ansi::FG_CODE_HL), ansi::BG_CODE_HL);
+  const auto hlCode = [&on](std::string_view text) {
+    const auto styled =
+        bgColor(fgColor(text, ansi::FG_CODE_HL), ansi::BG_CODE_HL);
+    return on ? bold(styled) : styled;
   };
   for (const auto nextInterval : highlightIntervals) {
-    const auto nonHlCode = on ? plainCode : dimCode;
     const bool containsHighlight =
         currentStart >= currentPos && currentStart < nextInterval;
     if (res == OK && containsHighlight) {
