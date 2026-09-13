@@ -383,7 +383,7 @@ void CliFrontEnd::printHelpBar() {
     std::vector<std::string> cells(row.size());
     for (size_t i = 0; i < row.size(); ++i) {
       const auto& [key, desc] = row[i];
-      cells[i] = bold(leftAlign(key, keyWidths[i])) + " " +
+      cells[i] = bold(rightAlign(key, keyWidths[i])) + " " +
                  leftAlign(desc, textWidths[i]);
     }
     return join(cells, " | ");
@@ -510,14 +510,14 @@ void CliFrontEnd::printAmplitudes(SimulationState* state) {
 
   std::vector<std::string> bsCells(nCols);
   for (size_t i = 0; i < nCols; ++i) {
-    bsCells[i] = bold(margins(leftAlign(bitStrings[i], widths[i])));
+    bsCells[i] = bold(margins(rightAlign(bitStrings[i], widths[i])));
   }
   renderer.println(bgColor(fgColor(join(bsCells, "|"), ansi::FG_BLACK),
                            ansi::BG_TABLE_TOP_ROW));
 
   std::vector<std::string> ampCells(nCols);
   for (size_t i = 0; i < nCols; ++i) {
-    ampCells[i] = margins(leftAlign(amplitudes[i], widths[i]));
+    ampCells[i] = margins(rightAlign(amplitudes[i], widths[i]));
   }
   renderer.println(bgColor(fgColor(join(ampCells, "|"), ansi::FG_WHITE),
                            ansi::BG_TABLE_BOTTOM_ROW));
