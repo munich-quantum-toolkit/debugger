@@ -56,50 +56,6 @@ std::string_view loadResultMessageView(const LoadResult& result) {
 }
 
 /**
- * @brief Prefix each source line in @p text with a right-aligned 1-based line
- * number.
- *
- * The gutter width is picked from the total line count so all separators line
- * up.
- *
- * Preserves any ANSI color codes already present in @p text.
- *
- * Only newline characters trigger a new gutter, so highlights that span
- * newlines still render correctly.
- *
- * Line numbers whose 1-based index is in @p breakpointLines are painted with a
- * red background so the user sees at a glance where the active breakpoints are.
- *
- * @param text The source text to number.
- * @param breakpointLines 1-based line numbers whose gutter number should be
- * highlighted.
- * @return The numbered text ready to send to stdout.
- */
-std::string addLineNumbers(std::string_view text,
-                           const std::set<size_t>& breakpointLines) {
-  if (text.empty()) {
-    return {};
-  }
-
-  auto lines = text | std::views::split('\n');
-  const auto lineCount = static_cast<size_t>(std::ranges::distance(lines));
-  const auto gutterWidth = std::to_string(lineCount).size();
-
-  std::ostringstream oss;
-  size_t lineNum = 1;
-  for (const auto& line : lines) {
-    const std::string_view code{line.begin(), line.end()};
-    auto gutter = rightAlign(std::to_string(lineNum), gutterWidth);
-    if (breakpointLines.contains(lineNum)) {
-      gutter = bgColor(gutter, ansi::BG_BREAKPOINT);
-    }
-    oss << gutter << ' ' << code << "\n";
-    ++lineNum;
-  }
-  return oss.str();
-}
-
-/**
  * @brief Return the character offset of the start of a given line in @p code.
  *
  * Used to translate the user-facing line number of `breakpoint <N>` into the
@@ -427,68 +383,88 @@ void CliFrontEnd::printScreen(SimulationState* state,
 
 void CliFrontEnd::printCode(SimulationState* state,
                             std::optional<size_t> inspecting) {
-  std::vector<size_t> highlightIntervals;
+  // 1-based line numbers whose instructions are data dependencies of the
+  // inspected instruction. Empty when not inspecting.
+  std::set<size_t> depLines;
   if (inspecting.has_value()) {
-    std::vector<uint8_t> inspectingDependencies(
-        state->getInstructionCount(state));
-    auto* deps = inspectingDependencies.data();
+    std::vector<uint8_t> deps(state->getInstructionCount(state));
     // NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
     state->getDiagnostics(state)->getDataDependencies(
         state->getDiagnostics(state), *inspecting, true,
-        reinterpret_cast<bool*>(deps));
+        reinterpret_cast<bool*>(deps.data()));
     // NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast)
-    uint8_t on = 0;
-    for (size_t i = 0; i < inspectingDependencies.size(); i++) {
-      if (inspectingDependencies[i] != on) {
-        on = inspectingDependencies[i];
+    for (size_t i = 0; i < deps.size(); ++i) {
+      if (deps[i] != 0) {
         size_t start = 0;
         size_t end = 0;
         state->getInstructionPosition(state, i, &start, &end);
-        highlightIntervals.push_back(start);
+        const auto startLine = charOffsetToLine(currentCode, start);
+        const auto endLine = charOffsetToLine(currentCode, end);
+        for (auto l = startLine; l <= endLine; ++l) {
+          depLines.insert(l);
+        }
       }
     }
   }
-  if (highlightIntervals.empty()) {
-    highlightIntervals.push_back(0);
-  }
-  highlightIntervals.push_back(currentCode.size());
-  size_t currentStart = 0;
-  size_t currentEnd = 0;
-  const Result res = state->getInstructionPosition(
-      state, state->getCurrentInstruction(state), &currentStart, &currentEnd);
 
-  size_t currentPos = 0;
-  // Default (not inspected) code renders as plain.
-  bool on = !inspecting.has_value();
-  std::ostringstream code;
-  const auto nonHlCode = [&on](std::string_view text) {
-    return on ? bold(fgColor(text, ansi::FG_WHITE)) : std::string{text};
-  };
-  const auto hlCode = [&on](std::string_view text) {
-    const auto styled =
-        bgColor(fgColor(text, ansi::FG_CODE_HL), ansi::BG_CODE_HL);
-    return on ? bold(styled) : styled;
-  };
-  for (const auto nextInterval : highlightIntervals) {
-    const bool containsHighlight =
-        currentStart >= currentPos && currentStart < nextInterval;
-    if (res == OK && containsHighlight) {
-      const auto preHl =
-          currentCode.substr(currentPos, currentStart - currentPos);
-      const auto hl =
-          currentCode.substr(currentStart, currentEnd - currentStart + 1);
-      const auto postHl =
-          currentCode.substr(currentEnd + 1, nextInterval - currentEnd - 1);
-      code << nonHlCode(preHl) << hlCode(hl) << nonHlCode(postHl);
-    } else {
-      const auto section =
-          currentCode.substr(currentPos, nextInterval - currentPos);
-      code << nonHlCode(section);
+  size_t curStart = 0;
+  size_t curEnd = 0;
+  const bool hasCurrent =
+      state->getInstructionPosition(state, state->getCurrentInstruction(state),
+                                    &curStart, &curEnd) == OK;
+
+  // Each rendered line closes its own ANSI escapes before its newline, so
+  // terminal styling never carries across into the next line.
+  auto lines = currentCode | std::views::split('\n');
+  const auto lineCount = static_cast<size_t>(std::ranges::distance(lines));
+  const auto gutterWidth = std::to_string(lineCount).size();
+
+  size_t lineNum = 1;
+  size_t lineStart = 0;
+  for (const auto& lineView : lines) {
+    const std::string_view line{lineView.begin(), lineView.end()};
+    const size_t lineEnd = lineStart + line.size();
+    const bool isDep = depLines.contains(lineNum);
+    const bool containsCurrent =
+        hasCurrent && curStart <= lineEnd && curEnd >= lineStart;
+    const auto codeStyle = [isDep](std::string_view text) {
+      return isDep ? bold(fgColor(text, ansi::FG_WHITE)) : std::string{text};
+    };
+    const auto hlStyle = [isDep](std::string_view text) {
+      const auto highlighted =
+          bgColor(fgColor(text, ansi::FG_CODE_HL), ansi::BG_CODE_HL);
+      return isDep ? bold(highlighted) : highlighted;
+    };
+
+    auto gutter = rightAlign(std::to_string(lineNum), gutterWidth);
+    if (isDep) {
+      gutter = bold(fgColor(gutter, ansi::FG_WHITE));
     }
-    on = !on;
-    currentPos = nextInterval;
+    if (breakpointLines.contains(lineNum)) {
+      gutter = bgColor(gutter, ansi::BG_BREAKPOINT);
+    }
+
+    std::string codeStr;
+    if (containsCurrent) {
+      const size_t hlBegin = curStart > lineStart ? curStart - lineStart : 0;
+      const size_t hlEnd = std::min(curEnd - lineStart + 1, line.size());
+      if (hlBegin > 0) {
+        codeStr += codeStyle(line.substr(0, hlBegin));
+      }
+      if (hlEnd > hlBegin) {
+        codeStr += hlStyle(line.substr(hlBegin, hlEnd - hlBegin));
+      }
+      if (hlEnd < line.size()) {
+        codeStr += codeStyle(line.substr(hlEnd));
+      }
+    } else {
+      codeStr = codeStyle(line);
+    }
+
+    renderer.println(std::format("{} {}", gutter, codeStr));
+    ++lineNum;
+    lineStart = lineEnd + 1;
   }
-  renderer.print(addLineNumbers(code.str(), breakpointLines));
 }
 
 void CliFrontEnd::printAmplitudes(SimulationState* state) {
