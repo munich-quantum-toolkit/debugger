@@ -16,12 +16,10 @@
 
 #include "frontend/cli/Renderer.hpp"
 
-#include <algorithm>
 #include <cstddef>
 #include <iterator>
 #include <numeric>
 #include <ostream>
-#include <ranges>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -51,31 +49,24 @@ std::string rightAlign(std::string_view content, size_t width) {
 }
 
 std::string bold(std::string_view content) {
-  std::string s{ANSI_BOLD};
+  std::string s{ansi::BOLD};
   s.append(content);
-  s.append(ANSI_NORMAL);
+  s.append(ansi::NORMAL);
   return s;
 }
 
 std::string bgColor(std::string_view content, std::string_view bg) {
   std::string s{bg};
   s.append(content);
-  s.append(ANSI_RESET);
+  s.append(ansi::RESET);
   return s;
 }
 
 std::string fgColor(std::string_view content, std::string_view fg) {
   std::string s{fg};
   s.append(content);
-  s.append(ANSI_RESET);
+  s.append(ansi::RESET);
   return s;
-}
-
-size_t colMaxWidth(const std::vector<std::vector<std::string>>& rows,
-                   size_t col) {
-  return std::ranges::max(rows | std::views::transform([col](const auto& row) {
-                            return row[col].size();
-                          }));
 }
 
 std::string join(const std::vector<std::string>& parts, std::string_view sep) {
@@ -93,44 +84,10 @@ std::string join(const std::vector<std::string>& parts, std::string_view sep) {
 
 Renderer::Renderer(std::ostream& outStream) : out(outStream) {}
 
-void Renderer::clearScreen() { out << ANSI_CLEAR_SCREEN; }
+void Renderer::clearScreen() { out << ansi::CLEAR_SCREEN; }
 
 void Renderer::print(std::string_view s) { out << s; }
 
 void Renderer::println(std::string_view s) { out << s << '\n'; }
-
-void Renderer::printTable(std::string_view header,
-                          const std::vector<std::vector<std::string>>& rows) {
-  if (rows.empty()) {
-    return;
-  }
-
-  // Column widths: max cell size across all rows per column.
-  const auto nCols = rows[0].size();
-  std::vector<size_t> widths(nCols);
-  std::ranges::transform(
-      std::views::iota(size_t{0}, nCols), widths.begin(),
-      [&rows](size_t col) { return colMaxWidth(rows, col); });
-
-  // Header row.
-  out << bgColor(fgColor(margins(bold(header)), ANSI_FG_BLACK),
-                 ANSI_BG_TABLE_HEADER)
-      << '\n';
-
-  // Data rows: alternate light/dark background, bold on even rows.
-  for (size_t r = 0; r < rows.size(); ++r) {
-    const bool even = (r % 2 == 0);
-    std::vector<std::string> cells(nCols);
-    std::ranges::transform(rows[r], widths, cells.begin(),
-                           [even](std::string_view content, size_t width) {
-                             const auto cell =
-                                 margins(leftAlign(content, width));
-                             return even ? bold(cell) : cell;
-                           });
-    const auto rowBg = even ? ANSI_BG_TABLE_ROW_EVEN : ANSI_BG_TABLE_ROW_ODD;
-    const auto rowFg = even ? ANSI_FG_BLACK : ANSI_FG_WHITE;
-    out << bgColor(fgColor(join(cells, "|"), rowFg), rowBg) << '\n';
-  }
-}
 
 } // namespace mqt::debugger

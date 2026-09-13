@@ -24,26 +24,30 @@
 
 namespace mqt::debugger {
 
+namespace ansi {
+
 // Style modifiers.
-constexpr std::string_view ANSI_RESET = "\x1b[0m";
-constexpr std::string_view ANSI_BOLD = "\x1b[1m";
-constexpr std::string_view ANSI_NORMAL = "\x1b[22m";
+constexpr std::string_view RESET = "\x1b[0m";
+constexpr std::string_view BOLD = "\x1b[1m";
+constexpr std::string_view NORMAL = "\x1b[22m";
 
 // Foreground colors.
-constexpr std::string_view ANSI_FG_BLACK = "\x1b[30m";
-constexpr std::string_view ANSI_FG_WHITE = "\x1b[97m";
-constexpr std::string_view ANSI_FG_CODE_DIM = "\x1b[90m";
-constexpr std::string_view ANSI_FG_CODE_HL = ANSI_FG_BLACK;
+constexpr std::string_view FG_BLACK = "\x1b[30m";
+constexpr std::string_view FG_WHITE = "\x1b[97m";
+constexpr std::string_view FG_CODE_DIM = "\x1b[90m";
+constexpr std::string_view FG_CODE_HL = FG_BLACK;
 
 // Background colors.
-constexpr std::string_view ANSI_BG_BREAKPOINT = "\x1b[41m";
-constexpr std::string_view ANSI_BG_CODE_HL = "\x1b[48;5;227m";
-constexpr std::string_view ANSI_BG_TABLE_HEADER = "\x1b[47m";
-constexpr std::string_view ANSI_BG_TABLE_ROW_EVEN = "\x1b[48;5;153m";
-constexpr std::string_view ANSI_BG_TABLE_ROW_ODD = "\x1b[44m";
+constexpr std::string_view BG_BREAKPOINT = "\x1b[41m";
+constexpr std::string_view BG_CODE_HL = "\x1b[48;5;227m";
+constexpr std::string_view BG_TABLE_HEADER = "\x1b[47m";
+constexpr std::string_view BG_TABLE_TOP_ROW = "\x1b[48;5;153m";
+constexpr std::string_view BG_TABLE_BOTTOM_ROW = "\x1b[44m";
 
 // Terminal control.
-constexpr std::string_view ANSI_CLEAR_SCREEN = "\x1b[2J\x1b[1;1H";
+constexpr std::string_view CLEAR_SCREEN = "\x1b[2J\x1b[1;1H";
+
+} // namespace ansi
 
 /**
  * @brief Wrap @p content between one space on each side.
@@ -92,15 +96,6 @@ std::string bgColor(std::string_view content, std::string_view bg);
 std::string fgColor(std::string_view content, std::string_view fg);
 
 /**
- * @brief Return the widest cell in column @p col of @p rows.
- * @param rows Rows of cells. Every row must have at least @p col + 1 cells.
- * @param col Column index to measure.
- * @return The size of the largest cell in the requested column.
- */
-size_t colMaxWidth(const std::vector<std::vector<std::string>>& rows,
-                   size_t col);
-
-/**
  * @brief Join @p parts with @p sep between adjacent parts.
  * @param parts The strings to join.
  * @param sep The separator to place between consecutive parts.
@@ -146,23 +141,6 @@ public:
    * @param s The text to write before the newline.
    */
   void println(std::string_view s);
-
-  /**
-   * @brief Print a two-part table: a header cell on the top-left and rows of
-   * data cells to its right.
-   *
-   * The (row 0, col 0) cell shows @p header on a white background in bold; the
-   * corresponding column-0 cells of the remaining rows are painted black as a
-   * visual divider. Data rows alternate their background color: even rows go
-   * on light blue and have their contents in bold, odd rows go on dark blue in
-   * normal weight. Each data column is padded to the widest cell across all
-   * rows.
-   *
-   * @param header Text placed in the header cell.
-   * @param rows Data rows. All rows must have the same number of cells.
-   */
-  void printTable(std::string_view header,
-                  const std::vector<std::vector<std::string>>& rows);
 
 private:
   std::ostream& out;
