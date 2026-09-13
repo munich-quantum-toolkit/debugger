@@ -27,6 +27,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <format>
 #include <iostream>
 #include <iterator>
 #include <memory>
@@ -263,13 +264,15 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
     } else if (command == "reset" || command == "r") {
       state->resetSimulation(state);
     } else if (command == "state" || command == "s") {
-      std::ostringstream oss;
-      for (size_t i = 0; i < 1ULL << state->getNumQubits(state); i++) {
+      const auto n = 1ULL << state->getNumQubits(state);
+      std::vector<std::string> lines;
+      lines.reserve(n);
+      for (size_t i = 0; i < n; i++) {
         Complex c;
         state->getAmplitudeIndex(state, i, &c);
-        oss << c.real << " + " << c.imaginary << "i\n";
+        lines.push_back(std::format("{} + {}i", c.real, c.imaginary));
       }
-      response = oss.str();
+      response = join(lines, "\n");
     } else {
       response = "Invalid command";
     }
