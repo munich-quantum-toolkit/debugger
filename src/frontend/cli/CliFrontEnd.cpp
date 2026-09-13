@@ -90,7 +90,7 @@ std::string addLineNumbers(std::string_view text,
     const std::string_view code{line.begin(), line.end()};
     auto gutter = rightAlign(std::to_string(lineNum), gutterWidth);
     if (breakpointLines.contains(lineNum)) {
-      gutter = bgColor(gutter, ANSI_BG_BREAKPOINT);
+      gutter = bgColor(gutter, ansi::BG_BREAKPOINT);
     }
     oss << gutter << ' ' << code << "\n";
     ++lineNum;
@@ -361,15 +361,41 @@ void CliFrontEnd::suggestUpdatedAssertions(SimulationState* state) {
 }
 
 void CliFrontEnd::printHelpBar() {
-  renderer.printTable(
-      "MQT Debugger",
-      {
-          {"F5", "F6", "F7", "F9", "F10", "F11", "q"},
-          {"Run", "Step", "Step over", "Run back", "Back", "Back over", "Quit"},
-          {"a", "b <line#>", "d", "g <var>", "i", "r", "s"},
-          {"Assertions", "Break line#", "Diagnose", "Get var", "Inspect",
-           "Reset", "State"},
-      });
+  using Cell = std::pair<std::string_view, std::string_view>;
+  const std::vector<Cell> row1 = {{"F5", "Run"},       {"F6", "Step"},
+                                  {"F7", "Step over"}, {"F9", "Run back"},
+                                  {"F10", "Back"},     {"F11", "Back over"},
+                                  {"q", "Quit"}};
+  const std::vector<Cell> row2 = {{"a", "Assertions"}, {"b <line#>", "Break"},
+                                  {"d", "Diagnose"},   {"g <var>", "Get"},
+                                  {"i", "Inspect"},    {"r", "Reset"},
+                                  {"s", "State"}};
+
+  const size_t n = row1.size();
+  std::vector<size_t> keyWidths(n);
+  std::vector<size_t> textWidths(n);
+  for (size_t i = 0; i < n; ++i) {
+    keyWidths[i] = std::max(row1[i].first.size(), row2[i].first.size());
+    textWidths[i] = std::max(row1[i].second.size(), row2[i].second.size());
+  }
+
+  const auto renderRow = [&](const std::vector<Cell>& row) {
+    std::vector<std::string> cells(row.size());
+    for (size_t i = 0; i < row.size(); ++i) {
+      const auto& [key, desc] = row[i];
+      cells[i] = bold(leftAlign(key, keyWidths[i])) + " " +
+                 leftAlign(desc, textWidths[i]);
+    }
+    return join(cells, " | ");
+  };
+
+  renderer.println(
+      bgColor(fgColor(margins(bold("MQT Debugger")), ansi::FG_BLACK),
+              ansi::BG_TABLE_HEADER));
+  renderer.println(bgColor(fgColor(margins(renderRow(row1)), ansi::FG_BLACK),
+                           ansi::BG_TABLE_TOP_ROW));
+  renderer.println(bgColor(fgColor(margins(renderRow(row2)), ansi::FG_WHITE),
+                           ansi::BG_TABLE_BOTTOM_ROW));
 }
 
 void CliFrontEnd::printScreen(SimulationState* state, size_t inspecting,
@@ -432,10 +458,10 @@ void CliFrontEnd::printCode(SimulationState* state, size_t inspecting) {
     return std::string{text};
   };
   const auto dimCode = [](std::string_view text) {
-    return fgColor(text, ANSI_FG_CODE_DIM);
+    return fgColor(text, ansi::FG_CODE_DIM);
   };
   const auto hlCode = [](std::string_view text) {
-    return bgColor(fgColor(text, ANSI_FG_CODE_HL), ANSI_BG_CODE_HL);
+    return bgColor(fgColor(text, ansi::FG_CODE_HL), ansi::BG_CODE_HL);
   };
   for (const auto nextInterval : highlightIntervals) {
     const auto nonHlCode = on ? plainCode : dimCode;
@@ -473,7 +499,28 @@ void CliFrontEnd::printAmplitudes(SimulationState* state) {
     amplitudes.push_back(oss.str());
   }
 
-  renderer.printTable("Amplitudes", {bitStrings, amplitudes});
+  const size_t nCols = bitStrings.size();
+  std::vector<size_t> widths(nCols);
+  for (size_t i = 0; i < nCols; ++i) {
+    widths[i] = std::max(bitStrings[i].size(), amplitudes[i].size());
+  }
+
+  renderer.println(bgColor(fgColor(margins(bold("Amplitudes")), ansi::FG_BLACK),
+                           ansi::BG_TABLE_HEADER));
+
+  std::vector<std::string> bsCells(nCols);
+  for (size_t i = 0; i < nCols; ++i) {
+    bsCells[i] = bold(margins(leftAlign(bitStrings[i], widths[i])));
+  }
+  renderer.println(bgColor(fgColor(join(bsCells, "|"), ansi::FG_BLACK),
+                           ansi::BG_TABLE_TOP_ROW));
+
+  std::vector<std::string> ampCells(nCols);
+  for (size_t i = 0; i < nCols; ++i) {
+    ampCells[i] = margins(leftAlign(amplitudes[i], widths[i]));
+  }
+  renderer.println(bgColor(fgColor(join(ampCells, "|"), ansi::FG_WHITE),
+                           ansi::BG_TABLE_BOTTOM_ROW));
 }
 
 } // namespace mqt::debugger
