@@ -34,7 +34,6 @@ constexpr std::string_view NORMAL = "\x1b[22m";
 // Foreground colors.
 constexpr std::string_view FG_BLACK = "\x1b[30m";
 constexpr std::string_view FG_WHITE = "\x1b[97m";
-constexpr std::string_view FG_CODE_DIM = "\x1b[90m";
 constexpr std::string_view FG_CODE_HL = FG_BLACK;
 
 // Background colors.

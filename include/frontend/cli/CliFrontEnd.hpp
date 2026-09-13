@@ -23,6 +23,7 @@
 
 #include <cstddef>
 #include <iosfwd>
+#include <optional>
 #include <set>
 #include <string>
 #include <string_view>
@@ -84,12 +85,13 @@ private:
    * requested), assertion warning, and the response of the last command.
    *
    * @param state The simulation state.
-   * @param inspecting The instruction being inspected (or -1ULL if nothing).
+   * @param inspecting The instruction being inspected, or `std::nullopt` if
+   * nothing.
    * @param response Text shown just above the prompt; empty means nothing to
    * show.
    * @param codeOnly If true, the amplitudes row is skipped.
    */
-  void printScreen(SimulationState* state, size_t inspecting,
+  void printScreen(SimulationState* state, std::optional<size_t> inspecting,
                    std::string_view response, bool codeOnly);
 
   /**
@@ -104,9 +106,10 @@ private:
    * data-dependencies of the inspected instruction.
    *
    * @param state The simulation state.
-   * @param inspecting The instruction being inspected (or -1ULL if nothing).
+   * @param inspecting The instruction being inspected, or `std::nullopt` if
+   * nothing.
    */
-  void printCode(SimulationState* state, size_t inspecting);
+  void printCode(SimulationState* state, std::optional<size_t> inspecting);
 
   /**
    * @brief Print the current state as a two-row table: bitstrings on top,
