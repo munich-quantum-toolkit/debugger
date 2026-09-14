@@ -198,9 +198,15 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
         size_t start = 0;
         size_t end = 0;
         state->getInstructionPosition(state, instr, &start, &end);
-        const auto bpLine = charOffsetToLine(currentCode, start);
-        breakpointLines.insert(bpLine);
-        response = "Breakpoint set at line " + std::to_string(bpLine);
+        const auto startLine = charOffsetToLine(currentCode, start);
+        const auto endLine = charOffsetToLine(currentCode, end);
+        for (auto l = startLine; l <= endLine; ++l) {
+          breakpointLines.insert(l);
+        }
+        response = "Breakpoint set at " +
+                   (startLine == endLine
+                        ? std::format("line {}", startLine)
+                        : std::format("lines {}-{}", startLine, endLine));
       }
     } else if (command == "diagnose" || command == "d") {
       std::vector<ErrorCause> problems(10);
