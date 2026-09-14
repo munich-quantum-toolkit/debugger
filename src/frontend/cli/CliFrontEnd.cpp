@@ -105,7 +105,7 @@ std::vector<std::string> getBitStrings(size_t numQubits) {
   for (size_t i = 0; i < (1ULL << numQubits); i++) {
     std::string bitString;
     for (size_t j = 0; j < numQubits; j++) {
-      bitString.insert(bitString.begin(), (i & (1 << j)) > 0 ? '1' : '0');
+      bitString.insert(bitString.begin(), (i & (1ULL << j)) > 0 ? '1' : '0');
     }
     bitStrings.push_back(bitString);
   }
