@@ -228,7 +228,17 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
       }
       response = oss.str();
     } else if (command == "inspect" || command == "i") {
-      inspecting = state->getCurrentInstruction(state);
+      const auto current = state->getCurrentInstruction(state);
+      inspecting = current;
+      std::vector<uint8_t> deps(state->getInstructionCount(state));
+      // NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
+      state->getDiagnostics(state)->getDataDependencies(
+          state->getDiagnostics(state), current, true,
+          reinterpret_cast<bool*>(deps.data()));
+      // NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast)
+      if (std::ranges::count(deps, uint8_t{1}) == 1) {
+        response = "Current instruction has no data dependencies.";
+      }
     } else if (command == "reset" || command == "r") {
       state->resetSimulation(state);
       inspecting.reset();
@@ -400,15 +410,18 @@ void CliFrontEnd::printCode(SimulationState* state,
         reinterpret_cast<bool*>(deps.data()));
     // NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast)
     for (size_t i = 0; i < deps.size(); ++i) {
-      if (deps[i] != 0) {
-        size_t start = 0;
-        size_t end = 0;
-        state->getInstructionPosition(state, i, &start, &end);
-        const auto startLine = charOffsetToLine(currentCode, start);
-        const auto endLine = charOffsetToLine(currentCode, end);
-        for (auto l = startLine; l <= endLine; ++l) {
-          depLines.insert(l);
-        }
+      // Skip self: the current instruction already has its own highlight;
+      // marking it as its own dependency would be redundant.
+      if (deps[i] == 0 || i == *inspecting) {
+        continue;
+      }
+      size_t start = 0;
+      size_t end = 0;
+      state->getInstructionPosition(state, i, &start, &end);
+      const auto startLine = charOffsetToLine(currentCode, start);
+      const auto endLine = charOffsetToLine(currentCode, end);
+      for (auto l = startLine; l <= endLine; ++l) {
+        depLines.insert(l);
       }
     }
   }
@@ -436,10 +449,8 @@ void CliFrontEnd::printCode(SimulationState* state,
     const auto codeStyle = [isDep](std::string_view text) {
       return isDep ? bold(fgColor(text, ansi::FG_WHITE)) : std::string{text};
     };
-    const auto hlStyle = [isDep](std::string_view text) {
-      const auto highlighted =
-          bgColor(fgColor(text, ansi::FG_CODE_HL), ansi::BG_CODE_HL);
-      return isDep ? bold(highlighted) : highlighted;
+    const auto hlStyle = [](std::string_view text) {
+      return bgColor(fgColor(text, ansi::FG_CODE_HL), ansi::BG_CODE_HL);
     };
 
     auto gutter = rightAlign(std::to_string(lineNum), gutterWidth);
