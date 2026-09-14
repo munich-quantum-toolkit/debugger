@@ -358,6 +358,27 @@ TEST_F(CustomCodeTest, ResetGate) {
 }
 
 /**
+ * @test Test that `resetSimulation` returns the classical side to its initial
+ * state, not just the quantum state.
+ * After running a program that measures `q[0] = |1>` into `c[0]`, `c[0]` holds
+ * `true`; a subsequent `resetSimulation` must set it back to `false`.
+ */
+TEST_F(CustomCodeTest, ResetSimulationClearsClassicalBits) {
+  loadCode(1, 1,
+           "x q[0];"
+           "measure q[0] -> c[0];");
+  ASSERT_EQ(state->runSimulation(state), OK);
+
+  Variable v;
+  ASSERT_EQ(state->getClassicalVariable(state, "c[0]", &v), OK);
+  ASSERT_TRUE(classicalEquals(v, true));
+
+  ASSERT_EQ(state->resetSimulation(state), OK);
+  ASSERT_EQ(state->getClassicalVariable(state, "c[0]", &v), OK);
+  ASSERT_TRUE(classicalEquals(v, false));
+}
+
+/**
  * @test Test that parsing works correctly even if a custom gate name includes
  * the keyword `gate`.
  */
