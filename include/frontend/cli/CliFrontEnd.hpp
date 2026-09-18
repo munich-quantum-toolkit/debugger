@@ -19,15 +19,16 @@
 #pragma once
 
 #include "backend/debug.h"
+#include "frontend/cli/Renderer.hpp"
 
 #include <cstddef>
+#include <iosfwd>
+#include <optional>
+#include <set>
 #include <string>
+#include <string_view>
 
 namespace mqt::debugger {
-
-#define ANSI_BG_YELLOW "\x1b[43m"
-#define ANSI_BG_RESET "\x1b[0m"
-#define ANSI_COL_GRAY "\x1b[90m"
 
 /**
  * @brief A command-line interface for the debugger.
@@ -38,6 +39,19 @@ namespace mqt::debugger {
 class CliFrontEnd {
 public:
   /**
+   * @brief Construct with the output stream to render to.
+   * @param out The stream the CLI will render to. Must outlive this object.
+   */
+  explicit CliFrontEnd(std::ostream& out);
+
+  ~CliFrontEnd() = default;
+
+  CliFrontEnd(const CliFrontEnd&) = delete;
+  CliFrontEnd& operator=(const CliFrontEnd&) = delete;
+  CliFrontEnd(CliFrontEnd&&) = delete;
+  CliFrontEnd& operator=(CliFrontEnd&&) = delete;
+
+  /**
    * @brief Runs the debugger with the given code and state.
    * @param code The code to run (compatible with the provided
    * `SimulationState`)
@@ -47,23 +61,72 @@ public:
 
 private:
   /**
-   * @brief The current code being executed. Used to display the code in the
-   * CLI.
+   * @brief The renderer that funnels every CLI write to the configured output
+   * stream.
+   */
+  Renderer renderer;
+
+  /**
+   * @brief The current code being executed.
+   *
+   * Used to display the code in the CLI.
    */
   std::string currentCode;
 
   /**
-   * @brief Print the current state of the simulation.
-   * @param state The simulation state.
-   * @param inspecting The instruction that is currently inspected (or -1ULL if
-   * nothing is being inspected).
-   * @param codeOnly If true, only the code is displayed, not the state.
+   * @brief 1-based line numbers that currently carry a breakpoint.
+   *
+   * Used to paint their gutter numbers on a red background in the source view.
    */
-  void printState(SimulationState* state, size_t inspecting,
-                  bool codeOnly = false);
+  std::set<size_t> breakpointLines;
+
+  /**
+   * @brief Print one full screen: help bar, source code, amplitudes (if
+   * requested), assertion warning, and the response of the last command.
+   *
+   * @param state The simulation state.
+   * @param inspecting The instruction being inspected, or `std::nullopt` if
+   * nothing.
+   * @param response Text shown just above the prompt; empty means nothing to
+   * show.
+   * @param codeOnly If true, the amplitudes row is skipped.
+   */
+  void printScreen(SimulationState* state, std::optional<size_t> inspecting,
+                   std::string_view response, bool codeOnly);
+
+  /**
+   * @brief Print the persistent help bar. Four rows: F-key shortcuts and
+   * descriptions on the first two, single-letter aliases on the last two.
+   */
+  void printHelpBar();
+
+  /**
+   * @brief Print the source code with line numbers, breakpoint markers, the
+   * current-instruction highlight, and dimming of the lines that are not
+   * data-dependencies of the inspected instruction.
+   *
+   * @param state The simulation state.
+   * @param inspecting The instruction being inspected, or `std::nullopt` if
+   * nothing.
+   */
+  void printCode(SimulationState* state, std::optional<size_t> inspecting);
+
+  /**
+   * @brief Print the current state as a two-row table: bitstrings on top,
+   * their amplitudes on the bottom.
+   *
+   * Layout matches the persistent help bar: labels in a white brand-style
+   * chip, bitstring values in light-blue chips (F-keys row style), amplitude
+   * values in dark-blue chips (letters row style). Each column width is the
+   * wider of the bitstring and its amplitude string, so both rows align.
+   *
+   * @param state The simulation state to query for amplitudes.
+   */
+  void printAmplitudes(SimulationState* state);
 
   /**
    * @brief Initialize the code for running it at a later time.
+   * @param code The code to remember for later runs.
    */
   void initCode(const char* code);
 

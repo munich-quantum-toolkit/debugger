@@ -17,16 +17,28 @@
 #include "backend/debug.h"
 #include "backend/diagnostics.h"
 #include "common.h"
+#include "frontend/cli/LineEditor.hpp"
+#include "frontend/cli/RawModeTerminal.hpp"
+#include "frontend/cli/Renderer.hpp"
 
 #include <algorithm>
 #include <array>
+#include <charconv>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <format>
 #include <iostream>
+#include <iterator>
+#include <memory>
+#include <optional>
+#include <ranges>
 #include <set>
+#include <sstream>
 #include <string>
 #include <string_view>
+#include <system_error>
+#include <utility>
 #include <vector>
 
 namespace mqt::debugger {
@@ -44,13 +56,43 @@ std::string_view loadResultMessageView(const LoadResult& result) {
 }
 
 /**
- * @brief ANSI escape sequence for resetting the background color.
+ * @brief Return the character offset of the start of a given line in @p code.
  *
- * This method clears the terminal screen.
+ * Used to translate the user-facing line number of `breakpoint <N>` into the
+ * character-offset position that the simulator's `setBreakpoint` API expects.
+ *
+ * @param code The source code to scan.
+ * @param lineNumber 1-based line number to look up.
+ * @return The 0-based character offset of the start of the requested line.
+ * Or `std::nullopt` if the line number is out of range.
  */
-void clearScreen() {
-  // Clear the screen using an ANSI escape sequence
-  std::cout << "\033[2J\033[1;1H";
+std::optional<size_t> lineToCharOffset(std::string_view code,
+                                       size_t lineNumber) {
+  auto lines = code | std::views::split('\n');
+  const auto lineCount = static_cast<size_t>(std::ranges::distance(lines));
+  if (lineNumber == 0 || lineNumber > lineCount) {
+    return std::nullopt;
+  }
+  size_t offset = 0;
+  for (const auto& line : lines | std::views::take(lineNumber - 1)) {
+    offset += static_cast<size_t>(std::ranges::distance(line)) + 1;
+  }
+  return offset;
+}
+
+/**
+ * @brief Return the 1-based line number that contains @p offset in @p code.
+ *
+ * Used to translate the character offset the simulator reports for a breakpoint
+ * back into a user-facing line number. Inverse of `lineToCharOffset`.
+ *
+ * @param code The source code to scan.
+ * @param offset A 0-based character offset into @p code.
+ * @return The 1-based line number containing @p offset.
+ */
+size_t charOffsetToLine(std::string_view code, size_t offset) {
+  const auto prefix = code.substr(0, std::min(offset, code.size()));
+  return static_cast<size_t>(std::ranges::count(prefix, '\n')) + 1;
 }
 
 /**
@@ -63,7 +105,7 @@ std::vector<std::string> getBitStrings(size_t numQubits) {
   for (size_t i = 0; i < (1ULL << numQubits); i++) {
     std::string bitString;
     for (size_t j = 0; j < numQubits; j++) {
-      bitString.insert(bitString.begin(), (i & (1 << j)) > 0 ? '1' : '0');
+      bitString.insert(bitString.begin(), (i & (1ULL << j)) > 0 ? '1' : '0');
     }
     bitStrings.push_back(bitString);
   }
@@ -72,109 +114,146 @@ std::vector<std::string> getBitStrings(size_t numQubits) {
 
 } // namespace
 
-void CliFrontEnd::initCode(const char* code) { currentCode = code; }
+CliFrontEnd::CliFrontEnd(std::ostream& out) : renderer(out) {}
+
+void CliFrontEnd::initCode(const char* code) {
+  currentCode = code;
+  // Trim trailing newlines so downstream consumers can rely on the invariant.
+  while (!currentCode.empty() && currentCode.back() == '\n') {
+    currentCode.pop_back();
+  }
+}
 
 void CliFrontEnd::run(const char* code, SimulationState* state) {
   initCode(code);
 
-  std::string command;
   const auto result = state->loadCode(state, code);
   state->resetSimulation(state);
   if (result.status != LOAD_OK) {
     const auto messageView = loadResultMessageView(result);
     if (!messageView.empty()) {
-      std::cout << "Error loading code: " << messageView << "\n";
+      renderer.print("Error loading code: ");
+      renderer.println(messageView);
     } else {
-      std::cout << "Error loading code\n";
+      renderer.println("Error loading code");
     }
     return;
   }
 
-  bool wasError = false;
-  bool wasGet = false;
-  size_t inspecting = -1ULL;
+  const RawModeTerminal rawMode;
+  LineEditor editor{std::cin, std::cout, "$ "};
+  editor.bindKey("15~", "run");       // F5
+  editor.bindKey("17~", "step");      // F6
+  editor.bindKey("18~", "step over"); // F7
+  editor.bindKey("20~", "run back");  // F9
+  editor.bindKey("21~", "back");      // F10
+  editor.bindKey("23~", "back over"); // F11
 
-  while (command != "exit") {
-    clearScreen();
-    if (wasError) {
-      std::cout << "Invalid command. Choose one of:\n";
-      std::cout << "run\t";
-      std::cout << "run back [rb]\t";
-      std::cout << "step [enter]\t";
-      std::cout << "step over [o]\t";
-      std::cout << "back [b]\t";
-      std::cout << "back over [bo]\t";
-      std::cout << "get <variable>\t";
-      std::cout << "reset\t";
-      std::cout << "inspect\t";
-      std::cout << "assertions\t";
-      std::cout << "exit\n\n";
-      wasError = false;
-    }
-    if (wasGet) {
-      Variable v;
-      if (state->getClassicalVariable(
-              state, command.substr(4, command.length() - 4).c_str(), &v) ==
-          ERROR) {
-        std::cout << "Variable " << command << " not found\n";
-      } else {
-        if (v.type == VarBool) {
-          std::cout << command.substr(4, command.length() - 4) << " = "
-                    << (v.value.boolValue ? "true" : "false") << "\n";
-        } else if (v.type == VarInt) {
-          std::cout << command.substr(4, command.length() - 4) << " = "
-                    << v.value.intValue << "\n";
-        } else if (v.type == VarFloat) {
-          std::cout << command.substr(4, command.length() - 4) << " = "
-                    << v.value.floatValue << "\n";
-        }
-      }
-      wasGet = false;
-    }
-    printState(state, inspecting, state->getNumQubits(state) >= 7);
+  std::string command;
+  std::string response;
+  std::optional<size_t> inspecting;
 
-    std::cout << "Enter command: ";
-    std::getline(std::cin, command);
+  while (command != "quit" && command != "q") {
+    printScreen(state, inspecting, response, state->getNumQubits(state) >= 7);
+    // The editor is printing the prompt before reading the line
+    auto line = editor.readLine();
+    if (!line.has_value()) {
+      break;
+    }
+    command = std::move(*line);
+    const bool wasFKey = editor.wasBound();
+    if (!command.empty() && !wasFKey) {
+      editor.addToHistory(command);
+    }
+    response.clear();
     if (command == "run") {
       state->runSimulation(state);
-    } else if (command == "run back" || command == "rb") {
+    } else if (command == "run back") {
       state->runSimulationBackward(state);
     } else if (command == "step" || command.empty()) {
       state->stepForward(state);
-    } else if (command == "step over" || command == "o") {
+    } else if (command == "step over") {
       state->stepOverForward(state);
-    } else if (command == "back" || command == "b") {
+    } else if (command == "back") {
       state->stepBackward(state);
-    } else if (command == "back over" || command == "bo") {
+    } else if (command == "back over") {
       state->stepOverBackward(state);
-    } else if (command == "reset") {
-      state->resetSimulation(state);
-    } else if (command.starts_with("get ")) {
-      wasGet = true;
-    } else if (command == "inspect") {
-      inspecting = state->getCurrentInstruction(state);
-    } else if (command == "diagnose") {
+    } else if (command == "assertions" || command == "a") {
+      suggestUpdatedAssertions(state);
+    } else if (command.starts_with("breakpoint ") ||
+               command.starts_with("b ")) {
+      const auto param = command.substr(command.find(' ') + 1);
+      const auto* const paramBegin = std::to_address(param.begin());
+      const auto* const paramEnd = std::to_address(param.end());
+      size_t lineNumber = 0;
+      const auto [ptr, ec] = std::from_chars(paramBegin, paramEnd, lineNumber);
+      if (ec != std::errc{} || ptr != paramEnd) {
+        response = "Invalid breakpoint line: " + param;
+      } else if (const auto offset = lineToCharOffset(currentCode, lineNumber);
+                 !offset.has_value()) {
+        response = "Line number out of range: " + param;
+      } else {
+        size_t instr = 0;
+        state->setBreakpoint(state, *offset, &instr);
+        size_t start = 0;
+        size_t end = 0;
+        state->getInstructionPosition(state, instr, &start, &end);
+        const auto startLine = charOffsetToLine(currentCode, start);
+        const auto endLine = charOffsetToLine(currentCode, end);
+        for (auto l = startLine; l <= endLine; ++l) {
+          breakpointLines.insert(l);
+        }
+        response = "Breakpoint set at " +
+                   (startLine == endLine
+                        ? std::format("line {}", startLine)
+                        : std::format("lines {}-{}", startLine, endLine));
+      }
+    } else if (command == "diagnose" || command == "d") {
       std::vector<ErrorCause> problems(10);
       const auto count = state->getDiagnostics(state)->potentialErrorCauses(
           state->getDiagnostics(state), problems.data(), problems.size());
-      std::cout << count << " potential problems found\n";
-    } else if (command.starts_with("breakpoint")) {
-      const auto param = command.substr(11, command.length() - 11);
-      const auto breakpoint = std::stoul(param);
-      size_t instr = 0;
-      state->setBreakpoint(state, breakpoint, &instr);
-      std::cout << "Breakpoint set at instruction " << instr << "\n";
-    } else if (command == "assertions") {
-      suggestUpdatedAssertions(state);
-    } else if (command == "state") {
-      for (size_t i = 0; i < 1ULL << state->getNumQubits(state); i++) {
+      response = std::to_string(count) + " potential problems found";
+    } else if (command.starts_with("get ") || command.starts_with("g ")) {
+      const auto varName = command.substr(command.find(' ') + 1);
+      Variable v;
+      std::ostringstream oss;
+      if (state->getClassicalVariable(state, varName.c_str(), &v) == ERROR) {
+        oss << "Variable " << varName << " not found";
+      } else if (v.type == VarBool) {
+        oss << std::boolalpha << varName << " = " << v.value.boolValue;
+      } else if (v.type == VarInt) {
+        oss << varName << " = " << v.value.intValue;
+      } else if (v.type == VarFloat) {
+        oss << varName << " = " << v.value.floatValue;
+      }
+      response = oss.str();
+    } else if (command == "inspect" || command == "i") {
+      const auto current = state->getCurrentInstruction(state);
+      inspecting = current;
+      std::vector<uint8_t> deps(state->getInstructionCount(state));
+      // NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
+      state->getDiagnostics(state)->getDataDependencies(
+          state->getDiagnostics(state), current, true,
+          reinterpret_cast<bool*>(deps.data()));
+      // NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast)
+      if (std::ranges::count(deps, uint8_t{1}) == 1) {
+        response = "Current instruction has no data dependencies.";
+      }
+    } else if (command == "reset" || command == "r") {
+      state->resetSimulation(state);
+      inspecting.reset();
+    } else if (command == "state" || command == "s") {
+      const auto n = 1ULL << state->getNumQubits(state);
+      std::vector<std::string> lines;
+      lines.reserve(n);
+      for (size_t i = 0; i < n; i++) {
         Complex c;
         state->getAmplitudeIndex(state, i, &c);
-        std::cout << c.real << " + " << c.imaginary << "i\n";
+        lines.push_back(std::format("{} + {}i", c.real, c.imaginary));
       }
-      std::cin >> command;
+      response = join(lines, "\n");
     } else {
-      wasError = true;
+      response = "Invalid command";
     }
   }
 }
@@ -243,16 +322,18 @@ void CliFrontEnd::suggestUpdatedAssertions(SimulationState* state) {
     state->loadCode(state, newCode.c_str());
   }
 
-  std::cout << "Code with updated assertions is:\n";
-  std::cout << "------------------------------------------------------------\n";
-  std::cout << newCode << "\n";
-  std::cout << "------------------------------------------------------------\n";
+  renderer.println("Code with updated assertions is:");
+  renderer.println(
+      "------------------------------------------------------------");
+  renderer.println(newCode);
+  renderer.println(
+      "------------------------------------------------------------");
 
   state->resetSimulation(state);
 
-  std::cout << "Accept? [y/n]: ";
-  std::string command;
-  std::getline(std::cin, command);
+  const LineEditor confirmEditor{std::cin, std::cout, "Accept? [y/n]: "};
+  const auto reply = confirmEditor.readLine();
+  const std::string command = reply.value_or("");
 
   if (command == "y") {
     currentCode = newCode;
@@ -261,77 +342,183 @@ void CliFrontEnd::suggestUpdatedAssertions(SimulationState* state) {
   }
 }
 
-void CliFrontEnd::printState(SimulationState* state, size_t inspecting,
-                             bool codeOnly) {
-  std::vector<size_t> highlightIntervals;
-  if (inspecting != -1ULL) {
-    std::vector<uint8_t> inspectingDependencies(
-        state->getInstructionCount(state));
-    auto* deps = inspectingDependencies.data();
+void CliFrontEnd::printHelpBar() {
+  using Cell = std::pair<std::string_view, std::string_view>;
+  const std::vector<Cell> row1 = {{"F5", "Run"},       {"F6", "Step"},
+                                  {"F7", "Step over"}, {"F9", "Run back"},
+                                  {"F10", "Back"},     {"F11", "Back over"},
+                                  {"q", "Quit"}};
+  const std::vector<Cell> row2 = {{"a", "Assertions"}, {"b <line#>", "Break"},
+                                  {"d", "Diagnose"},   {"g <var>", "Get"},
+                                  {"i", "Inspect"},    {"r", "Reset"},
+                                  {"s", "State"}};
+
+  const size_t n = row1.size();
+  std::vector<size_t> keyWidths(n);
+  std::vector<size_t> textWidths(n);
+  for (size_t i = 0; i < n; ++i) {
+    keyWidths[i] = std::max(row1[i].first.size(), row2[i].first.size());
+    textWidths[i] = std::max(row1[i].second.size(), row2[i].second.size());
+  }
+
+  const auto renderRow = [&](const std::vector<Cell>& row) {
+    std::vector<std::string> cells(row.size());
+    for (size_t i = 0; i < row.size(); ++i) {
+      const auto& [key, desc] = row[i];
+      cells[i] = bold(rightAlign(key, keyWidths[i])) + " " +
+                 leftAlign(desc, textWidths[i]);
+    }
+    return join(cells, " | ");
+  };
+
+  renderer.println(
+      bgColor(fgColor(margins(bold("MQT Debugger")), ansi::FG_BLACK),
+              ansi::BG_TABLE_HEADER));
+  renderer.println(bgColor(fgColor(margins(renderRow(row1)), ansi::FG_BLACK),
+                           ansi::BG_TABLE_TOP_ROW));
+  renderer.println(bgColor(fgColor(margins(renderRow(row2)), ansi::FG_WHITE),
+                           ansi::BG_TABLE_BOTTOM_ROW));
+}
+
+void CliFrontEnd::printScreen(SimulationState* state,
+                              std::optional<size_t> inspecting,
+                              std::string_view response, bool codeOnly) {
+  renderer.clearScreen();
+  printHelpBar();
+  printCode(state, inspecting);
+  if (!codeOnly) {
+    printAmplitudes(state);
+  }
+  if (state->didAssertionFail(state)) {
+    renderer.println("THIS LINE FAILED AN ASSERTION");
+  }
+  if (!response.empty()) {
+    renderer.println(response);
+  }
+}
+
+void CliFrontEnd::printCode(SimulationState* state,
+                            std::optional<size_t> inspecting) {
+  // 1-based line numbers whose instructions are data dependencies of the
+  // inspected instruction. Empty when not inspecting.
+  std::set<size_t> depLines;
+  if (inspecting.has_value()) {
+    std::vector<uint8_t> deps(state->getInstructionCount(state));
     // NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
     state->getDiagnostics(state)->getDataDependencies(
-        state->getDiagnostics(state), inspecting, true,
-        reinterpret_cast<bool*>(deps));
+        state->getDiagnostics(state), *inspecting, true,
+        reinterpret_cast<bool*>(deps.data()));
     // NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast)
-    uint8_t on = 0;
-    for (size_t i = 0; i < inspectingDependencies.size(); i++) {
-      if (inspectingDependencies[i] != on) {
-        on = inspectingDependencies[i];
-        size_t start = 0;
-        size_t end = 0;
-        state->getInstructionPosition(state, i, &start, &end);
-        highlightIntervals.push_back(start);
+    for (size_t i = 0; i < deps.size(); ++i) {
+      // Skip self: the current instruction already has its own highlight;
+      // marking it as its own dependency would be redundant.
+      if (deps[i] == 0 || i == *inspecting) {
+        continue;
+      }
+      size_t start = 0;
+      size_t end = 0;
+      state->getInstructionPosition(state, i, &start, &end);
+      const auto startLine = charOffsetToLine(currentCode, start);
+      const auto endLine = charOffsetToLine(currentCode, end);
+      for (auto l = startLine; l <= endLine; ++l) {
+        depLines.insert(l);
       }
     }
   }
-  if (highlightIntervals.empty()) {
-    highlightIntervals.push_back(0);
-  }
-  highlightIntervals.push_back(currentCode.length() + 1);
-  size_t currentStart = 0;
-  size_t currentEnd = 0;
-  const Result res = state->getInstructionPosition(
-      state, state->getCurrentInstruction(state), &currentStart, &currentEnd);
 
-  size_t currentPos = 0;
-  bool on = false;
-  for (const auto nextInterval : highlightIntervals) {
-    const auto* const textColor = on ? ANSI_BG_RESET : ANSI_COL_GRAY;
-    if (res == OK && currentStart >= currentPos &&
-        currentStart < nextInterval) {
-      std::cout << textColor
-                << currentCode.substr(currentPos, currentStart - currentPos)
-                << ANSI_BG_RESET;
-      std::cout << ANSI_BG_YELLOW
-                << currentCode.substr(currentStart,
-                                      currentEnd - currentStart + 1)
-                << ANSI_BG_RESET;
-      std::cout << textColor
-                << currentCode.substr(currentEnd + 1,
-                                      nextInterval - currentEnd - 1)
-                << ANSI_BG_RESET;
+  size_t curStart = 0;
+  size_t curEnd = 0;
+  const bool hasCurrent =
+      state->getInstructionPosition(state, state->getCurrentInstruction(state),
+                                    &curStart, &curEnd) == OK;
+
+  // Each rendered line closes its own ANSI escapes before its newline, so
+  // terminal styling never carries across into the next line.
+  auto lines = currentCode | std::views::split('\n');
+  const auto lineCount = static_cast<size_t>(std::ranges::distance(lines));
+  const auto gutterWidth = std::to_string(lineCount).size();
+
+  size_t lineNum = 1;
+  size_t lineStart = 0;
+  for (const auto& lineView : lines) {
+    const std::string_view line{lineView.begin(), lineView.end()};
+    const size_t lineEnd = lineStart + line.size();
+    const bool isDep = depLines.contains(lineNum);
+    const bool containsCurrent =
+        hasCurrent && curStart <= lineEnd && curEnd >= lineStart;
+    const auto codeStyle = [isDep](std::string_view text) {
+      return isDep ? bold(fgColor(text, ansi::FG_WHITE)) : std::string{text};
+    };
+    const auto hlStyle = [](std::string_view text) {
+      return bgColor(fgColor(text, ansi::FG_CODE_HL), ansi::BG_CODE_HL);
+    };
+
+    auto gutter = rightAlign(std::to_string(lineNum), gutterWidth);
+    if (isDep) {
+      gutter = bold(fgColor(gutter, ansi::FG_WHITE));
+    }
+    if (breakpointLines.contains(lineNum)) {
+      gutter = bgColor(gutter, ansi::BG_BREAKPOINT);
+    }
+
+    std::string codeStr;
+    if (containsCurrent) {
+      const size_t hlBegin = curStart > lineStart ? curStart - lineStart : 0;
+      const size_t hlEnd = std::min(curEnd - lineStart + 1, line.size());
+      if (hlBegin > 0) {
+        codeStr += codeStyle(line.substr(0, hlBegin));
+      }
+      if (hlEnd > hlBegin) {
+        codeStr += hlStyle(line.substr(hlBegin, hlEnd - hlBegin));
+      }
+      if (hlEnd < line.size()) {
+        codeStr += codeStyle(line.substr(hlEnd));
+      }
     } else {
-      std::cout << textColor
-                << currentCode.substr(currentPos, nextInterval - currentPos)
-                << ANSI_BG_RESET;
+      codeStr = codeStyle(line);
     }
-    on = !on;
-    currentPos = nextInterval;
-  }
-  std::cout << "\n";
 
-  if (!codeOnly) {
-    const auto bitStrings = getBitStrings(state->getNumQubits(state));
+    renderer.println(std::format("{} {}", gutter, codeStr));
+    ++lineNum;
+    lineStart = lineEnd + 1;
+  }
+}
+
+void CliFrontEnd::printAmplitudes(SimulationState* state) {
+  const auto bitStrings = getBitStrings(state->getNumQubits(state));
+
+  std::vector<std::string> amplitudes;
+  amplitudes.reserve(bitStrings.size());
+  for (const auto& bitString : bitStrings) {
     Complex c;
-    for (const auto& bitString : bitStrings) {
-      state->getAmplitudeBitstring(state, bitString.c_str(), &c);
-      std::cout << bitString << " " << c.real << "\t||\t";
-    }
-    std::cout << "\n";
+    state->getAmplitudeBitstring(state, bitString.c_str(), &c);
+    std::ostringstream oss;
+    oss << c.real;
+    amplitudes.push_back(oss.str());
   }
-  if (state->didAssertionFail(state)) {
-    std::cout << "THIS LINE FAILED AN ASSERTION\n";
+
+  const size_t nCols = bitStrings.size();
+  std::vector<size_t> widths(nCols);
+  for (size_t i = 0; i < nCols; ++i) {
+    widths[i] = std::max(bitStrings[i].size(), amplitudes[i].size());
   }
+
+  renderer.println(bgColor(fgColor(margins(bold("Amplitudes")), ansi::FG_BLACK),
+                           ansi::BG_TABLE_HEADER));
+
+  std::vector<std::string> bsCells(nCols);
+  for (size_t i = 0; i < nCols; ++i) {
+    bsCells[i] = bold(margins(rightAlign(bitStrings[i], widths[i])));
+  }
+  renderer.println(bgColor(fgColor(join(bsCells, "|"), ansi::FG_BLACK),
+                           ansi::BG_TABLE_TOP_ROW));
+
+  std::vector<std::string> ampCells(nCols);
+  for (size_t i = 0; i < nCols; ++i) {
+    ampCells[i] = margins(rightAlign(amplitudes[i], widths[i]));
+  }
+  renderer.println(bgColor(fgColor(join(ampCells, "|"), ansi::FG_WHITE),
+                           ansi::BG_TABLE_BOTTOM_ROW));
 }
 
 } // namespace mqt::debugger
