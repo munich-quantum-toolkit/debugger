@@ -247,7 +247,7 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
           reinterpret_cast<bool*>(deps.data()));
       // NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast)
       if (std::ranges::count(deps, uint8_t{1}) == 1) {
-        response = "Current instruction has no data dependencies.";
+        response = "Current instruction has no data dependencies";
       }
     } else if (command == "reset" || command == "r") {
       state->resetSimulation(state);
