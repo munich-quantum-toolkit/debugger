@@ -492,9 +492,7 @@ void CliFrontEnd::printAmplitudes(SimulationState* state) {
   for (const auto& bitString : bitStrings) {
     Complex c;
     state->getAmplitudeBitstring(state, bitString.c_str(), &c);
-    std::ostringstream oss;
-    oss << c.real;
-    amplitudes.push_back(oss.str());
+    amplitudes.push_back(std::format("{} + {}i", c.real, c.imaginary));
   }
 
   const size_t nCols = bitStrings.size();
