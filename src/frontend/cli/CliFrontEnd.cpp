@@ -194,19 +194,22 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
         response = "Line number out of range: " + param;
       } else {
         size_t instr = 0;
-        state->setBreakpoint(state, *offset, &instr);
         size_t start = 0;
         size_t end = 0;
-        state->getInstructionPosition(state, instr, &start, &end);
-        const auto startLine = charOffsetToLine(currentCode, start);
-        const auto endLine = charOffsetToLine(currentCode, end);
-        for (auto l = startLine; l <= endLine; ++l) {
-          breakpointLines.insert(l);
+        if (state->setBreakpoint(state, *offset, &instr) != OK ||
+            state->getInstructionPosition(state, instr, &start, &end) != OK) {
+          response = "Could not set breakpoint at line " + param;
+        } else {
+          const auto startLine = charOffsetToLine(currentCode, start);
+          const auto endLine = charOffsetToLine(currentCode, end);
+          for (auto l = startLine; l <= endLine; ++l) {
+            breakpointLines.insert(l);
+          }
+          response = "Breakpoint set at " +
+                     (startLine == endLine
+                          ? std::format("line {}", startLine)
+                          : std::format("lines {}-{}", startLine, endLine));
         }
-        response = "Breakpoint set at " +
-                   (startLine == endLine
-                        ? std::format("line {}", startLine)
-                        : std::format("lines {}-{}", startLine, endLine));
       }
     } else if (command == "diagnose" || command == "d") {
       std::vector<ErrorCause> problems(10);
