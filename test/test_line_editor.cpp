@@ -117,6 +117,22 @@ TEST(LineEditorTest, EndMovesToPastLast) {
   EXPECT_EQ(readLineWith("abc\x1b[H\x1b[FX\n"), "abcX");
 }
 
+TEST(LineEditorTest, HomeAlsoAcceptsCsi1Tilde) {
+  EXPECT_EQ(readLineWith("abc\x1b[1~X\n"), "Xabc");
+}
+
+TEST(LineEditorTest, HomeAlsoAcceptsCsi7Tilde) {
+  EXPECT_EQ(readLineWith("abc\x1b[7~X\n"), "Xabc");
+}
+
+TEST(LineEditorTest, EndAlsoAcceptsCsi4Tilde) {
+  EXPECT_EQ(readLineWith("abc\x1b[H\x1b[4~X\n"), "abcX");
+}
+
+TEST(LineEditorTest, EndAlsoAcceptsCsi8Tilde) {
+  EXPECT_EQ(readLineWith("abc\x1b[H\x1b[8~X\n"), "abcX");
+}
+
 TEST(LineEditorTest, DeleteRemovesCharacterUnderCursor) {
   EXPECT_EQ(readLineWith("abc\x1b[D\x1b[D\x1b[3~\n"), "ac");
 }

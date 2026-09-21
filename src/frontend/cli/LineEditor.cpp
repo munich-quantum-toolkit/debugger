@@ -304,6 +304,14 @@ void LineEditor::handleEscape(ReadLineState& state) const {
     handleDelete(state);
     return;
   }
+  if ((params == "1" || params == "7") && final == '~') { // Home (rxvt/linux)
+    moveHome(state);
+    return;
+  }
+  if ((params == "4" || params == "8") && final == '~') { // End (rxvt/linux)
+    moveEnd(state);
+    return;
+  }
   if (params == "1;5" && final == 'D') { // Ctrl+Left
     moveWordLeft(state);
     return;
