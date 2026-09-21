@@ -336,6 +336,11 @@ std::optional<std::string> LineEditor::readLine() const {
     }
     const auto c = static_cast<char>(rawByte);
 
+    if (c == LF && lastWasCR) {
+      lastWasCR = false;
+      continue;
+    }
+    lastWasCR = (c == CR);
     if (c == LF || c == CR) {
       output << '\n';
       output.flush();

@@ -120,12 +120,32 @@ private:
   void recallNewer(ReadLineState& state) const;
   void handleEscape(ReadLineState& state) const;
 
+  /// Source of user input. Must outlive this object.
   std::istream& input;
+
+  /// Sink for prompt echoes and redraws. Must outlive this object.
   std::ostream& output;
+
+  /// Text printed once at the start of every `readLine` call.
   std::string prompt;
+
+  /// In-memory list of previously submitted lines.
+  /// Oldest first, navigated by `Up`/`Down` inside a `readLine` call.
   std::vector<std::string> history;
+
+  /// CSI-sequence-to-command bindings registered via `bindKey`.
+  /// The key is the parameter bytes plus the final byte of the CSI sequence
+  /// (e.g. `"15~"` for `F5`).
+  /// The value is the command auto-submitted when that sequence fires.
   std::map<std::string, std::string> keyBindings;
+
+  /// `true` if the last `readLine` returned because a bound key fired rather
+  /// than because the user pressed Enter on a typed line.
   mutable bool lastBound{false};
+
+  /// `true` if the last `readLine` returned on a `\r`, so the next call must
+  /// silently drop one leading `\n` to consume a CRLF pair as one Enter.
+  mutable bool lastWasCR{false};
 };
 
 } // namespace mqt::debugger

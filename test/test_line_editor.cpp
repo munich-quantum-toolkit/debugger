@@ -57,6 +57,14 @@ TEST(LineEditorTest, ReadsPlainLineTerminatedByCarriageReturn) {
   EXPECT_EQ(readLineWith("hello\r"), "hello");
 }
 
+TEST(LineEditorTest, CrlfIsConsumedAsSingleEnterAcrossReadLineCalls) {
+  std::stringstream input("first\r\nsecond\n");
+  std::stringstream output;
+  const LineEditor editor{input, output, DEFAULT_PROMPT};
+  EXPECT_EQ(editor.readLine(), "first");
+  EXPECT_EQ(editor.readLine(), "second");
+}
+
 TEST(LineEditorTest, EmptyLineOnJustEnter) {
   EXPECT_EQ(readLineWith("\n"), "");
 }
