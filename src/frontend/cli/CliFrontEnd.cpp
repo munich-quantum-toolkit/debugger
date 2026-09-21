@@ -45,6 +45,12 @@ namespace mqt::debugger {
 
 namespace {
 
+/// Largest qubit count for which the CLI is willing to render the full
+/// statevector (amplitude table on screen, `state` command dump).
+/// Above this, the number of basis states becomes both unreadable and
+/// memory-hungry (128 amplitudes at the boundary), so the views bail out.
+constexpr size_t MAX_STATE_VIEW_QUBITS = 6;
+
 size_t boundedStrnlen(const char* data, size_t max) {
   const auto* end = static_cast<const char*>(std::memchr(data, '\0', max));
   return end != nullptr ? static_cast<size_t>(end - data) : max;
@@ -154,7 +160,8 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
   std::optional<size_t> inspecting;
 
   while (command != "quit" && command != "q") {
-    printScreen(state, inspecting, response, state->getNumQubits(state) >= 7);
+    printScreen(state, inspecting, response,
+                state->getNumQubits(state) > MAX_STATE_VIEW_QUBITS);
     // The editor is printing the prompt before reading the line
     auto line = editor.readLine();
     if (!line.has_value()) {
@@ -246,15 +253,20 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
       state->resetSimulation(state);
       inspecting.reset();
     } else if (command == "state" || command == "s") {
-      const auto n = 1ULL << state->getNumQubits(state);
-      std::vector<std::string> lines;
-      lines.reserve(n);
-      for (size_t i = 0; i < n; i++) {
-        Complex c;
-        state->getAmplitudeIndex(state, i, &c);
-        lines.push_back(std::format("{} + {}i", c.real, c.imaginary));
+      if (state->getNumQubits(state) > MAX_STATE_VIEW_QUBITS) {
+        response = std::format("The state command supports up to {} qubits",
+                               MAX_STATE_VIEW_QUBITS);
+      } else {
+        const auto n = 1ULL << state->getNumQubits(state);
+        std::vector<std::string> lines;
+        lines.reserve(n);
+        for (size_t i = 0; i < n; i++) {
+          Complex c;
+          state->getAmplitudeIndex(state, i, &c);
+          lines.push_back(std::format("{} + {}i", c.real, c.imaginary));
+        }
+        response = join(lines, "\n");
       }
-      response = join(lines, "\n");
     } else {
       response = "Invalid command";
     }
