@@ -263,7 +263,7 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
         for (size_t i = 0; i < n; i++) {
           Complex c;
           state->getAmplitudeIndex(state, i, &c);
-          lines.push_back(std::format("{} + {}i", c.real, c.imaginary));
+          lines.push_back(std::format("{:.6g} + {:.6g}i", c.real, c.imaginary));
         }
         response = join(lines, "\n");
       }
@@ -507,7 +507,7 @@ void CliFrontEnd::printAmplitudes(SimulationState* state) {
   for (const auto& bitString : bitStrings) {
     Complex c;
     state->getAmplitudeBitstring(state, bitString.c_str(), &c);
-    amplitudes.push_back(std::format("{} + {}i", c.real, c.imaginary));
+    amplitudes.push_back(std::format("{:.6g} + {:.6g}i", c.real, c.imaginary));
   }
 
   const size_t nCols = bitStrings.size();
