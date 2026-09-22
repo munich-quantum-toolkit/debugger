@@ -124,10 +124,10 @@ The screen is split into three areas:
 
 1. A persistent help bar at the top with the function-key and letter-key
    shortcuts.
-2. The source code with line numbers, the current instruction highlighted,
-   and any breakpoints marked on the gutter.
-3. An amplitudes table at the bottom that lists all basis states of the
-   current simulation state with their complex amplitudes.
+2. The source code with line numbers, the current instruction highlighted, and
+   any breakpoints marked on the gutter.
+3. An amplitudes table at the bottom that lists all basis states of the current
+   simulation state with their complex amplitudes.
 
 <p align="center">
   <img src="_static/cli_app.png" width="90%"
