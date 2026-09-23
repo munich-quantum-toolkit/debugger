@@ -46,8 +46,28 @@ readLineWith(const std::string& inputBytes,
 } // namespace
 
 //
-// Basic reading
+// Prompt
 //
+
+TEST(LineEditorTest, WritesPromptToOutput) {
+  std::stringstream input("hello\n");
+  std::stringstream output;
+  const LineEditor editor{input, output, DEFAULT_PROMPT};
+  static_cast<void>(editor.readLine());
+  EXPECT_TRUE(output.str().starts_with(DEFAULT_PROMPT));
+}
+
+//
+// EOF, CR, LF, control bytes
+//
+
+TEST(LineEditorTest, NulloptOnEof) {
+  EXPECT_EQ(readLineWith(""), std::nullopt);
+}
+
+TEST(LineEditorTest, EmptyLineOnJustEnter) {
+  EXPECT_EQ(readLineWith("\n"), "");
+}
 
 TEST(LineEditorTest, ReadsPlainLineTerminatedByNewline) {
   EXPECT_EQ(readLineWith("hello\n"), "hello");
@@ -65,25 +85,18 @@ TEST(LineEditorTest, CrlfIsConsumedAsSingleEnterAcrossReadLineCalls) {
   EXPECT_EQ(editor.readLine(), "second");
 }
 
-TEST(LineEditorTest, EmptyLineOnJustEnter) {
-  EXPECT_EQ(readLineWith("\n"), "");
-}
-
-TEST(LineEditorTest, NulloptOnEof) {
-  EXPECT_EQ(readLineWith(""), std::nullopt);
-}
-
-TEST(LineEditorTest, WritesPromptToOutput) {
-  std::stringstream input("hello\n");
-  std::stringstream output;
-  const LineEditor editor{input, output, DEFAULT_PROMPT};
-  static_cast<void>(editor.readLine());
-  EXPECT_TRUE(output.str().starts_with(DEFAULT_PROMPT));
+TEST(LineEditorTest, UnhandledControlByteIsIgnored) {
+  // Tab (0x09) has no binding and is not a recognized editor control.
+  EXPECT_EQ(readLineWith("a\tb\n"), "ab");
 }
 
 //
-// Backspace and clear-line
+// Delete, Backspace, Ctrl+D, Ctrl+U
 //
+
+TEST(LineEditorTest, DeleteRemovesCharacterUnderCursor) {
+  EXPECT_EQ(readLineWith("abc\x1b[D\x1b[D\x1b[3~\n"), "ac");
+}
 
 TEST(LineEditorTest, BackspaceRemovesPreviousCharacter) {
   EXPECT_EQ(readLineWith("he\x7fllo\n"), "hllo");
@@ -93,12 +106,20 @@ TEST(LineEditorTest, BackspaceOnEmptyBufferIsNoop) {
   EXPECT_EQ(readLineWith("\x7f\x7fhi\n"), "hi");
 }
 
+TEST(LineEditorTest, CtrlDOnEmptyBufferReturnsNullopt) {
+  EXPECT_EQ(readLineWith("\x04"), std::nullopt);
+}
+
+TEST(LineEditorTest, CtrlDOnNonEmptyBufferIsIgnored) {
+  EXPECT_EQ(readLineWith("hi\x04\n"), "hi");
+}
+
 TEST(LineEditorTest, CtrlUClearsTheLine) {
   EXPECT_EQ(readLineWith("abc\x15xyz\n"), "xyz");
 }
 
 //
-// Cursor navigation
+// Cursor navigation (Left / Right / Home / End)
 //
 
 TEST(LineEditorTest, CursorLeftAllowsInsertionInTheMiddle) {
@@ -113,10 +134,6 @@ TEST(LineEditorTest, HomeMovesToStart) {
   EXPECT_EQ(readLineWith("abc\x1b[HX\n"), "Xabc");
 }
 
-TEST(LineEditorTest, EndMovesToPastLast) {
-  EXPECT_EQ(readLineWith("abc\x1b[H\x1b[FX\n"), "abcX");
-}
-
 TEST(LineEditorTest, HomeAlsoAcceptsCsi1Tilde) {
   EXPECT_EQ(readLineWith("abc\x1b[1~X\n"), "Xabc");
 }
@@ -125,16 +142,16 @@ TEST(LineEditorTest, HomeAlsoAcceptsCsi7Tilde) {
   EXPECT_EQ(readLineWith("abc\x1b[7~X\n"), "Xabc");
 }
 
+TEST(LineEditorTest, EndMovesToPastLast) {
+  EXPECT_EQ(readLineWith("abc\x1b[H\x1b[FX\n"), "abcX");
+}
+
 TEST(LineEditorTest, EndAlsoAcceptsCsi4Tilde) {
   EXPECT_EQ(readLineWith("abc\x1b[H\x1b[4~X\n"), "abcX");
 }
 
 TEST(LineEditorTest, EndAlsoAcceptsCsi8Tilde) {
   EXPECT_EQ(readLineWith("abc\x1b[H\x1b[8~X\n"), "abcX");
-}
-
-TEST(LineEditorTest, DeleteRemovesCharacterUnderCursor) {
-  EXPECT_EQ(readLineWith("abc\x1b[D\x1b[D\x1b[3~\n"), "ac");
 }
 
 //

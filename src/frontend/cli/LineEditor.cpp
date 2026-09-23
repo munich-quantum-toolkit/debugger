@@ -30,12 +30,14 @@ namespace mqt::debugger {
 
 namespace {
 
+constexpr unsigned char CTRL_D = 0x04;
 constexpr unsigned char CTRL_U = 0x15;
 constexpr unsigned char BACKSPACE_DEL = 0x7f;
 constexpr unsigned char BACKSPACE_BS = 0x08;
 constexpr unsigned char ESC = 0x1b;
 constexpr unsigned char CR = '\r';
 constexpr unsigned char LF = '\n';
+constexpr unsigned char SPACE = ' ';
 
 /// @brief Locale-agnostic whitespace check that avoids UB on signed `char`.
 bool isSpace(char c) {
@@ -344,27 +346,41 @@ std::optional<std::string> LineEditor::readLine() const {
     }
     const auto c = static_cast<unsigned char>(rawByte);
 
+    // Second half of a CRLF pair: CR already submitted the line, absorb the LF.
     if (c == LF && lastWasCR) {
       lastWasCR = false;
       continue;
     }
     lastWasCR = (c == CR);
+
+    // Enter (CR or LF alone) submits the current buffer.
     if (c == LF || c == CR) {
       output << '\n';
       output.flush();
       return state.buffer;
     }
 
+    // Backspace: erase the character to the left of the cursor.
     if (c == BACKSPACE_DEL || c == BACKSPACE_BS) {
       handleBackspace(state);
       continue;
     }
 
+    // Ctrl+D on an empty line closes the reader (shell EOF convention).
+    // Ctrl+D on a non-empty line is a no-op.
+    if (c == CTRL_D && state.buffer.empty()) {
+      output << '\n';
+      output.flush();
+      return std::nullopt;
+    }
+
+    // Ctrl+U: clear the current buffer.
     if (c == CTRL_U) {
       handleClearLine(state);
       continue;
     }
 
+    // Escape sequence: CSI navigation, function keys, or a user-bound key.
     if (c == ESC) {
       handleEscape(state);
       if (state.submitted) {
@@ -376,6 +392,12 @@ std::optional<std::string> LineEditor::readLine() const {
       continue;
     }
 
+    // Silently drop any other control byte (Tab, Ctrl+C, ...).
+    if (c < SPACE) {
+      continue;
+    }
+
+    // Printable byte: insert at the cursor.
     insertChar(c, state);
   }
 }
