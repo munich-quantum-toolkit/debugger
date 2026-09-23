@@ -107,7 +107,14 @@ TEST(LineEditorTest, BackspaceOnEmptyBufferIsNoop) {
 }
 
 TEST(LineEditorTest, CtrlDOnEmptyBufferReturnsNullopt) {
-  EXPECT_EQ(readLineWith("\x04"), std::nullopt);
+  // Trailing "run\n" distinguishes Ctrl+D from stream EOF: if Ctrl+D were
+  // ignored, the first readLine would consume "run" and return it rather than
+  // nullopt.
+  std::stringstream input("\x04run\n");
+  std::stringstream output;
+  const LineEditor editor{input, output, DEFAULT_PROMPT};
+  EXPECT_EQ(editor.readLine(), std::nullopt);
+  EXPECT_EQ(editor.readLine(), "run");
 }
 
 TEST(LineEditorTest, CtrlDOnNonEmptyBufferIsIgnored) {
