@@ -115,7 +115,7 @@ private:
   void moveEnd(ReadLineState& state) const;
   void moveWordLeft(ReadLineState& state) const;
   void moveWordRight(ReadLineState& state) const;
-  void insertChar(char c, ReadLineState& state) const;
+  void insertChar(unsigned char c, ReadLineState& state) const;
   void recallOlder(ReadLineState& state) const;
   void recallNewer(ReadLineState& state) const;
   void handleEscape(ReadLineState& state) const;

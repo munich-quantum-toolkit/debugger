@@ -30,12 +30,12 @@ namespace mqt::debugger {
 
 namespace {
 
-constexpr char CTRL_U = 0x15;
-constexpr char BACKSPACE_DEL = 0x7f;
-constexpr char BACKSPACE_BS = 0x08;
-constexpr char ESC = 0x1b;
-constexpr char CR = '\r';
-constexpr char LF = '\n';
+constexpr unsigned char CTRL_U = 0x15;
+constexpr unsigned char BACKSPACE_DEL = 0x7f;
+constexpr unsigned char BACKSPACE_BS = 0x08;
+constexpr unsigned char ESC = 0x1b;
+constexpr unsigned char CR = '\r';
+constexpr unsigned char LF = '\n';
 
 /// @brief Locale-agnostic whitespace check that avoids UB on signed `char`.
 bool isSpace(char c) {
@@ -220,9 +220,9 @@ void LineEditor::moveWordRight(ReadLineState& state) const {
   redraw(state);
 }
 
-/// @brief Insert a printable character at the cursor position.
-void LineEditor::insertChar(char c, ReadLineState& state) const {
-  state.buffer.insert(state.cursor, 1, c);
+/// @brief Insert a printable byte at the cursor position.
+void LineEditor::insertChar(unsigned char c, ReadLineState& state) const {
+  state.buffer.insert(state.cursor, 1, static_cast<char>(c));
   ++state.cursor;
   redraw(state);
 }
@@ -342,7 +342,7 @@ std::optional<std::string> LineEditor::readLine() const {
     if (rawByte == EOF) {
       return std::nullopt;
     }
-    const auto c = static_cast<char>(rawByte);
+    const auto c = static_cast<unsigned char>(rawByte);
 
     if (c == LF && lastWasCR) {
       lastWasCR = false;
