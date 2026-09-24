@@ -119,3 +119,17 @@ accessibility through CLI parameters.
 Instead, the CLI app will open an OpenQASM file with the name
 {code}`program.qasm` in the current working directory and start the debugging
 process for it.
+
+The screen is split into three areas:
+
+1. A persistent help bar at the top with the function-key and letter-key
+   shortcuts.
+2. The source code with line numbers, the current instruction highlighted, and
+   any breakpoints marked on the gutter.
+3. An amplitudes table at the bottom that lists all basis states of the current
+   simulation state with their complex amplitudes.
+
+<p align="center">
+  <img src="_static/cli_app.png" width="90%"
+       alt="MQT Debugger CLI app showing the help bar, source code with the current instruction highlighted, a breakpoint on line 8, the amplitudes table for a Bell state, and the output of the state command.">
+</p>
