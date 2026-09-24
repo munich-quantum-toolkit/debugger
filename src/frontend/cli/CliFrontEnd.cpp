@@ -156,7 +156,7 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
   std::string response;
   std::optional<size_t> inspecting;
 
-  while (command != "quit" && command != "q") {
+  while (command != "q" && command != "quit") {
     printScreen(state, inspecting, response);
     // The editor is printing the prompt before reading the line
     auto line = editor.readLine();
@@ -181,10 +181,10 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
       state->stepBackward(state);
     } else if (command == "back over") {
       state->stepOverBackward(state);
-    } else if (command == "assertions" || command == "a") {
+    } else if (command == "a" || command == "assertions") {
       suggestUpdatedAssertions(state);
-    } else if (command.starts_with("breakpoint ") ||
-               command.starts_with("b ")) {
+    } else if (command.starts_with("b ") ||
+               command.starts_with("breakpoint ")) {
       const auto param = command.substr(command.find(' ') + 1);
       const auto* const paramBegin = std::to_address(param.begin());
       const auto* const paramEnd = std::to_address(param.end());
@@ -214,12 +214,12 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
                           : std::format("lines {}-{}", startLine, endLine));
         }
       }
-    } else if (command == "diagnose" || command == "d") {
+    } else if (command == "d" || command == "diagnose") {
       std::vector<ErrorCause> problems(10);
       const auto count = state->getDiagnostics(state)->potentialErrorCauses(
           state->getDiagnostics(state), problems.data(), problems.size());
       response = std::to_string(count) + " potential problems found";
-    } else if (command.starts_with("get ") || command.starts_with("g ")) {
+    } else if (command.starts_with("g ") || command.starts_with("get ")) {
       const auto varName = command.substr(command.find(' ') + 1);
       Variable v;
       std::ostringstream oss;
@@ -233,7 +233,7 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
         oss << varName << " = " << v.value.floatValue;
       }
       response = oss.str();
-    } else if (command == "inspect" || command == "i") {
+    } else if (command == "i" || command == "inspect") {
       const auto current = state->getCurrentInstruction(state);
       inspecting = current;
       std::vector<uint8_t> deps(state->getInstructionCount(state));
@@ -245,10 +245,10 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
       if (std::ranges::count(deps, uint8_t{1}) == 1) {
         response = "Current instruction has no data dependencies";
       }
-    } else if (command == "reset" || command == "r") {
+    } else if (command == "r" || command == "reset") {
       state->resetSimulation(state);
       inspecting.reset();
-    } else if (command == "state" || command == "s") {
+    } else if (command == "s" || command == "state") {
       if (state->getNumQubits(state) > MAX_STATE_VIEW_QUBITS) {
         response = std::format("The state command supports up to {} qubits",
                                MAX_STATE_VIEW_QUBITS);
