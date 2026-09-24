@@ -81,18 +81,21 @@ private:
   std::set<size_t> breakpointLines;
 
   /**
-   * @brief Print one full screen: help bar, source code, amplitudes (if
-   * requested), assertion warning, and the response of the last command.
+   * @brief Print one full screen:
+   * - help table,
+   * - source code,
+   * - amplitudes table,
+   * - assertion warning (if any), and
+   * - response of the last command (if any).
    *
    * @param state The simulation state.
    * @param inspecting The instruction being inspected, or `std::nullopt` if
    * nothing.
    * @param response Text shown just above the prompt; empty means nothing to
    * show.
-   * @param codeOnly If true, the amplitudes row is skipped.
    */
   void printScreen(SimulationState* state, std::optional<size_t> inspecting,
-                   std::string_view response, bool codeOnly);
+                   std::string_view response);
 
   /**
    * @brief Print the persistent help bar. Four rows: F-key shortcuts and
@@ -119,6 +122,10 @@ private:
    * chip, bitstring values in light-blue chips (F-keys row style), amplitude
    * values in dark-blue chips (letters row style). Each column width is the
    * wider of the bitstring and its amplitude string, so both rows align.
+   *
+   * When the qubit count exceeds what fits in a single row, the table is
+   * skipped and a one-line notice pointing to the `state` command is
+   * printed instead.
    *
    * @param state The simulation state to query for amplitudes.
    */

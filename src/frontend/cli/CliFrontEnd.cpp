@@ -45,11 +45,11 @@ namespace mqt::debugger {
 
 namespace {
 
-/// Largest qubit count for which the CLI is willing to render the full
-/// statevector (amplitude table on screen, `state` command dump).
-/// Above this, the number of basis states becomes both unreadable and
-/// memory-hungry (128 amplitudes at the boundary), so the views bail out.
+/// Largest qubit count for which the `state` command dumps every amplitude.
 constexpr size_t MAX_STATE_VIEW_QUBITS = 6;
+
+/// Largest qubit count for which the on-screen amplitudes table is rendered.
+constexpr size_t MAX_AMPLITUDES_VIEW_QUBITS = 3;
 
 size_t boundedStrnlen(const char* data, size_t max) {
   const auto* end = static_cast<const char*>(std::memchr(data, '\0', max));
@@ -160,8 +160,7 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
   std::optional<size_t> inspecting;
 
   while (command != "quit" && command != "q") {
-    printScreen(state, inspecting, response,
-                state->getNumQubits(state) > MAX_STATE_VIEW_QUBITS);
+    printScreen(state, inspecting, response);
     // The editor is printing the prompt before reading the line
     auto line = editor.readLine();
     if (!line.has_value()) {
@@ -398,13 +397,11 @@ void CliFrontEnd::printHelpBar() {
 
 void CliFrontEnd::printScreen(SimulationState* state,
                               std::optional<size_t> inspecting,
-                              std::string_view response, bool codeOnly) {
+                              std::string_view response) {
   renderer.clearScreen();
   printHelpBar();
   printCode(state, inspecting);
-  if (!codeOnly) {
-    printAmplitudes(state);
-  }
+  printAmplitudes(state);
   if (state->didAssertionFail(state)) {
     renderer.println("THIS LINE FAILED AN ASSERTION");
   }
@@ -501,8 +498,18 @@ void CliFrontEnd::printCode(SimulationState* state,
 }
 
 void CliFrontEnd::printAmplitudes(SimulationState* state) {
+  // Check qubit count.
+  if (state->getNumQubits(state) > MAX_AMPLITUDES_VIEW_QUBITS) {
+    renderer.println(std::format(
+        "Amplitudes table hidden for more than {} qubits. "
+        "Use the 'state' command instead.",
+        MAX_AMPLITUDES_VIEW_QUBITS));
+    return;
+  }
+
   const auto bitStrings = getBitStrings(state->getNumQubits(state));
 
+  // Build vector of amplitude strings.
   std::vector<std::string> amplitudes;
   amplitudes.reserve(bitStrings.size());
   for (const auto& bitString : bitStrings) {
@@ -511,15 +518,18 @@ void CliFrontEnd::printAmplitudes(SimulationState* state) {
     amplitudes.push_back(std::format("{:.6g} + {:.6g}i", c.real, c.imaginary));
   }
 
+  // Build vector of column widths.
   const size_t nCols = bitStrings.size();
   std::vector<size_t> widths(nCols);
   for (size_t i = 0; i < nCols; ++i) {
     widths[i] = std::max(bitStrings[i].size(), amplitudes[i].size());
   }
 
+  // Render header.
   renderer.println(bgColor(fgColor(margins(bold("Amplitudes")), ansi::FG_BLACK),
                            ansi::BG_TABLE_HEADER));
 
+  // Render first row.
   std::vector<std::string> bsCells(nCols);
   for (size_t i = 0; i < nCols; ++i) {
     bsCells[i] = bold(margins(rightAlign(bitStrings[i], widths[i])));
@@ -527,6 +537,7 @@ void CliFrontEnd::printAmplitudes(SimulationState* state) {
   renderer.println(bgColor(fgColor(join(bsCells, "|"), ansi::FG_BLACK),
                            ansi::BG_TABLE_TOP_ROW));
 
+  // Render second row.
   std::vector<std::string> ampCells(nCols);
   for (size_t i = 0; i < nCols; ++i) {
     ampCells[i] = margins(rightAlign(amplitudes[i], widths[i]));
