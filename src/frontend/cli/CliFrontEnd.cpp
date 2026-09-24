@@ -137,12 +137,9 @@ void CliFrontEnd::run(const char* code, SimulationState* state) {
   state->resetSimulation(state);
   if (result.status != LOAD_OK) {
     const auto messageView = loadResultMessageView(result);
-    if (!messageView.empty()) {
-      renderer.print("Error loading code: ");
-      renderer.println(messageView);
-    } else {
-      renderer.println("Error loading code");
-    }
+    renderer.println(std::format(
+        "Error loading code{}",
+        messageView.empty() ? "" : std::format(": {}", messageView)));
     return;
   }
 
