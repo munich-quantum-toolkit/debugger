@@ -497,10 +497,10 @@ void CliFrontEnd::printCode(SimulationState* state,
 void CliFrontEnd::printAmplitudes(SimulationState* state) {
   // Check qubit count.
   if (state->getNumQubits(state) > MAX_AMPLITUDES_VIEW_QUBITS) {
-    renderer.println(std::format(
-        "Amplitudes table hidden for more than {} qubits. "
-        "Use the 'state' command instead.",
-        MAX_AMPLITUDES_VIEW_QUBITS));
+    renderer.println(
+        std::format("Amplitudes table hidden for more than {} qubits. "
+                    "Use the 'state' command instead.",
+                    MAX_AMPLITUDES_VIEW_QUBITS));
     return;
   }
 
