@@ -11,6 +11,7 @@ permissions: {}
 
 jobs:
   build-sdist:
+    if: false
     name: 🐍 Packaging
     uses: munich-quantum-toolkit/workflows/.github/workflows/reusable-python-packaging-sdist.yml@17f5c58e46c51027501e7d8d38dc182654ed035c # v2.5.0
     permissions:
@@ -19,6 +20,7 @@ jobs:
   # Builds wheels on all supported platforms using cibuildwheel.
   # The wheels are uploaded as GitHub artifacts `dev-cibw-*` or `cibw-*`, depending on whether the workflow is triggered from a PR or a release, respectively.
   build-wheel:
+    if: false
     name: 🐍 Packaging
     strategy:
       fail-fast: false
