@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 RESOURCES_DIR = Path("test/python/resources/end-to-end")
 BELL_QASM = str((RESOURCES_DIR / "bell.qasm").resolve())
 FAIL_GHZ_QASM = str((RESOURCES_DIR / "fail_ghz.qasm").resolve())
+JUMPS_QASM = str((RESOURCES_DIR.parent / "bindings" / "jumps.qasm").resolve())
 
 
 def test_code_pos_to_coordinates_handles_line_end() -> None:
@@ -485,6 +486,57 @@ def test_restart_frame(launched_session: tuple[DAPServer, DAPClient]) -> None:
     client.wait_for_event("stopped")
 
     client.send_request("restartFrame", {"frameId": 1})
+    resp = client.receive_response("restartFrame")
+    assert resp["success"] is True
+    stopped = client.wait_for_event("stopped")
+    assert stopped["body"]["reason"] == "step"
+
+
+def test_restart_frame_nested(dap_session: tuple[DAPServer, DAPClient]) -> None:
+    """Restart a nested stack frame."""
+    _, client = dap_session
+    client.send_request("initialize", {"adapterID": "mqtqasm"})
+    client.receive_response("initialize")
+
+    client.send_request("launch", {"program": JUMPS_QASM, "stopOnEntry": True})
+    client.receive_response("launch")
+    client.wait_for_event("initialized")
+    client.wait_for_event("grayOut")
+    client.wait_for_event("stopped")
+
+    # Set breakpoint at line 24 (call to gate create_ghz)
+    client.send_request(
+        "setBreakpoints",
+        {
+            "source": {"name": "jumps.qasm", "path": JUMPS_QASM},
+            "breakpoints": [{"line": 24, "column": 1}],
+        },
+    )
+    bpt_resp = client.receive_response("setBreakpoints")
+    assert bpt_resp["success"] is True
+
+    client.send_request("configurationDone")
+    client.receive_response("configurationDone")
+
+    client.send_request("continue", {"threadId": 1})
+    client.receive_response("continue")
+    stop_event = client.wait_for_event("stopped")
+    assert stop_event["body"]["reason"] in {"instruction breakpoint", "breakpoint_instruction", "step"}
+
+    # Step in to enter create_ghz subroutine (stack depth 2)
+    client.send_request("stepIn", {"threadId": 1})
+    step_resp = client.receive_response("stepIn")
+    assert step_resp["success"] is True
+    client.wait_for_event("stopped")
+
+    # Verify stack depth >= 2 via stackTrace
+    client.send_request("stackTrace", {"threadId": 1})
+    st_resp = client.receive_response("stackTrace")
+    assert st_resp["success"] is True
+    assert len(st_resp["body"]["stackFrames"]) >= 2
+
+    # Restart frame 2 (the nested frame)
+    client.send_request("restartFrame", {"frameId": 2})
     resp = client.receive_response("restartFrame")
     assert resp["success"] is True
     stopped = client.wait_for_event("stopped")

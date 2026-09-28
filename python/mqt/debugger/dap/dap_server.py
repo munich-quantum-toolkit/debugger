@@ -10,7 +10,6 @@
 
 from __future__ import annotations
 
-import contextlib
 import json
 import socket
 import sys
@@ -85,8 +84,7 @@ def send_message(msg: str, client: socket.socket) -> None:
     msg = msg.replace("\n", "\r\n")
     length = len(msg)
     header = f"Content-Length: {length}\r\n\r\n".encode("ascii")
-    with contextlib.suppress(OSError):
-        client.sendall(header + msg.encode("utf-8"))
+    client.sendall(header + msg.encode("utf-8"))
 
 
 class DAPServer:
@@ -154,10 +152,7 @@ class DAPServer:
         message_str = ""
         while True:
             if not message_str or not data_str:
-                try:
-                    data = connection.recv(1024)
-                except OSError:
-                    break
+                data = connection.recv(1024)
                 if not data:
                     break
                 data_str += data.decode()
