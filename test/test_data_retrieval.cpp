@@ -321,10 +321,11 @@ TEST_F(DataRetrievalTest, ChangeAmplitudeValueRejectsInvalidBitstring) {
  * @test Test that amplitudes with magnitude larger than one are rejected.
  */
 TEST_F(DataRetrievalTest, ChangeAmplitudeValueRejectsMagnitudeAboveOne) {
+  // norm^2 > 1, should fail
   const Complex desired{
       .real = 0.9,
       .imaginary = 0.6,
-  }; // norm^2 > 1, should fail.
+  };
   forwardTo(12);
   ASSERT_EQ(state->changeAmplitudeValue(state, "0010", &desired), ERROR);
 }
