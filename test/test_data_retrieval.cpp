@@ -28,6 +28,7 @@
 #include <vector>
 
 namespace mqt::debugger::test {
+namespace {
 
 /**
  * @brief Fixture for testing the correctness of the debugger for data retrieval
@@ -37,6 +38,7 @@ namespace mqt::debugger::test {
  * `circuits/classical-storage`.
  */
 class DataRetrievalTest : public LoadFromFileFixture {
+protected:
   void SetUp() override {
     LoadFromFileFixture::SetUp();
     loadFromFile("classical-storage");
@@ -173,7 +175,11 @@ TEST_F(DataRetrievalTest, GetClassicalVariable) {
  */
 TEST_F(DataRetrievalTest, GetStateVectorFull) {
   std::array<Complex, 16> amplitudes{};
-  Statevector sv{4, 16, amplitudes.data()};
+  const Statevector sv{
+      .numQubits = 4,
+      .numStates = 16,
+      .amplitudes = amplitudes.data(),
+  };
 
   ASSERT_EQ(state->getStateVectorFull(state, &sv), OK);
   ASSERT_TRUE(complexEquality(amplitudes[0], 1.0, 0.0));
@@ -191,7 +197,11 @@ TEST_F(DataRetrievalTest, GetStateVectorFull) {
  */
 TEST_F(DataRetrievalTest, GetStateVectorSub) {
   std::array<Complex, 4> amplitudes{};
-  Statevector sv{2, 4, amplitudes.data()};
+  const Statevector sv{
+      .numQubits = 2,
+      .numStates = 4,
+      .amplitudes = amplitudes.data(),
+  };
 
   forwardTo(6);
   std::array<size_t, 2> qubits = {0, 1};
@@ -286,7 +296,7 @@ TEST_F(DataRetrievalTest, ChangeClassicalVariableNullValue) {
  */
 TEST_F(DataRetrievalTest, ChangeAmplitudeValueRescalesOtherStates) {
   forwardTo(12);
-  const Complex desired{0.5, 0.0};
+  const Complex desired{.real = 0.5, .imaginary = 0.0};
   ASSERT_EQ(state->changeAmplitudeValue(state, "0010", &desired), OK);
 
   Complex updated{};
@@ -301,7 +311,7 @@ TEST_F(DataRetrievalTest, ChangeAmplitudeValueRescalesOtherStates) {
  * @test Test that invalid bitstrings for amplitude updates are rejected.
  */
 TEST_F(DataRetrievalTest, ChangeAmplitudeValueRejectsInvalidBitstring) {
-  const Complex desired{0.25, 0.0};
+  const Complex desired{.real = 0.25, .imaginary = 0.0};
   forwardTo(12);
   ASSERT_EQ(state->changeAmplitudeValue(state, "10", &desired), ERROR);
   ASSERT_EQ(state->changeAmplitudeValue(state, "10a1", &desired), ERROR);
@@ -311,7 +321,11 @@ TEST_F(DataRetrievalTest, ChangeAmplitudeValueRejectsInvalidBitstring) {
  * @test Test that amplitudes with magnitude larger than one are rejected.
  */
 TEST_F(DataRetrievalTest, ChangeAmplitudeValueRejectsMagnitudeAboveOne) {
-  const Complex desired{0.9, 0.6}; // norm^2 > 1, should fail.
+  // norm^2 > 1, should fail
+  const Complex desired{
+      .real = 0.9,
+      .imaginary = 0.6,
+  };
   forwardTo(12);
   ASSERT_EQ(state->changeAmplitudeValue(state, "0010", &desired), ERROR);
 }
@@ -320,7 +334,7 @@ TEST_F(DataRetrievalTest, ChangeAmplitudeValueRejectsMagnitudeAboveOne) {
  * @test Test that over-normalized targets are rejected.
  */
 TEST_F(DataRetrievalTest, ChangeAmplitudeValueRejectsOverNormalizedTarget) {
-  const Complex desired{1.1, 0.0};
+  const Complex desired{.real = 1.1, .imaginary = 0.0};
   forwardTo(12);
   ASSERT_EQ(state->changeAmplitudeValue(state, "0010", &desired), ERROR);
 }
@@ -330,9 +344,10 @@ TEST_F(DataRetrievalTest, ChangeAmplitudeValueRejectsOverNormalizedTarget) {
  * refused.
  */
 TEST_F(DataRetrievalTest, ChangeAmplitudeValueRejectsSubNormalizedVacuum) {
-  const Complex desired{0.5, 0.0};
+  const Complex desired{.real = 0.5, .imaginary = 0.0};
   ASSERT_EQ(state->changeAmplitudeValue(state, "0000", &desired), ERROR);
   ASSERT_EQ(state->changeAmplitudeValue(state, "0000", nullptr), ERROR);
 }
 
+} // namespace
 } // namespace mqt::debugger::test

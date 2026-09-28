@@ -554,18 +554,21 @@ Result ddsimGetQuantumVariableName(SimulationState* self, size_t variableIndex,
  *
  * The state vector is expected to be initialized with the correct number of
  * qubits and allocated space for the amplitudes before calling this method.
+ * Only the amplitude buffer is modified.
  * @param self The instance to query.
  * @param output A reference to a `Statevector` instance to store the state
  * vector.
  * @return The result of the operation.
  */
-Result ddsimGetStateVectorFull(SimulationState* self, Statevector* output);
+Result ddsimGetStateVectorFull(SimulationState* self,
+                               const Statevector* output);
 /**
  * @brief Gets a sub-state of the state vector of the simulation at the current
  * time.
  *
  * The state vector is expected to be initialized with the correct number of
  * qubits and allocated space for the amplitudes before calling this method.
+ * Only the amplitude buffer is modified.
  * \n\n
  *
  * This method also supports the re-ordering of qubits, but does not allow
@@ -578,7 +581,7 @@ Result ddsimGetStateVectorFull(SimulationState* self, Statevector* output);
  * @return The result of the operation.
  */
 Result ddsimGetStateVectorSub(SimulationState* self, size_t subStateSize,
-                              const size_t* qubits, Statevector* output);
+                              const size_t* qubits, const Statevector* output);
 
 /**
  * @brief Sets a breakpoint at the desired position in the code.
@@ -688,7 +691,7 @@ bool checkAssertion(DDSimulationState* ddsim,
  * @param index The index of the classical bit.
  * @return The name of the classical bit.
  */
-std::string getClassicalBitName(DDSimulationState* ddsim, size_t index);
+std::string getClassicalBitName(const DDSimulationState* ddsim, size_t index);
 
 /**
  * @brief Gets the name of a qubit variable by its index.
@@ -696,7 +699,7 @@ std::string getClassicalBitName(DDSimulationState* ddsim, size_t index);
  * @param index The index of the qubit variable.
  * @return The name of the qubit variable.
  */
-std::string getQuantumBitName(DDSimulationState* ddsim, size_t index);
+std::string getQuantumBitName(const DDSimulationState* ddsim, size_t index);
 
 /**
  * @brief Gets the qubit index from a variable name.

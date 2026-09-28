@@ -29,7 +29,7 @@ namespace mqt::debugger {
  * @param c The complex number.
  * @return The computed magnitude.
  */
-double complexMagnitude(Complex& c);
+double complexMagnitude(const Complex& c);
 
 /**
  * @brief Add two complex numbers.
@@ -64,7 +64,7 @@ Complex complexConjugate(const Complex& c);
  * @param qubit2 The second qubit to check.
  * @return True if the qubits are entangled, false otherwise.
  */
-bool areQubitsEntangled(std::vector<std::vector<Complex>>& densityMatrix,
+bool areQubitsEntangled(const std::vector<std::vector<Complex>>& densityMatrix,
                         size_t qubit1, size_t qubit2);
 
 /**

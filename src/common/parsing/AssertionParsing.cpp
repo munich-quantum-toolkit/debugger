@@ -22,7 +22,6 @@
 #include "common/parsing/Utils.hpp"
 
 #include <algorithm>
-#include <cmath>
 #include <cstddef>
 #include <iterator>
 #include <memory>
@@ -85,7 +84,7 @@ Complex parseComplex(std::string complexString) {
   double real = 0;
   double imaginary = 0;
   bool first = true;
-  for (auto& part : parts) {
+  for (const auto& part : parts) {
     if (part.find('i') != std::string::npos ||
         part.find('j') != std::string::npos) {
       imaginary +=
@@ -96,7 +95,7 @@ Complex parseComplex(std::string complexString) {
     }
     first = false;
   }
-  return {real, imaginary};
+  return {.real = real, .imaginary = imaginary};
 }
 
 /**
@@ -106,19 +105,19 @@ Complex parseComplex(std::string complexString) {
  */
 Statevector parseStatevector(std::string statevectorString) {
   statevectorString = removeWhitespace(statevectorString);
-  auto parts = splitString(statevectorString, ',');
+  const auto parts = splitString(statevectorString, ',');
   auto amplitudes = std::make_unique<std::vector<Complex>>();
-  for (auto& part : parts) {
+  for (const auto& part : parts) {
     amplitudes->push_back(parseComplex(part));
   }
 
   size_t numQubits = 0;
   size_t n = amplitudes->size();
   while (n > 1) {
-    if ((n & 1) == 1) {
+    if ((n & 1U) == 1) {
       throw ParsingError("Invalid statevector size");
     }
-    n >>= 1;
+    n >>= 1U;
     numQubits++;
   }
 
@@ -250,9 +249,11 @@ bool StatevectorEqualityAssertion::implies(
         });
     newAmplitudes =
         getSubStateVectorAmplitudes(getTargetStatevector(), indexList);
-    targetSV = {.numQubits = indexList.size(),
-                .numStates = newAmplitudes.size(),
-                .amplitudes = newAmplitudes.data()};
+    targetSV = {
+        .numQubits = indexList.size(),
+        .numStates = newAmplitudes.size(),
+        .amplitudes = newAmplitudes.data(),
+    };
   } else {
     targetSV = getTargetStatevector();
   }
@@ -312,7 +313,7 @@ bool StatevectorEqualityAssertion::implies(
                          getTargetStatevector().numStates);
 
   std::vector<std::vector<Complex>> densityMatrix(
-      sv.size(), std::vector<Complex>(sv.size(), {0, 0}));
+      sv.size(), std::vector<Complex>(sv.size(), {.real = 0, .imaginary = 0}));
   for (size_t i = 0; i < sv.size(); i++) {
     for (size_t j = 0; j < sv.size(); j++) {
       densityMatrix[i][j] =
@@ -385,15 +386,15 @@ std::unique_ptr<Assertion> parseAssertion(std::string assertionString,
   assertionString = trim(replaceString(assertionString, ";", ""));
 
   if (assertionString.starts_with("assert-ent")) {
-    auto targets = extractTargetQubits(assertionString.substr(11));
+    const auto targets = extractTargetQubits(assertionString.substr(11));
     return std::make_unique<EntanglementAssertion>(targets);
   }
   if (assertionString.starts_with("assert-sup")) {
-    auto targets = extractTargetQubits(assertionString.substr(11));
+    const auto targets = extractTargetQubits(assertionString.substr(11));
     return std::make_unique<SuperpositionAssertion>(targets);
   }
   if (assertionString.starts_with("assert-eq")) {
-    auto sub = assertionString.substr(10);
+    const auto sub = assertionString.substr(10);
     auto targets = extractTargetQubits(sub);
     double similarityThreshold = 0;
     try {
@@ -407,11 +408,11 @@ std::unique_ptr<Assertion> parseAssertion(std::string assertionString,
     }
 
     if (blockContent.find(';') == std::string::npos) {
-      auto statevector = parseStatevector(blockContent);
+      const auto statevector = parseStatevector(blockContent);
       return std::make_unique<StatevectorEqualityAssertion>(
           statevector, similarityThreshold, targets);
     }
-    auto circuitCode = trim(blockContent);
+    const auto circuitCode = trim(blockContent);
     return std::make_unique<CircuitEqualityAssertion>(
         circuitCode, similarityThreshold, targets);
   }

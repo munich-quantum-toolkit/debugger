@@ -227,8 +227,8 @@ protected:
    */
   static CompilationSettings makeSettings(uint8_t opt, size_t slice) {
     return {
-        /*opt=*/opt,
-        /*sliceIndex=*/slice,
+        .opt = opt,
+        .sliceIndex = slice,
     };
   }
 

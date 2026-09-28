@@ -28,7 +28,7 @@ using namespace mqt::debugger;
 void bindBackend(nb::module_& m) {
   m.def(
       "create_ddsim_simulation_state",
-      []() {
+      [] {
         // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
         auto* state = new DDSimulationState();
         createDDSimulationState(state);

@@ -15,7 +15,7 @@
 #include "common/parsing/Utils.hpp"
 
 #include <algorithm>
-#include <functional>
+#include <array>
 #include <memory>
 #include <string>
 #include <vector>
@@ -61,25 +61,17 @@ static COMMUTATION_RULE_SUP(OTHER_1Q_GATE_INVARIANTS,
 
 //------------------------------------------------------------------------------
 
-const std::vector<std::function<CommutationResult(
-    const Assertion*, const std::string&, const std::vector<std::string>&)>>
-    GENERAL_COMMUTATION_RULES = {
-        BARRIER,
+constexpr std::array GENERAL_COMMUTATION_RULES = {
+    +BARRIER,
 };
 
-const std::vector<std::function<CommutationResult(
-    const EntanglementAssertion*, const std::string&,
-    const std::vector<std::string>&)>>
-    ENTANGLEMENT_COMMUTATION_RULES = {
-        TWO_OR_MORE_TARGETS,
+constexpr std::array ENTANGLEMENT_COMMUTATION_RULES = {
+    +TWO_OR_MORE_TARGETS,
 };
 
-const std::vector<std::function<CommutationResult(
-    const SuperpositionAssertion*, const std::string&,
-    const std::vector<std::string>&)>>
-    SUPERPOSITION_COMMUTATION_RULES = {
-        PAULI_INVARIANT,
-        OTHER_1Q_GATE_INVARIANTS,
+constexpr std::array SUPERPOSITION_COMMUTATION_RULES = {
+    +PAULI_INVARIANT,
+    +OTHER_1Q_GATE_INVARIANTS,
 };
 
 /**
