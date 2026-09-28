@@ -73,13 +73,13 @@ std::pair<size_t, size_t> splitBitString(size_t number, size_t n,
 
   for (size_t index = 0; index < n; index++) {
     if (std::ranges::find(bits, index) != bits.end()) {
-      first |= (number & 1) << lenFirst;
+      first |= (number & 1U) << lenFirst;
       lenFirst++;
     } else {
-      second |= (number & 1) << lenSecond;
+      second |= (number & 1U) << lenSecond;
       lenSecond++;
     }
-    number >>= 1;
+    number >>= 1U;
   }
   return {first, second};
 }
@@ -332,10 +332,10 @@ double dotProduct(const Statevector& sv1, const Statevector& sv2) {
   const Span<Complex> amplitudes2(sv2.amplitudes, sv2.numStates);
 
   for (size_t i = 0; i < sv1.numStates; i++) {
-    resultReal += amplitudes1[i].real * amplitudes2[i].real +
-                  amplitudes1[i].imaginary * amplitudes2[i].imaginary;
-    resultImag += -1 * amplitudes1[i].real * amplitudes2[i].imaginary +
-                  amplitudes1[i].imaginary * amplitudes2[i].real;
+    resultReal += (amplitudes1[i].real * amplitudes2[i].real) +
+                  (amplitudes1[i].imaginary * amplitudes2[i].imaginary);
+    resultImag += (-1 * amplitudes1[i].real * amplitudes2[i].imaginary) +
+                  (amplitudes1[i].imaginary * amplitudes2[i].real);
   }
   const Complex result{.real = resultReal, .imaginary = resultImag};
   return complexMagnitude(result);

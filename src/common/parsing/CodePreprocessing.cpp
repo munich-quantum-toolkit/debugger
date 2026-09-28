@@ -202,7 +202,7 @@ std::string invalidTargetDetail(const std::string& target,
   std::string detail = "Invalid target qubit ";
   detail += target;
   detail += context;
-  detail += ".";
+  detail += '.';
   return detail;
 }
 
@@ -214,7 +214,7 @@ std::string invalidTargetDetail(const std::string& target,
 std::string invalidRegisterDetail(const std::string& trimmedLine) {
   std::string detail = "Invalid register declaration ";
   detail += trimmedLine;
-  detail += ".";
+  detail += '.';
   return detail;
 }
 
@@ -236,7 +236,7 @@ void validateTargets(const std::string& code, size_t instructionStart,
     if (target.empty()) {
       std::string detail = "Empty target";
       detail += context;
-      detail += ".";
+      detail += '.';
       throw makeParseError(code, instructionStart, detail);
     }
     const auto ref = parseRegisterRef(target);

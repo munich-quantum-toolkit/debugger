@@ -38,7 +38,6 @@
 
 #include <Eigen/Dense>
 #include <algorithm>
-#include <cctype>
 #include <cmath>
 #include <cstddef>
 #include <cstring>
@@ -2008,7 +2007,7 @@ size_t compileStatisticalSlice(DDSimulationState* ddsim, char* buffer,
       std::string targetName =
           "test_" + replaceString(replaceString(target, "]", ""), "[", "");
       while (assertionTargetsSet.contains(targetName)) {
-        targetName += "_";
+        targetName += '_';
       }
       assertionTargets[foundIndex][target] = targetName;
       assertionTargetsSet.insert(targetName);

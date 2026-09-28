@@ -22,7 +22,6 @@
 #include "common/parsing/Utils.hpp"
 
 #include <algorithm>
-#include <cmath>
 #include <cstddef>
 #include <iterator>
 #include <memory>
