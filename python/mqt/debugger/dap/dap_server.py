@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import socket
 import sys
@@ -84,7 +85,8 @@ def send_message(msg: str, client: socket.socket) -> None:
     msg = msg.replace("\n", "\r\n")
     length = len(msg)
     header = f"Content-Length: {length}\r\n\r\n".encode("ascii")
-    client.sendall(header + msg.encode("utf-8"))
+    with contextlib.suppress(OSError):
+        client.sendall(header + msg.encode("utf-8"))
 
 
 class DAPServer:
@@ -125,6 +127,7 @@ class DAPServer:
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             try:
                 s.bind((self.host, self.port))
+                self.port = s.getsockname()[1]
             except OSError:
                 print("Address already in use")  # ruff:ignore[print]
                 return
@@ -151,7 +154,12 @@ class DAPServer:
         message_str = ""
         while True:
             if not message_str or not data_str:
-                data = connection.recv(1024)
+                try:
+                    data = connection.recv(1024)
+                except OSError:
+                    break
+                if not data:
+                    break
                 data_str += data.decode()
             first_end = data_str.find("Content-Length:", 1)
             if first_end != -1:
@@ -167,7 +175,18 @@ class DAPServer:
             if not parts or not data:
                 break
             payload = json.loads(parts[-1])
-            result, cmd = self.handle_command(payload)
+            try:
+                result, cmd = self.handle_command(payload)
+            except Exception as exc:  # ruff: ignore[blind-except]
+                result_payload = json.dumps({
+                    "type": "response",
+                    "request_seq": payload.get("seq", 0),
+                    "success": False,
+                    "command": payload.get("command", ""),
+                    "message": str(exc),
+                })
+                send_message(result_payload, connection)
+                continue
             result_payload = json.dumps(result)
             send_message(result_payload, connection)
             if isinstance(
@@ -247,6 +266,8 @@ class DAPServer:
                 send_message(event_payload, connection)
                 if self.simulation_state.did_assertion_fail():
                     self.handle_assertion_fail(connection)
+            if isinstance(cmd, mqt.debugger.dap.messages.DisconnectDAPMessage):
+                break
             if isinstance(cmd, mqt.debugger.dap.messages.TerminateDAPMessage):
                 e = mqt.debugger.dap.messages.TerminatedDAPEvent()
                 event_payload = json.dumps(e.encode())
@@ -254,6 +275,7 @@ class DAPServer:
                 e = mqt.debugger.dap.messages.ExitedDAPEvent(143)
                 event_payload = json.dumps(e.encode())
                 send_message(event_payload, connection)
+                break
             if isinstance(cmd, mqt.debugger.dap.messages.PauseDAPMessage):
                 e = mqt.debugger.dap.messages.StoppedDAPEvent(
                     mqt.debugger.dap.messages.StopReason.PAUSE, "Stopped after pause"

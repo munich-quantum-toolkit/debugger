@@ -45,8 +45,17 @@ class RestartFrameDAPMessage(DAPMessage):
         Returns:
             dict[str, Any]: The response to the request.
         """
-        while server.simulation_state.get_stack_depth() >= self.frame:
-            server.simulation_state.step_out_backward()
+        if self.frame <= 1:
+            while server.simulation_state.can_step_backward():
+                server.simulation_state.step_over_backward()
+        else:
+            prev_depth = server.simulation_state.get_stack_depth()
+            while server.simulation_state.get_stack_depth() >= self.frame:
+                server.simulation_state.step_out_backward()
+                new_depth = server.simulation_state.get_stack_depth()
+                if new_depth >= prev_depth:
+                    break
+                prev_depth = new_depth
         server.simulation_state.step_forward()
         d = super().handle(server)
         d["body"] = {}
