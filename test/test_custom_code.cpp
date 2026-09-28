@@ -52,7 +52,11 @@ TEST_F(CustomCodeTest, IfElseOperationFalse) {
   ASSERT_EQ(state->runSimulation(state), OK);
 
   std::array<Complex, 4> amplitudes{};
-  Statevector sv{2, 4, amplitudes.data()};
+  Statevector sv{
+      .numQubits = 2,
+      .numStates = 4,
+      .amplitudes = amplitudes.data(),
+  };
   state->getStateVectorFull(state, &sv);
   ASSERT_TRUE(complexEquality(amplitudes[0], 1, 0.0));
 
@@ -73,7 +77,11 @@ TEST_F(CustomCodeTest, IfElseOperationTrue) {
   ASSERT_EQ(state->runSimulation(state), OK);
 
   std::array<Complex, 4> amplitudes{};
-  Statevector sv{2, 4, amplitudes.data()};
+  Statevector sv{
+      .numQubits = 2,
+      .numStates = 4,
+      .amplitudes = amplitudes.data(),
+  };
   state->getStateVectorFull(state, &sv);
   ASSERT_TRUE(complexEquality(amplitudes[1], 1, 0.0));
 
@@ -91,7 +99,11 @@ TEST_F(CustomCodeTest, IfElseOperationMulti) {
   ASSERT_EQ(state->runSimulation(state), OK);
 
   std::array<Complex, 4> amplitudes{};
-  Statevector sv{2, 4, amplitudes.data()};
+  Statevector sv{
+      .numQubits = 2,
+      .numStates = 4,
+      .amplitudes = amplitudes.data(),
+  };
   state->getStateVectorFull(state, &sv);
   ASSERT_TRUE(complexEquality(amplitudes[2], 1, 0.0));
 }
@@ -113,7 +125,11 @@ TEST_F(CustomCodeTest, IfElseOperationMultiMultilineBlock) {
   ASSERT_EQ(state->runSimulation(state), OK);
 
   std::array<Complex, 4> amplitudes{};
-  Statevector sv{2, 4, amplitudes.data()};
+  Statevector sv{
+      .numQubits = 2,
+      .numStates = 4,
+      .amplitudes = amplitudes.data(),
+  };
   state->getStateVectorFull(state, &sv);
   ASSERT_TRUE(complexEquality(amplitudes[2], 1, 0.0));
 }
@@ -132,7 +148,11 @@ TEST_F(CustomCodeTest, IfElseOperationNeq) {
   ASSERT_EQ(state->runSimulation(state), OK);
 
   std::array<Complex, 4> amplitudes{};
-  Statevector sv{2, 4, amplitudes.data()};
+  Statevector sv{
+      .numQubits = 2,
+      .numStates = 4,
+      .amplitudes = amplitudes.data(),
+  };
   state->getStateVectorFull(state, &sv);
   ASSERT_TRUE(complexEquality(amplitudes[1], 1, 0.0));
 }
@@ -151,7 +171,11 @@ TEST_F(CustomCodeTest, IfElseOperationLt) {
   ASSERT_EQ(state->runSimulation(state), OK);
 
   std::array<Complex, 4> amplitudes{};
-  Statevector sv{2, 4, amplitudes.data()};
+  Statevector sv{
+      .numQubits = 2,
+      .numStates = 4,
+      .amplitudes = amplitudes.data(),
+  };
   state->getStateVectorFull(state, &sv);
   ASSERT_TRUE(complexEquality(amplitudes[1], 1, 0.0));
 }
@@ -170,7 +194,11 @@ TEST_F(CustomCodeTest, IfElseOperationLeq) {
   ASSERT_EQ(state->runSimulation(state), OK);
 
   std::array<Complex, 4> amplitudes{};
-  Statevector sv{2, 4, amplitudes.data()};
+  Statevector sv{
+      .numQubits = 2,
+      .numStates = 4,
+      .amplitudes = amplitudes.data(),
+  };
   state->getStateVectorFull(state, &sv);
   ASSERT_TRUE(complexEquality(amplitudes[1], 1, 0.0));
 }
@@ -189,7 +217,11 @@ TEST_F(CustomCodeTest, IfElseOperationGt) {
   ASSERT_EQ(state->runSimulation(state), OK);
 
   std::array<Complex, 4> amplitudes{};
-  Statevector sv{2, 4, amplitudes.data()};
+  Statevector sv{
+      .numQubits = 2,
+      .numStates = 4,
+      .amplitudes = amplitudes.data(),
+  };
   state->getStateVectorFull(state, &sv);
   ASSERT_TRUE(complexEquality(amplitudes[1], 1, 0.0));
 }
@@ -208,7 +240,11 @@ TEST_F(CustomCodeTest, IfElseOperationGeq) {
   ASSERT_EQ(state->runSimulation(state), OK);
 
   std::array<Complex, 4> amplitudes{};
-  Statevector sv{2, 4, amplitudes.data()};
+  Statevector sv{
+      .numQubits = 2,
+      .numStates = 4,
+      .amplitudes = amplitudes.data(),
+  };
   state->getStateVectorFull(state, &sv);
   ASSERT_TRUE(complexEquality(amplitudes[1], 1, 0.0));
 }
@@ -229,7 +265,11 @@ TEST_F(CustomCodeTest, IfElseOperationSingleBit) {
   ASSERT_EQ(state->runSimulation(state), OK);
 
   std::array<Complex, 4> amplitudes{};
-  Statevector sv{2, 4, amplitudes.data()};
+  Statevector sv{
+      .numQubits = 2,
+      .numStates = 4,
+      .amplitudes = amplitudes.data(),
+  };
   state->getStateVectorFull(state, &sv);
   ASSERT_TRUE(complexEquality(amplitudes[1], 1, 0.0));
 }
@@ -249,7 +289,11 @@ TEST_F(CustomCodeTest, IfElseOperationBackwardStep) {
   ASSERT_EQ(state->runSimulation(state), OK);
 
   std::array<Complex, 4> amplitudes{};
-  Statevector sv{2, 4, amplitudes.data()};
+  Statevector sv{
+      .numQubits = 2,
+      .numStates = 4,
+      .amplitudes = amplitudes.data(),
+  };
   state->getStateVectorFull(state, &sv);
   // q[1] = 0, q[0] = 1  after the `if` fires, so amplitude index 1.
   ASSERT_TRUE(complexEquality(amplitudes[1], 1, 0.0));
@@ -274,7 +318,11 @@ TEST_F(CustomCodeTest, IfElseOperationBareRegisterTrue) {
   ASSERT_EQ(state->runSimulation(state), OK);
 
   std::array<Complex, 4> amplitudes{};
-  Statevector sv{2, 4, amplitudes.data()};
+  Statevector sv{
+      .numQubits = 2,
+      .numStates = 4,
+      .amplitudes = amplitudes.data(),
+  };
   state->getStateVectorFull(state, &sv);
   // q[0] = 1, q[1] = 0 after the `if` flips q[1] from 1 to 0.
   ASSERT_TRUE(complexEquality(amplitudes[1], 1, 0.0));
@@ -291,7 +339,11 @@ TEST_F(CustomCodeTest, IfElseOperationBareRegisterFalse) {
   ASSERT_EQ(state->runSimulation(state), OK);
 
   std::array<Complex, 4> amplitudes{};
-  Statevector sv{2, 4, amplitudes.data()};
+  Statevector sv{
+      .numQubits = 2,
+      .numStates = 4,
+      .amplitudes = amplitudes.data(),
+  };
   state->getStateVectorFull(state, &sv);
   // Both qubits stay at |0>; the `if` is skipped.
   ASSERT_TRUE(complexEquality(amplitudes[0], 1, 0.0));
@@ -310,7 +362,11 @@ TEST_F(CustomCodeTest, IfElseOperationBareBit) {
   ASSERT_EQ(state->runSimulation(state), OK);
 
   std::array<Complex, 4> amplitudes{};
-  Statevector sv{2, 4, amplitudes.data()};
+  Statevector sv{
+      .numQubits = 2,
+      .numStates = 4,
+      .amplitudes = amplitudes.data(),
+  };
   state->getStateVectorFull(state, &sv);
   ASSERT_TRUE(complexEquality(amplitudes[1], 1, 0.0));
 }
@@ -328,7 +384,11 @@ TEST_F(CustomCodeTest, IfElseOperationBareRegisterBackwardStep) {
   ASSERT_EQ(state->runSimulation(state), OK);
 
   std::array<Complex, 4> amplitudes{};
-  Statevector sv{2, 4, amplitudes.data()};
+  Statevector sv{
+      .numQubits = 2,
+      .numStates = 4,
+      .amplitudes = amplitudes.data(),
+  };
   state->getStateVectorFull(state, &sv);
   ASSERT_TRUE(complexEquality(amplitudes[1], 1, 0.0));
 

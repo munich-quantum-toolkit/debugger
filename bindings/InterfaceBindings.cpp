@@ -556,12 +556,16 @@ Returns:
           [](SimulationState* self) {
             const size_t numQubits = self->getNumQubits(self);
             const std::vector<Complex> amplitudes(1 << numQubits);
-            StatevectorCPP result{.numQubits = numQubits,
-                                  .numStates = 1ULL << numQubits,
-                                  .amplitudes = amplitudes};
-            Statevector output{.numQubits = numQubits,
-                               .numStates = result.numStates,
-                               .amplitudes = result.amplitudes.data()};
+            StatevectorCPP result{
+                .numQubits = numQubits,
+                .numStates = 1ULL << numQubits,
+                .amplitudes = amplitudes,
+            };
+            Statevector output{
+                .numQubits = numQubits,
+                .numStates = result.numStates,
+                .amplitudes = result.amplitudes.data(),
+            };
             checkOrThrow(self->getStateVectorFull(self, &output));
             return result;
           },
@@ -574,12 +578,16 @@ Returns:
           [](SimulationState* self, std::vector<size_t> qubits) {
             const size_t numQubits = qubits.size();
             const std::vector<Complex> amplitudes(1 << numQubits);
-            StatevectorCPP result{.numQubits = numQubits,
-                                  .numStates = 1ULL << numQubits,
-                                  .amplitudes = amplitudes};
-            Statevector output{.numQubits = numQubits,
-                               .numStates = result.numStates,
-                               .amplitudes = result.amplitudes.data()};
+            StatevectorCPP result{
+                .numQubits = numQubits,
+                .numStates = 1ULL << numQubits,
+                .amplitudes = amplitudes,
+            };
+            Statevector output{
+                .numQubits = numQubits,
+                .numStates = result.numStates,
+                .amplitudes = result.amplitudes.data(),
+            };
             checkOrThrow(self->getStateVectorSub(self, numQubits, qubits.data(),
                                                  &output));
             return result;

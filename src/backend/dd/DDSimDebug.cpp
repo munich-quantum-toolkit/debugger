@@ -234,7 +234,8 @@ bool checkAssertionEntangled(
   }
 
   std::vector<std::vector<Complex>> densityMatrix(
-      sv.numStates, std::vector<Complex>(sv.numStates, {0, 0}));
+      sv.numStates,
+      std::vector<Complex>(sv.numStates, {.real = 0, .imaginary = 0}));
   for (size_t i = 0; i < sv.numStates; i++) {
     for (size_t j = 0; j < sv.numStates; j++) {
       densityMatrix[i][j] =
@@ -825,7 +826,11 @@ Result ddsimChangeAmplitudeValue(SimulationState* self, const char* basisState,
 
   const auto numStates = 1ULL << numQubits;
   std::vector<Complex> amplitudes(numStates);
-  Statevector sv{numQubits, numStates, amplitudes.data()};
+  Statevector sv{
+      .numQubits = numQubits,
+      .numStates = numStates,
+      .amplitudes = amplitudes.data(),
+  };
   if (self->getStateVectorFull(self, &sv) != OK) {
     return ERROR;
   }
@@ -1083,9 +1088,11 @@ Result ddsimStepForward(SimulationState* self) {
         ddsim->variables[name].value = value;
       } else {
         ddsim->variableNames.push_back(std::make_unique<std::string>(name));
-        const Variable newVariable{ddsim->variableNames.back()->data(),
-                                   VariableType::VarBool,
-                                   {!result}};
+        const Variable newVariable{
+            .name = ddsim->variableNames.back()->data(),
+            .type = VariableType::VarBool,
+            .value = {.boolValue = !result},
+        };
         ddsim->variables.insert({name, newVariable});
       }
     }
@@ -1891,7 +1898,10 @@ std::string preprocessAssertionCode(const char* code,
                                : ddsim->qubitRegisters.back().index +
                                      ddsim->qubitRegisters.back().size;
       const QubitRegisterDefinition reg{
-          .name = name, .index = index, .size = size};
+          .name = name,
+          .index = index,
+          .size = size,
+      };
       ddsim->qubitRegisters.push_back(reg);
 
       if (!instruction.inFunctionDefinition) {
@@ -1912,16 +1922,21 @@ std::string preprocessAssertionCode(const char* code,
                                : ddsim->classicalRegisters.back().index +
                                      ddsim->classicalRegisters.back().size;
       const ClassicalRegisterDefinition reg{
-          .name = removeWhitespace(name), .index = index, .size = size};
+          .name = removeWhitespace(name),
+          .index = index,
+          .size = size,
+      };
       ddsim->classicalRegisters.push_back(reg);
       for (auto i = 0ULL; i < size; i++) {
         const auto variableName =
             removeWhitespace(name) + "[" + std::to_string(i) + "]";
         ddsim->variableNames.push_back(
             std::make_unique<std::string>(variableName));
-        const Variable newVariable{ddsim->variableNames.back()->data(),
-                                   VariableType::VarBool,
-                                   {false}};
+        const Variable newVariable{
+            .name = ddsim->variableNames.back()->data(),
+            .type = VariableType::VarBool,
+            .value = {.boolValue = false},
+        };
         ddsim->variables.insert({newVariable.name, newVariable});
       }
 

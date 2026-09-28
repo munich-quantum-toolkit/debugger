@@ -95,7 +95,7 @@ Complex parseComplex(std::string complexString) {
     }
     first = false;
   }
-  return {real, imaginary};
+  return {.real = real, .imaginary = imaginary};
 }
 
 /**
@@ -249,9 +249,11 @@ bool StatevectorEqualityAssertion::implies(
         });
     newAmplitudes =
         getSubStateVectorAmplitudes(getTargetStatevector(), indexList);
-    targetSV = {.numQubits = indexList.size(),
-                .numStates = newAmplitudes.size(),
-                .amplitudes = newAmplitudes.data()};
+    targetSV = {
+        .numQubits = indexList.size(),
+        .numStates = newAmplitudes.size(),
+        .amplitudes = newAmplitudes.data(),
+    };
   } else {
     targetSV = getTargetStatevector();
   }
@@ -311,7 +313,7 @@ bool StatevectorEqualityAssertion::implies(
                          getTargetStatevector().numStates);
 
   std::vector<std::vector<Complex>> densityMatrix(
-      sv.size(), std::vector<Complex>(sv.size(), {0, 0}));
+      sv.size(), std::vector<Complex>(sv.size(), {.real = 0, .imaginary = 0}));
   for (size_t i = 0; i < sv.size(); i++) {
     for (size_t j = 0; j < sv.size(); j++) {
       densityMatrix[i][j] =

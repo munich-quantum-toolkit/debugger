@@ -464,14 +464,16 @@ parseClassicConditionExpression(const std::string& condition) {
     qc::ComparisonKind kind;
   };
   using OperatorsT = std::array<OperatorMatch, 6>;
-  static constexpr OperatorsT OPERATORS{{
-      {.text = "<=", .kind = qc::Leq},
-      {.text = ">=", .kind = qc::Geq},
-      {.text = "==", .kind = qc::Eq},
-      {.text = "!=", .kind = qc::Neq},
-      {.text = "<", .kind = qc::Lt},
-      {.text = ">", .kind = qc::Gt},
-  }};
+  static constexpr OperatorsT OPERATORS{
+      {
+          {.text = "<=", .kind = qc::Leq},
+          {.text = ">=", .kind = qc::Geq},
+          {.text = "==", .kind = qc::Eq},
+          {.text = "!=", .kind = qc::Neq},
+          {.text = "<", .kind = qc::Lt},
+          {.text = ">", .kind = qc::Gt},
+      },
+  };
 
   auto normalized = removeWhitespace(condition);
   if (!normalized.empty() && normalized.front() == '(') {
@@ -508,10 +510,12 @@ parseClassicConditionExpression(const std::string& condition) {
   }
 
   if (const auto ref = parseRegisterRef(operand); ref.has_value()) {
-    return ClassicCondition{.registerName = ref->name,
-                            .bitIndex = ref->index,
-                            .expectedValue = expected,
-                            .kind = kind};
+    return ClassicCondition{
+        .registerName = ref->name,
+        .bitIndex = ref->index,
+        .expectedValue = expected,
+        .kind = kind,
+    };
   }
   return std::nullopt;
 }
