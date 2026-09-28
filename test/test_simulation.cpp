@@ -35,13 +35,13 @@ namespace {
  * defines the specific file to run the tests on.
  */
 class SimulationTest : public testing::TestWithParam<std::string> {
+protected:
   void SetUp() override {
     createDDSimulationState(&ddState);
     state = &ddState.interface;
     loadFromFile(GetParam());
   }
 
-protected:
   /**
    * @brief The DDSimulationState to use for testing.
    */

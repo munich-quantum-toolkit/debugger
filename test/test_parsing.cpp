@@ -29,9 +29,7 @@ namespace {
 /**
  * @brief Fixture for testing the correctness of parsing functions.
  */
-class ParsingTest : public testing::Test {
-  void SetUp() override {}
-};
+class ParsingTest : public testing::Test {};
 
 /**
  * @test Test the parsing of equality assertions.

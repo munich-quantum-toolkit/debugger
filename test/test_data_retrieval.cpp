@@ -38,6 +38,7 @@ namespace {
  * `circuits/classical-storage`.
  */
 class DataRetrievalTest : public LoadFromFileFixture {
+protected:
   void SetUp() override {
     LoadFromFileFixture::SetUp();
     loadFromFile("classical-storage");
