@@ -184,7 +184,7 @@ Complex complexMultiplication(const Complex& c1, const Complex& c2) {
 
 Complex complexConjugate(const Complex& c) { return {c.real, -c.imaginary}; }
 
-bool areQubitsEntangled(std::vector<std::vector<Complex>>& densityMatrix,
+bool areQubitsEntangled(const std::vector<std::vector<Complex>>& densityMatrix,
                         size_t qubit1, size_t qubit2) {
   const auto numQubits = static_cast<size_t>(std::log2(densityMatrix.size()));
   if (numQubits == 2) {
@@ -260,7 +260,7 @@ toEigenMatrix(const std::vector<std::vector<Complex>>& matrix) {
   return mat;
 }
 
-double complexMagnitude(Complex& c) {
+double complexMagnitude(const Complex& c) {
   return std::sqrt((c.real * c.real) + (c.imaginary * c.imaginary));
 }
 
@@ -332,7 +332,7 @@ double dotProduct(const Statevector& sv1, const Statevector& sv2) {
     resultImag += -1 * amplitudes1[i].real * amplitudes2[i].imaginary +
                   amplitudes1[i].imaginary * amplitudes2[i].real;
   }
-  Complex result{resultReal, resultImag};
+  const Complex result{resultReal, resultImag};
   return complexMagnitude(result);
 }
 

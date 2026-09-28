@@ -203,7 +203,7 @@ getInteractionTreeAtRuntime(DDDiagnostics* ddd, size_t qubit) {
         continue;
       }
 
-      auto& actualQubits = ddd->actualQubits[i];
+      const auto& actualQubits = ddd->actualQubits[i];
       for (const auto& actualQubitVector : actualQubits) {
         if (!std::ranges::none_of(actualQubitVector,
                                   [&interactions](size_t elem) {
@@ -308,7 +308,7 @@ findUniquePath(const std::set<std::tuple<size_t, size_t, size_t>>& graph,
 
   toVisit.push_back(start);
   while (!toVisit.empty()) {
-    auto current = *toVisit.begin();
+    const auto current = *toVisit.begin();
     toVisit.erase(toVisit.begin());
     visited.insert(current);
     if (current == end) {
@@ -588,7 +588,7 @@ Result dddiagnosticsInit(Diagnostics* self) {
 Result dddiagnosticsGetDataDependencies(Diagnostics* self, size_t instruction,
                                         bool includeCallers,
                                         bool* instructions) {
-  auto* ddd = toDDDiagnostics(self);
+  const auto* ddd = toDDDiagnostics(self);
   auto* ddsim = ddd->simulationState;
   const Span<bool> isDependency(
       instructions, ddsim->interface.getInstructionCount(&ddsim->interface));
@@ -602,12 +602,12 @@ Result dddiagnosticsGetDataDependencies(Diagnostics* self, size_t instruction,
                      : std::set<size_t>{};
 
   while (!toVisit.empty()) {
-    auto current = *toVisit.begin();
+    const auto current = *toVisit.begin();
     isDependency[current] = true;
     toVisit.erase(toVisit.begin());
     visited.insert(current);
 
-    for (auto dep : ddsim->dataDependencies[current]) {
+    for (const auto dep : ddsim->dataDependencies[current]) {
       const auto depInstruction = dep.first;
       if (ddsim->instructionTypes[depInstruction] == NOP) {
         continue; // We don't want variable declarations as dependencies.
@@ -621,7 +621,7 @@ Result dddiagnosticsGetDataDependencies(Diagnostics* self, size_t instruction,
     }
 
     if (unknownCallers.contains(current - 1)) {
-      for (auto caller : ddsim->functionCallers[current - 1]) {
+      for (const auto caller : ddsim->functionCallers[current - 1]) {
         if (!visited.contains(caller)) {
           toVisit.insert(caller);
         }
@@ -634,7 +634,7 @@ Result dddiagnosticsGetDataDependencies(Diagnostics* self, size_t instruction,
 
 Result dddiagnosticsGetInteractions(Diagnostics* self, size_t beforeInstruction,
                                     size_t qubit, bool* qubitsAreInteracting) {
-  auto* ddd = toDDDiagnostics(self);
+  const auto* ddd = toDDDiagnostics(self);
   auto* ddsim = ddd->simulationState;
   std::set<size_t> interactions;
   interactions.insert(qubit);
@@ -652,7 +652,7 @@ Result dddiagnosticsGetInteractions(Diagnostics* self, size_t beforeInstruction,
         continue;
       }
 
-      auto targets = getTargetVariables(ddsim, i);
+      const auto targets = getTargetVariables(ddsim, i);
       std::set<size_t> targetQubits;
       for (const auto& target : targets) {
         targetQubits.insert(variableToQubitAt(ddsim, target, i).first);
@@ -672,7 +672,7 @@ Result dddiagnosticsGetInteractions(Diagnostics* self, size_t beforeInstruction,
 
   const auto qubits = Span<bool>(
       qubitsAreInteracting, ddsim->interface.getNumQubits(&ddsim->interface));
-  for (auto interaction : interactions) {
+  for (const auto interaction : interactions) {
     qubits[interaction] = true;
   }
 
@@ -683,7 +683,7 @@ size_t dddiagnosticsPotentialErrorCauses(Diagnostics* self, ErrorCause* output,
                                          size_t count) {
   auto* ddd = toDDDiagnostics(self);
   auto* ddsim = ddd->simulationState;
-  auto outputs = Span(output, count);
+  const auto outputs = Span(output, count);
 
   const size_t assertion = ddsim->lastFailedAssertion;
   if (assertion == -1ULL) {
@@ -711,7 +711,7 @@ size_t tryFindMissingInteraction(DDDiagnostics* diagnostics,
   }
 
   auto targets = assertion->getTargetQubits();
-  auto outputs = Span(output, count);
+  const auto outputs = Span(output, count);
   std::vector<size_t> targetQubits(targets.size());
   size_t index = 0;
 
@@ -755,7 +755,7 @@ size_t tryFindZeroControls(DDDiagnostics* diagnostics, size_t instruction,
   diagnostics->interface.getDataDependencies(&diagnostics->interface,
                                              instruction, true,
                                              toBoolArray(dependencies.data()));
-  auto outputs = Span(output, count);
+  const auto outputs = Span(output, count);
   size_t index = 0;
 
   for (size_t i = 0; i < dependencies.size(); i++) {
@@ -784,7 +784,7 @@ size_t tryFindZeroControls(DDDiagnostics* diagnostics, size_t instruction,
 
 Result dddiagnosticsGetZeroControlInstructions(Diagnostics* self,
                                                bool* instructions) {
-  auto* ddd = toDDDiagnostics(self);
+  const auto* ddd = toDDDiagnostics(self);
   const Span<bool> instructionSpan(instructions,
                                    dddiagnosticsGetInstructionCount(self));
   for (size_t i = 0; i < dddiagnosticsGetInstructionCount(self); i++) {
@@ -872,7 +872,7 @@ size_t dddiagnosticsSuggestNewAssertions(Diagnostics* self,
                                          size_t* suggestedPositions,
                                          char** suggestedAssertions,
                                          size_t count) {
-  auto* ddd = toDDDiagnostics(self);
+  const auto* ddd = toDDDiagnostics(self);
   if (count == 0) {
     size_t totalNumber = 0;
     for (const auto& entry : ddd->assertionsEntToInsert) {
