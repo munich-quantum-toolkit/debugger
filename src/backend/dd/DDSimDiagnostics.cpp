@@ -503,11 +503,12 @@ void suggestSplitEqualityAssertion(
 
     const auto& amplitudeSet = extractedAmplitudes[i];
     const auto& targetQubitSet = targetQubits[i];
-    auto toInsert =
-        InsertEqualityAssertion{.instructionIndex = instructionIndex,
-                                .amplitudes = {},
-                                .similarity = similarity,
-                                .targets = targetQubitSet};
+    auto toInsert = InsertEqualityAssertion{
+        .instructionIndex = instructionIndex,
+        .amplitudes = {},
+        .similarity = similarity,
+        .targets = targetQubitSet,
+    };
 
     // Round amplitudes if necessary.
     const auto roundingFactor = 1e8;
@@ -517,7 +518,8 @@ void suggestSplitEqualityAssertion(
           return Complex{
               .real = std::round(c.real * roundingFactor) / roundingFactor,
               .imaginary =
-                  std::round(c.imaginary * roundingFactor) / roundingFactor};
+                  std::round(c.imaginary * roundingFactor) / roundingFactor,
+          };
         });
     // If an amplitude was rounded, we adapt the similarity if it is too high
     // otherwise.
@@ -828,7 +830,11 @@ void dddiagnosticsOnStepForward(DDDiagnostics* diagnostics,
   const auto& controls = op->getControls();
 
   std::vector<Complex> amplitudes(2ULL << numQubits);
-  Statevector sv{numQubits, 2ULL << numQubits, amplitudes.data()};
+  Statevector sv{
+      .numQubits = numQubits,
+      .numStates = 2ULL << numQubits,
+      .amplitudes = amplitudes.data(),
+  };
   ddsim->interface.getStateVectorFull(&ddsim->interface, &sv);
 
   for (const auto& control : controls) {

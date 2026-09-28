@@ -123,8 +123,9 @@ public:
   StatEqPreambleEntry(std::vector<std::string> n, std::vector<double> dist,
                       double fid)
       : names(std::move(n)), distribution(dist.size()), fidelity(fid) {
-    std::ranges::transform(dist, this->distribution.begin(),
-                           [](double value) { return Complex{value, 0.0}; });
+    std::ranges::transform(dist, this->distribution.begin(), [](double value) {
+      return Complex{.real = value, .imaginary = 0.0};
+    });
   }
 
   [[nodiscard]] std::string toString() const override {
