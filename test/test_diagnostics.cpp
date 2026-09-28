@@ -29,6 +29,7 @@
 #include <vector>
 
 namespace mqt::debugger::test {
+namespace {
 
 /**
  * @brief Fixture for testing the correctness of the diagnostics module.
@@ -324,4 +325,5 @@ TEST_F(DiagnosticsTest, RuntimeInteractions) {
   ASSERT_EQ(errors[0].instruction, 6);
 }
 
+} // namespace
 } // namespace mqt::debugger::test

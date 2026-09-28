@@ -54,8 +54,6 @@ void checkOrThrow(Result result) {
   }
 }
 
-} // namespace
-
 /**
  * @brief A representation of statevectors in C++ style, using std::vector
  * instead of a raw pointer.
@@ -67,6 +65,8 @@ struct StatevectorCPP {
   size_t numStates = 0;
   std::vector<Complex> amplitudes;
 };
+
+} // namespace
 
 // NOLINTNEXTLINE(misc-use-internal-linkage)
 void bindFramework(nb::module_& m) {

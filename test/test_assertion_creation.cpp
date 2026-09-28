@@ -28,6 +28,7 @@
 #include <vector>
 
 namespace mqt::debugger::test {
+namespace {
 
 /**
  * @brief Fixture for testing the correctness of assertion creation on custom
@@ -180,4 +181,5 @@ TEST_F(AssertionCreationTest, SplitEqualityAssertionRounded) {
   checkNewAssertions(expected, 1);
 }
 
+} // namespace
 } // namespace mqt::debugger::test

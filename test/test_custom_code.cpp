@@ -28,6 +28,7 @@
 #include <gtest/gtest.h>
 
 namespace mqt::debugger::test {
+namespace {
 
 /**
  * @brief Fixture for testing the correctness of the debugger on custom code.
@@ -819,4 +820,5 @@ TEST_F(CustomCodeTest, PaperExampleGrover) {
   ASSERT_EQ(state->isFinished(state), true);
 }
 
+} // namespace
 } // namespace mqt::debugger::test

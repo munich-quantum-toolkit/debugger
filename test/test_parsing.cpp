@@ -24,6 +24,7 @@
 #include <string>
 
 namespace mqt::debugger::test {
+namespace {
 
 /**
  * @brief Fixture for testing the correctness of parsing functions.
@@ -180,4 +181,5 @@ TEST_F(ParsingTest, BadFunctionCall) {
   ASSERT_THROW(preprocessCode(input2, output), ParsingError);
 }
 
+} // namespace
 } // namespace mqt::debugger::test

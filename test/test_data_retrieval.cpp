@@ -28,6 +28,7 @@
 #include <vector>
 
 namespace mqt::debugger::test {
+namespace {
 
 /**
  * @brief Fixture for testing the correctness of the debugger for data retrieval
@@ -335,4 +336,5 @@ TEST_F(DataRetrievalTest, ChangeAmplitudeValueRejectsSubNormalizedVacuum) {
   ASSERT_EQ(state->changeAmplitudeValue(state, "0000", nullptr), ERROR);
 }
 
+} // namespace
 } // namespace mqt::debugger::test

@@ -23,6 +23,7 @@
 #include <utility>
 
 namespace mqt::debugger::test {
+namespace {
 
 /**
  * @brief Fixture for testing the correctness of utility functions.
@@ -73,4 +74,5 @@ TEST_F(UtilityTest, BadInstructionPosition) {
   ASSERT_EQ(state->getInstructionPosition(state, 100, &start, &end), ERROR);
 }
 
+} // namespace
 } // namespace mqt::debugger::test
