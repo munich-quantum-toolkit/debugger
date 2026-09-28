@@ -170,7 +170,7 @@ def dap_session() -> Generator[tuple[DAPServer, DAPClient], None, None]:
         yield server, client
     finally:
         if not client.disconnected:
-            with contextlib.suppress(OSError, TimeoutError):
+            with contextlib.suppress(OSError, TimeoutError, EOFError):
                 client.send_request("disconnect")
                 client.receive_response("disconnect", timeout=1.0)
         client.close()
@@ -542,3 +542,4 @@ def test_terminate(launched_session: tuple[DAPServer, DAPClient]) -> None:
     client.wait_for_event("terminated")
     exited = client.wait_for_event("exited")
     assert exited["body"]["exitCode"] == 143
+    client.disconnected = True
