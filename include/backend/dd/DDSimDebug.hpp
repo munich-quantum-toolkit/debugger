@@ -688,7 +688,7 @@ bool checkAssertion(DDSimulationState* ddsim,
  * @param index The index of the classical bit.
  * @return The name of the classical bit.
  */
-std::string getClassicalBitName(DDSimulationState* ddsim, size_t index);
+std::string getClassicalBitName(const DDSimulationState* ddsim, size_t index);
 
 /**
  * @brief Gets the name of a qubit variable by its index.
@@ -696,7 +696,7 @@ std::string getClassicalBitName(DDSimulationState* ddsim, size_t index);
  * @param index The index of the qubit variable.
  * @return The name of the qubit variable.
  */
-std::string getQuantumBitName(DDSimulationState* ddsim, size_t index);
+std::string getQuantumBitName(const DDSimulationState* ddsim, size_t index);
 
 /**
  * @brief Gets the qubit index from a variable name.

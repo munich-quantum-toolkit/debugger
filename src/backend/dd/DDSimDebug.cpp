@@ -406,7 +406,7 @@ std::string validCodeFromChildren(const Instruction& parent,
     return code;
   }
   code += " { ";
-  for (auto child : parent.childInstructions) {
+  for (const auto child : parent.childInstructions) {
     const auto& childInstruction = allInstructions[child];
     if (childInstruction.assertion != nullptr) {
       continue;
@@ -622,7 +622,7 @@ void compileProjectiveMeasurement(
     stream << "measure " << qbit << " -> " << cbit << "[0];\n";
   }
 
-  for (auto& it : newQc) {
+  for (const auto& it : newQc) {
     serializer.serialize(*it, qubitIndexToRegisterMap, {});
   }
 }
@@ -889,7 +889,7 @@ Result ddsimChangeAmplitudeValue(SimulationState* self, const char* basisState,
   }
 
   try {
-    auto newState = dd::makeStateFromVector(ddVector, *(ddsim->dd));
+    const auto newState = dd::makeStateFromVector(ddVector, *(ddsim->dd));
     ddsim->dd->incRef(newState);
     if (ddsim->simulationState.p != nullptr) {
       ddsim->dd->decRef(ddsim->simulationState);
@@ -1066,17 +1066,17 @@ Result ddsimStepForward(SimulationState* self) {
         dynamic_cast<qc::NonUnitaryOperation*>(ddsim->iterator->get())
             ->getClassics();
     for (size_t i = 0; i < qubitsToMeasure.size(); i++) {
-      auto qubit = qubitsToMeasure[i];
-      auto classicalBit = classicalBits[i];
+      const auto qubit = qubitsToMeasure[i];
+      const auto classicalBit = classicalBits[i];
 
       auto [pZero, pOne] = dd::Package::determineMeasurementProbabilities(
           ddsim->simulationState, static_cast<dd::Qubit>(qubit));
-      auto rnd = generateRandomNumber();
-      auto result = rnd < pZero;
+      const auto rnd = generateRandomNumber();
+      const auto result = rnd < pZero;
       ddsim->dd->performCollapsingMeasurement(ddsim->simulationState,
                                               static_cast<dd::Qubit>(qubit),
                                               result ? pZero : pOne, result);
-      auto name = getClassicalBitName(ddsim, classicalBit);
+      const auto name = getClassicalBitName(ddsim, classicalBit);
       if (ddsim->variables.contains(name)) {
         VariableValue value;
         value.boolValue = !result;
@@ -1098,7 +1098,7 @@ Result ddsimStepForward(SimulationState* self) {
   }
   if ((*ddsim->iterator)->getType() == qc::Reset) {
     // Perform the desired qubits. This will first perform a measurement.
-    auto qubitsToMeasure = (*ddsim->iterator)->getTargets();
+    const auto qubitsToMeasure = (*ddsim->iterator)->getTargets();
     ddsim->iterator++;
     ddsim->previousInstructionStack.clear();
     ddsim->restoreCallReturnStack.clear();
@@ -1106,15 +1106,15 @@ Result ddsimStepForward(SimulationState* self) {
     for (const auto qubit : qubitsToMeasure) {
       auto [pZero, pOne] = dd::Package::determineMeasurementProbabilities(
           ddsim->simulationState, static_cast<dd::Qubit>(qubit));
-      auto rnd = generateRandomNumber();
-      auto result = rnd < pZero;
+      const auto rnd = generateRandomNumber();
+      const auto result = rnd < pZero;
       ddsim->dd->performCollapsingMeasurement(ddsim->simulationState,
                                               static_cast<dd::Qubit>(qubit),
                                               result ? pZero : pOne, result);
       if (!result) {
         const auto x = qc::StandardOperation(qubit, qc::X);
-        auto tmp = ddsim->dd->multiply(dd::getDD(x, *ddsim->dd),
-                                       ddsim->simulationState);
+        const auto tmp = ddsim->dd->multiply(dd::getDD(x, *ddsim->dd),
+                                             ddsim->simulationState);
         ddsim->dd->incRef(tmp);
         ddsim->dd->decRef(ddsim->simulationState);
         ddsim->simulationState = tmp;
@@ -1158,10 +1158,10 @@ Result ddsimStepForward(SimulationState* self) {
           applyComparison(registerValue, exp, op->getComparisonKind());
     }
     if (conditionMet) {
-      auto* thenOp = op->getThenOp();
+      const auto* thenOp = op->getThenOp();
       currDD = dd::getDD(*thenOp, *ddsim->dd);
     } else if (op->getElseOp() != nullptr) {
-      auto* elseOp = op->getElseOp();
+      const auto* elseOp = op->getElseOp();
       currDD = dd::getDD(*elseOp, *ddsim->dd);
     } else {
       currDD = dd::Package::makeIdent();
@@ -1172,7 +1172,7 @@ Result ddsimStepForward(SimulationState* self) {
                        *ddsim->dd); // retrieve the "new" current operation
   }
 
-  auto temp = ddsim->dd->multiply(currDD, ddsim->simulationState);
+  const auto temp = ddsim->dd->multiply(currDD, ddsim->simulationState);
   ddsim->dd->incRef(temp);
   ddsim->dd->decRef(ddsim->simulationState);
   ddsim->simulationState = temp;
@@ -1253,10 +1253,10 @@ Result ddsimStepBackward(SimulationState* self) {
           applyComparison(registerValue, exp, op->getComparisonKind());
     }
     if (conditionMet) {
-      auto* thenOp = op->getThenOp();
+      const auto* thenOp = op->getThenOp();
       currDD = dd::getInverseDD(*thenOp, *ddsim->dd);
     } else if (op->getElseOp() != nullptr) {
-      auto* elseOp = op->getElseOp();
+      const auto* elseOp = op->getElseOp();
       currDD = dd::getInverseDD(*elseOp, *ddsim->dd);
     } else {
       currDD = dd::Package::makeIdent();
@@ -1267,7 +1267,7 @@ Result ddsimStepBackward(SimulationState* self) {
         *ddsim->dd); // get the inverse of the current operation
   }
 
-  auto temp = ddsim->dd->multiply(currDD, ddsim->simulationState);
+  const auto temp = ddsim->dd->multiply(currDD, ddsim->simulationState);
   ddsim->dd->incRef(temp);
   ddsim->dd->decRef(ddsim->simulationState);
   ddsim->simulationState = temp;
@@ -1277,7 +1277,7 @@ Result ddsimStepBackward(SimulationState* self) {
 }
 
 Result ddsimRunAll(SimulationState* self, size_t* failedAssertions) {
-  auto* ddsim = toDDSimulationState(self);
+  const auto* ddsim = toDDSimulationState(self);
   if (!ddsim->ready) {
     return ERROR;
   }
@@ -1361,38 +1361,38 @@ Result ddsimPauseSimulation(SimulationState* self) {
 }
 
 bool ddsimCanStepForward(SimulationState* self) {
-  auto* ddsim = toDDSimulationState(self);
+  const auto* ddsim = toDDSimulationState(self);
   return ddsim->ready &&
          ddsim->currentInstruction < ddsim->instructionTypes.size();
 }
 
 bool ddsimCanStepBackward(SimulationState* self) {
-  auto* ddsim = toDDSimulationState(self);
+  const auto* ddsim = toDDSimulationState(self);
   return ddsim->ready && !ddsim->previousInstructionStack.empty();
 }
 
 bool ddsimIsFinished(SimulationState* self) {
-  auto* ddsim = toDDSimulationState(self);
+  const auto* ddsim = toDDSimulationState(self);
   return ddsim->currentInstruction == ddsim->instructionTypes.size();
 }
 
 bool ddsimDidAssertionFail(SimulationState* self) {
-  auto* ddsim = toDDSimulationState(self);
+  const auto* ddsim = toDDSimulationState(self);
   return ddsim->lastFailedAssertion == ddsim->currentInstruction;
 }
 
 bool ddsimWasBreakpointHit(SimulationState* self) {
-  auto* ddsim = toDDSimulationState(self);
+  const auto* ddsim = toDDSimulationState(self);
   return ddsim->lastMetBreakpoint == ddsim->currentInstruction;
 }
 
 size_t ddsimGetCurrentInstruction(SimulationState* self) {
-  auto* ddsim = toDDSimulationState(self);
+  const auto* ddsim = toDDSimulationState(self);
   return ddsim->currentInstruction;
 }
 
 size_t ddsimGetInstructionCount(SimulationState* self) {
-  auto* ddsim = toDDSimulationState(self);
+  const auto* ddsim = toDDSimulationState(self);
   return ddsim->instructionTypes.size();
 }
 
@@ -1429,8 +1429,8 @@ size_t ddsimGetNumQubits(SimulationState* self) {
 
 Result ddsimGetAmplitudeIndex(SimulationState* self, size_t index,
                               Complex* output) {
-  auto* ddsim = toDDSimulationState(self);
-  auto result = ddsim->simulationState.getValueByIndex(index);
+  const auto* ddsim = toDDSimulationState(self);
+  const auto result = ddsim->simulationState.getValueByIndex(index);
   output->real = result.real();
   output->imaginary = result.imag();
   return OK;
@@ -1441,7 +1441,7 @@ Result ddsimGetAmplitudeBitstring(SimulationState* self, const char* bitstring,
   auto* ddsim = toDDSimulationState(self);
   auto path = std::string(bitstring);
   std::ranges::reverse(path);
-  auto result =
+  const auto result =
       ddsim->simulationState.getValueByPath(ddsim->qc->getNqubits(), path);
   output->real = result.real();
   output->imaginary = result.imag();
@@ -1458,7 +1458,7 @@ Result ddsimGetClassicalVariable(SimulationState* self, const char* name,
   return ERROR;
 }
 size_t ddsimGetNumClassicalVariables(SimulationState* self) {
-  auto* ddsim = toDDSimulationState(self);
+  const auto* ddsim = toDDSimulationState(self);
   return ddsim->variables.size();
 }
 Result ddsimGetClassicalVariableName(SimulationState* self,
@@ -1487,6 +1487,7 @@ Result ddsimGetQuantumVariableName(SimulationState* self, size_t variableIndex,
   return OK;
 }
 
+// NOLINTNEXTLINE(misc-const-correctness)
 Result ddsimGetStateVectorFull(SimulationState* self, Statevector* output) {
   const Span<Complex> amplitudes(output->amplitudes, output->numStates);
   for (size_t i = 0; i < output->numStates; i++) {
@@ -1595,7 +1596,7 @@ Result ddsimClearBreakpoints(SimulationState* self) {
 }
 
 Result ddsimGetStackDepth(SimulationState* self, size_t* depth) {
-  auto* ddsim = toDDSimulationState(self);
+  const auto* ddsim = toDDSimulationState(self);
   if (!ddsim->ready) {
     return ERROR;
   }
@@ -1705,7 +1706,7 @@ size_t variableToQubit(DDSimulationState* ddsim, const std::string& variable) {
     }
   }
 
-  for (auto& reg : ddsim->qubitRegisters) {
+  for (const auto& reg : ddsim->qubitRegisters) {
     if (reg.name == var) {
       if (idx >= reg.size) {
         throw std::runtime_error("Index out of bounds");
@@ -1768,28 +1769,30 @@ bool checkAssertion(DDSimulationState* ddsim,
   if (assertion->getType() == AssertionType::Entanglement) {
     std::unique_ptr<EntanglementAssertion> entanglementAssertion(
         dynamic_cast<EntanglementAssertion*>(assertion.release()));
-    auto result = checkAssertionEntangled(ddsim, entanglementAssertion);
+    const auto result = checkAssertionEntangled(ddsim, entanglementAssertion);
     assertion = std::move(entanglementAssertion);
     return result;
   }
   if (assertion->getType() == AssertionType::Superposition) {
     std::unique_ptr<SuperpositionAssertion> superpositionAssertion(
         dynamic_cast<SuperpositionAssertion*>(assertion.release()));
-    auto result = checkAssertionSuperposition(ddsim, superpositionAssertion);
+    const auto result =
+        checkAssertionSuperposition(ddsim, superpositionAssertion);
     assertion = std::move(superpositionAssertion);
     return result;
   }
   if (assertion->getType() == AssertionType::StatevectorEquality) {
     std::unique_ptr<StatevectorEqualityAssertion> svEqualityAssertion(
         dynamic_cast<StatevectorEqualityAssertion*>(assertion.release()));
-    auto result = checkAssertionEqualityStatevector(ddsim, svEqualityAssertion);
+    const auto result =
+        checkAssertionEqualityStatevector(ddsim, svEqualityAssertion);
     assertion = std::move(svEqualityAssertion);
     return result;
   }
   if (assertion->getType() == AssertionType::CircuitEquality) {
     std::unique_ptr<CircuitEqualityAssertion> circuitEqualityAssertion(
         dynamic_cast<CircuitEqualityAssertion*>(assertion.release()));
-    auto result =
+    const auto result =
         checkAssertionEqualityCircuit(ddsim, circuitEqualityAssertion);
     assertion = std::move(circuitEqualityAssertion);
     return result;
@@ -1880,7 +1883,7 @@ std::string preprocessAssertionCode(const char* code,
       declaration = replaceString(declaration, "\t", "");
       declaration = replaceString(declaration, ";", "");
       auto parts = splitString(declaration, '[');
-      auto name = parts[0];
+      const auto name = parts[0];
       const size_t size = std::stoul(parts[1].substr(0, parts[1].size() - 1));
 
       const size_t index = ddsim->qubitRegisters.empty()
@@ -1901,7 +1904,7 @@ std::string preprocessAssertionCode(const char* code,
       declaration = replaceString(declaration, "\t", "");
       declaration = replaceString(declaration, ";", "");
       auto parts = splitString(declaration, '[');
-      auto& name = parts[0];
+      const auto& name = parts[0];
       const size_t size = std::stoul(parts[1].substr(0, parts[1].size() - 1));
 
       const size_t index = ddsim->classicalRegisters.empty()
@@ -1945,8 +1948,8 @@ std::string preprocessAssertionCode(const char* code,
   return result;
 }
 
-std::string getClassicalBitName(DDSimulationState* ddsim, size_t index) {
-  for (auto& reg : ddsim->classicalRegisters) {
+std::string getClassicalBitName(const DDSimulationState* ddsim, size_t index) {
+  for (const auto& reg : ddsim->classicalRegisters) {
     if (index >= reg.index && index < reg.index + reg.size) {
       return reg.name + "[" + std::to_string(index - reg.index) + "]";
     }
@@ -1954,8 +1957,8 @@ std::string getClassicalBitName(DDSimulationState* ddsim, size_t index) {
   return "UNKNOWN";
 }
 
-std::string getQuantumBitName(DDSimulationState* ddsim, size_t index) {
-  for (auto& reg : ddsim->qubitRegisters) {
+std::string getQuantumBitName(const DDSimulationState* ddsim, size_t index) {
+  for (const auto& reg : ddsim->qubitRegisters) {
     if (index >= reg.index && index < reg.index + reg.size) {
       return reg.name + "[" + std::to_string(index - reg.index) + "]";
     }

@@ -84,7 +84,7 @@ Complex parseComplex(std::string complexString) {
   double real = 0;
   double imaginary = 0;
   bool first = true;
-  for (auto& part : parts) {
+  for (const auto& part : parts) {
     if (part.find('i') != std::string::npos ||
         part.find('j') != std::string::npos) {
       imaginary +=
@@ -105,9 +105,9 @@ Complex parseComplex(std::string complexString) {
  */
 Statevector parseStatevector(std::string statevectorString) {
   statevectorString = removeWhitespace(statevectorString);
-  auto parts = splitString(statevectorString, ',');
+  const auto parts = splitString(statevectorString, ',');
   auto amplitudes = std::make_unique<std::vector<Complex>>();
-  for (auto& part : parts) {
+  for (const auto& part : parts) {
     amplitudes->push_back(parseComplex(part));
   }
 
@@ -384,15 +384,15 @@ std::unique_ptr<Assertion> parseAssertion(std::string assertionString,
   assertionString = trim(replaceString(assertionString, ";", ""));
 
   if (assertionString.starts_with("assert-ent")) {
-    auto targets = extractTargetQubits(assertionString.substr(11));
+    const auto targets = extractTargetQubits(assertionString.substr(11));
     return std::make_unique<EntanglementAssertion>(targets);
   }
   if (assertionString.starts_with("assert-sup")) {
-    auto targets = extractTargetQubits(assertionString.substr(11));
+    const auto targets = extractTargetQubits(assertionString.substr(11));
     return std::make_unique<SuperpositionAssertion>(targets);
   }
   if (assertionString.starts_with("assert-eq")) {
-    auto sub = assertionString.substr(10);
+    const auto sub = assertionString.substr(10);
     auto targets = extractTargetQubits(sub);
     double similarityThreshold = 0;
     try {
@@ -406,11 +406,11 @@ std::unique_ptr<Assertion> parseAssertion(std::string assertionString,
     }
 
     if (blockContent.find(';') == std::string::npos) {
-      auto statevector = parseStatevector(blockContent);
+      const auto statevector = parseStatevector(blockContent);
       return std::make_unique<StatevectorEqualityAssertion>(
           statevector, similarityThreshold, targets);
     }
-    auto circuitCode = trim(blockContent);
+    const auto circuitCode = trim(blockContent);
     return std::make_unique<CircuitEqualityAssertion>(
         circuitCode, similarityThreshold, targets);
   }

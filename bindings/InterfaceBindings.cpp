@@ -69,7 +69,7 @@ struct StatevectorCPP {
 } // namespace
 
 // NOLINTNEXTLINE(misc-use-internal-linkage)
-void bindFramework(nb::module_& m) {
+void bindFramework(const nb::module_& m) {
   // Bind the Result enum
   nb::enum_<Result>(m, "Result", "Represents the result of an operation.")
       .value("OK", OK, "Indicates that the operation was successful.")
@@ -690,7 +690,7 @@ This is the main class of the `mqt-debugger` library, allowing developers to ste
 }
 
 // NOLINTNEXTLINE(misc-use-internal-linkage)
-void bindDiagnostics(nb::module_& m) {
+void bindDiagnostics(const nb::module_& m) {
   // Bind the ErrorCauseType enum
   nb::enum_<ErrorCauseType>(m, "ErrorCauseType",
                             "The type of a potential error cause.")
