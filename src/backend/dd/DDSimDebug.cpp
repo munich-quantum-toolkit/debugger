@@ -1470,7 +1470,7 @@ size_t ddsimGetNumClassicalVariables(SimulationState* self) {
 }
 Result ddsimGetClassicalVariableName(SimulationState* self,
                                      size_t variableIndex, char* output) {
-  auto* ddsim = toDDSimulationState(self);
+  const auto* ddsim = toDDSimulationState(self);
 
   if (variableIndex >= ddsim->variables.size()) {
     return ERROR;
@@ -1483,7 +1483,7 @@ Result ddsimGetClassicalVariableName(SimulationState* self,
 
 Result ddsimGetQuantumVariableName(SimulationState* self, size_t variableIndex,
                                    char* output) {
-  auto* ddsim = toDDSimulationState(self);
+  const auto* ddsim = toDDSimulationState(self);
 
   const auto name = getQuantumBitName(ddsim, variableIndex);
 
@@ -1890,7 +1890,7 @@ std::string preprocessAssertionCode(const char* code,
       declaration = replaceString(declaration, "\t", "");
       declaration = replaceString(declaration, ";", "");
       auto parts = splitString(declaration, '[');
-      const auto name = parts[0];
+      const auto& name = parts[0];
       const size_t size = std::stoul(parts[1].substr(0, parts[1].size() - 1));
 
       const size_t index = ddsim->qubitRegisters.empty()

@@ -439,7 +439,7 @@ void suggestBasedOnFailedEntanglementAssertion(
   for (const auto& entry : generalInteractions) {
     const auto q1 = std::get<0>(entry);
     const auto q2 = std::get<1>(entry);
-    auto* ddsim = self->simulationState;
+    const auto* ddsim = self->simulationState;
     self->assertionsEntToInsert[instructionIndex].insert(
         {{getQuantumBitName(ddsim, q1), getQuantumBitName(ddsim, q2)},
          std::get<2>(entry) +
