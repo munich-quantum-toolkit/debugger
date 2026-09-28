@@ -114,10 +114,10 @@ Statevector parseStatevector(std::string statevectorString) {
   size_t numQubits = 0;
   size_t n = amplitudes->size();
   while (n > 1) {
-    if ((n & 1) == 1) {
+    if ((n & 1U) == 1) {
       throw ParsingError("Invalid statevector size");
     }
-    n >>= 1;
+    n >>= 1U;
     numQubits++;
   }
 

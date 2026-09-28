@@ -186,7 +186,7 @@ void resetSimulationState(DDSimulationState* ddsim) {
     ddsim->dd->decRef(ddsim->simulationState);
   }
   ddsim->simulationState =
-      dd::makeZeroState(ddsim->qc->getNqubits(), *(ddsim->dd));
+      dd::makeZeroState(ddsim->qc->getNqubits(), *ddsim->dd);
   ddsim->dd->incRef(ddsim->simulationState);
   ddsim->paused = false;
   // Return the classical side to its initial state (all bits false),
@@ -207,7 +207,7 @@ std::vector<bool> extractBits(const std::vector<size_t>& indices,
                               size_t value) {
   std::vector<bool> result(indices.size());
   for (size_t i = 0; i < indices.size(); i++) {
-    result[i] = (((value >> indices[i]) & 1) == 1);
+    result[i] = (((value >> indices[i]) & 1U) == 1U);
   }
   return result;
 }
@@ -223,7 +223,7 @@ bool checkAssertionEntangled(
     std::unique_ptr<EntanglementAssertion>& assertion) {
   Statevector sv;
   sv.numQubits = ddsim->interface.getNumQubits(&ddsim->interface);
-  sv.numStates = 1 << sv.numQubits;
+  sv.numStates = 1ULL << sv.numQubits;
   std::vector<Complex> amplitudes(sv.numStates);
   sv.amplitudes = amplitudes.data();
   ddsim->interface.getStateVectorFull(&ddsim->interface, &sv);
@@ -309,7 +309,7 @@ bool checkAssertionEqualityStatevector(
 
   Statevector sv;
   sv.numQubits = qubits.size();
-  sv.numStates = 1 << sv.numQubits;
+  sv.numStates = 1ULL << sv.numQubits;
   std::vector<Complex> amplitudes(sv.numStates);
   sv.amplitudes = amplitudes.data();
 
@@ -366,7 +366,7 @@ bool checkAssertionEqualityCircuit(
   Statevector sv2;
   sv2.numQubits =
       secondSimulation.interface.getNumQubits(&secondSimulation.interface);
-  sv2.numStates = 1 << sv2.numQubits;
+  sv2.numStates = 1ULL << sv2.numQubits;
   std::vector<Complex> amplitudes2(sv2.numStates);
   sv2.amplitudes = amplitudes2.data();
   secondSimulation.interface.getStateVectorFull(&secondSimulation.interface,
@@ -374,7 +374,7 @@ bool checkAssertionEqualityCircuit(
 
   Statevector sv;
   sv.numQubits = qubits.size();
-  sv.numStates = 1 << sv.numQubits;
+  sv.numStates = 1ULL << sv.numQubits;
   std::vector<Complex> amplitudes(sv.numStates);
   sv.amplitudes = amplitudes.data();
   if (ddsim->interface.getStateVectorSub(&ddsim->interface, sv.numQubits,
@@ -894,7 +894,7 @@ Result ddsimChangeAmplitudeValue(SimulationState* self, const char* basisState,
   }
 
   try {
-    const auto newState = dd::makeStateFromVector(ddVector, *(ddsim->dd));
+    const auto newState = dd::makeStateFromVector(ddVector, *ddsim->dd);
     ddsim->dd->incRef(newState);
     if (ddsim->simulationState.p != nullptr) {
       ddsim->dd->decRef(ddsim->simulationState);
@@ -1523,7 +1523,7 @@ Result ddsimGetStateVectorSub(SimulationState* self, size_t subStateSize,
   auto* ddsim = toDDSimulationState(self);
   Statevector fullState;
   fullState.numQubits = ddsim->qc->getNqubits();
-  fullState.numStates = 1 << fullState.numQubits;
+  fullState.numStates = 1ULL << fullState.numQubits;
   std::vector<Complex> amplitudes(fullState.numStates);
   const Span<Complex> outAmplitudes(output->amplitudes, output->numStates);
 

@@ -555,7 +555,7 @@ Returns:
           "get_state_vector_full",
           [](SimulationState* self) {
             const size_t numQubits = self->getNumQubits(self);
-            const std::vector<Complex> amplitudes(1 << numQubits);
+            const std::vector<Complex> amplitudes(1ULL << numQubits);
             StatevectorCPP result{
                 .numQubits = numQubits,
                 .numStates = 1ULL << numQubits,
@@ -577,7 +577,7 @@ Returns:
           "get_state_vector_sub",
           [](SimulationState* self, std::vector<size_t> qubits) {
             const size_t numQubits = qubits.size();
-            const std::vector<Complex> amplitudes(1 << numQubits);
+            const std::vector<Complex> amplitudes(1ULL << numQubits);
             StatevectorCPP result{
                 .numQubits = numQubits,
                 .numStates = 1ULL << numQubits,
@@ -890,7 +890,7 @@ Returns:
       .def(
           "suggest_new_assertions",
           [](Diagnostics* self) {
-            const size_t stringSize = 2 << 17;
+            const size_t stringSize = 2U << 17U;
             const size_t count =
                 self->suggestNewAssertions(self, nullptr, nullptr, 0);
             std::vector<size_t> positions(count);
