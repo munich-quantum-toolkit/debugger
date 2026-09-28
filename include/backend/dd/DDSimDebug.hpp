@@ -554,18 +554,21 @@ Result ddsimGetQuantumVariableName(SimulationState* self, size_t variableIndex,
  *
  * The state vector is expected to be initialized with the correct number of
  * qubits and allocated space for the amplitudes before calling this method.
+ * Only the amplitude buffer is modified.
  * @param self The instance to query.
  * @param output A reference to a `Statevector` instance to store the state
  * vector.
  * @return The result of the operation.
  */
-Result ddsimGetStateVectorFull(SimulationState* self, Statevector* output);
+Result ddsimGetStateVectorFull(SimulationState* self,
+                               const Statevector* output);
 /**
  * @brief Gets a sub-state of the state vector of the simulation at the current
  * time.
  *
  * The state vector is expected to be initialized with the correct number of
  * qubits and allocated space for the amplitudes before calling this method.
+ * Only the amplitude buffer is modified.
  * \n\n
  *
  * This method also supports the re-ordering of qubits, but does not allow
@@ -578,7 +581,7 @@ Result ddsimGetStateVectorFull(SimulationState* self, Statevector* output);
  * @return The result of the operation.
  */
 Result ddsimGetStateVectorSub(SimulationState* self, size_t subStateSize,
-                              const size_t* qubits, Statevector* output);
+                              const size_t* qubits, const Statevector* output);
 
 /**
  * @brief Sets a breakpoint at the desired position in the code.

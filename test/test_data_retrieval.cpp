@@ -175,7 +175,7 @@ TEST_F(DataRetrievalTest, GetClassicalVariable) {
  */
 TEST_F(DataRetrievalTest, GetStateVectorFull) {
   std::array<Complex, 16> amplitudes{};
-  Statevector sv{
+  const Statevector sv{
       .numQubits = 4,
       .numStates = 16,
       .amplitudes = amplitudes.data(),
@@ -197,7 +197,7 @@ TEST_F(DataRetrievalTest, GetStateVectorFull) {
  */
 TEST_F(DataRetrievalTest, GetStateVectorSub) {
   std::array<Complex, 4> amplitudes{};
-  Statevector sv{
+  const Statevector sv{
       .numQubits = 2,
       .numStates = 4,
       .amplitudes = amplitudes.data(),

@@ -830,7 +830,7 @@ void dddiagnosticsOnStepForward(DDDiagnostics* diagnostics,
   const auto& controls = op->getControls();
 
   std::vector<Complex> amplitudes(2ULL << numQubits);
-  Statevector sv{
+  const Statevector sv{
       .numQubits = numQubits,
       .numStates = 2ULL << numQubits,
       .amplitudes = amplitudes.data(),

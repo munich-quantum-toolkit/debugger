@@ -561,7 +561,7 @@ Returns:
                 .numStates = 1ULL << numQubits,
                 .amplitudes = amplitudes,
             };
-            Statevector output{
+            const Statevector output{
                 .numQubits = numQubits,
                 .numStates = result.numStates,
                 .amplitudes = result.amplitudes.data(),
@@ -583,7 +583,7 @@ Returns:
                 .numStates = 1ULL << numQubits,
                 .amplitudes = amplitudes,
             };
-            Statevector output{
+            const Statevector output{
                 .numQubits = numQubits,
                 .numStates = result.numStates,
                 .amplitudes = result.amplitudes.data(),

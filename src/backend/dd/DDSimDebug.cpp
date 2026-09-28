@@ -826,7 +826,7 @@ Result ddsimChangeAmplitudeValue(SimulationState* self, const char* basisState,
 
   const auto numStates = 1ULL << numQubits;
   std::vector<Complex> amplitudes(numStates);
-  Statevector sv{
+  const Statevector sv{
       .numQubits = numQubits,
       .numStates = numStates,
       .amplitudes = amplitudes.data(),
@@ -1494,8 +1494,8 @@ Result ddsimGetQuantumVariableName(SimulationState* self, size_t variableIndex,
   return OK;
 }
 
-// NOLINTNEXTLINE(misc-const-correctness)
-Result ddsimGetStateVectorFull(SimulationState* self, Statevector* output) {
+Result ddsimGetStateVectorFull(SimulationState* self,
+                               const Statevector* output) {
   const Span<Complex> amplitudes(output->amplitudes, output->numStates);
   for (size_t i = 0; i < output->numStates; i++) {
     self->getAmplitudeIndex(self, i, &amplitudes[i]);
@@ -1504,7 +1504,7 @@ Result ddsimGetStateVectorFull(SimulationState* self, Statevector* output) {
 }
 
 Result ddsimGetStateVectorSub(SimulationState* self, size_t subStateSize,
-                              const size_t* qubits, Statevector* output) {
+                              const size_t* qubits, const Statevector* output) {
   const Span<const size_t> qubitsSpan(qubits, subStateSize);
 
   if (subStateSize == self->getNumQubits(self)) {
