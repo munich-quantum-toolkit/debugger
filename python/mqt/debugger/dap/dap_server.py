@@ -153,8 +153,6 @@ class DAPServer:
         while True:
             if not message_str or not data_str:
                 data = connection.recv(1024)
-                if not data:
-                    break
                 data_str += data.decode()
             first_end = data_str.find("Content-Length:", 1)
             if first_end != -1:
