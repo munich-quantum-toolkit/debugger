@@ -1437,7 +1437,15 @@ size_t ddsimGetNumQubits(SimulationState* self) {
 Result ddsimGetAmplitudeIndex(SimulationState* self, size_t index,
                               Complex* output) {
   const auto* ddsim = toDDSimulationState(self);
-  const auto result = ddsim->simulationState.getValueByIndex(index);
+  auto path = std::string(ddsim->qc->getNqubits(), '0');
+  for (size_t i = 0; i < path.size(); ++i) {
+    path[i] = (index & 1U) != 0U ? '1' : '0';
+    index >>= 1U;
+  }
+  if (index != 0U) {
+    return ERROR;
+  }
+  const auto result = ddsim->simulationState.getValueByPath(path.size(), path);
   output->real = result.real();
   output->imaginary = result.imag();
   return OK;

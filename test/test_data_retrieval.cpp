@@ -114,6 +114,19 @@ TEST_F(DataRetrievalTest, GetAmplitudes) {
 }
 
 /**
+ * @test Test indexed amplitudes across the full program register.
+ */
+TEST_F(DataRetrievalTest, GetAmplitudesFullRegister) {
+  forwardTo(6);
+  Complex result;
+  for (size_t index = 0; index < 16; ++index) {
+    ASSERT_EQ(state->getAmplitudeIndex(state, index, &result), OK);
+    ASSERT_TRUE(complexEquality(result, index == 3 ? 1.0 : 0.0, 0.0));
+  }
+  ASSERT_EQ(state->getAmplitudeIndex(state, 16, &result), ERROR);
+}
+
+/**
  * @test Test the correctness of the `getClassicalVariableName` method of the
  * debugging interface.
  */
