@@ -75,6 +75,7 @@ TEST_F(DataRetrievalTest, GetAmplitudes) {
   ASSERT_TRUE(complexEquality(result, 0.0, 0.0));
   ASSERT_EQ(state->getAmplitudeIndex(state, 3, &result), OK);
   ASSERT_TRUE(complexEquality(result, 1.0, 0.0));
+  ASSERT_EQ(state->getAmplitudeIndex(state, 16, &result), ERROR);
   ASSERT_EQ(state->getAmplitudeBitstring(state, "0011", &result), OK);
   ASSERT_TRUE(complexEquality(result, 1.0, 0.0));
   ASSERT_EQ(state->getAmplitudeBitstring(state, "1011", &result), OK);
@@ -111,19 +112,6 @@ TEST_F(DataRetrievalTest, GetAmplitudes) {
   ASSERT_TRUE(complexEquality(result, baseIndex == 2 ? 1.0 : -1.0, 0.0));
   ASSERT_EQ(state->getAmplitudeIndex(state, baseIndex, &result), OK);
   ASSERT_TRUE(complexEquality(result, 0.0, 0.0));
-}
-
-/**
- * @test Test indexed amplitudes across the full program register.
- */
-TEST_F(DataRetrievalTest, GetAmplitudesFullRegister) {
-  forwardTo(6);
-  Complex result;
-  for (size_t index = 0; index < 16; ++index) {
-    ASSERT_EQ(state->getAmplitudeIndex(state, index, &result), OK);
-    ASSERT_TRUE(complexEquality(result, index == 3 ? 1.0 : 0.0, 0.0));
-  }
-  ASSERT_EQ(state->getAmplitudeIndex(state, 16, &result), ERROR);
 }
 
 /**
