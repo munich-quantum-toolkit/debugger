@@ -75,6 +75,7 @@ TEST_F(DataRetrievalTest, GetAmplitudes) {
   ASSERT_TRUE(complexEquality(result, 0.0, 0.0));
   ASSERT_EQ(state->getAmplitudeIndex(state, 3, &result), OK);
   ASSERT_TRUE(complexEquality(result, 1.0, 0.0));
+  ASSERT_EQ(state->getAmplitudeIndex(state, 16, &result), ERROR);
   ASSERT_EQ(state->getAmplitudeBitstring(state, "0011", &result), OK);
   ASSERT_TRUE(complexEquality(result, 1.0, 0.0));
   ASSERT_EQ(state->getAmplitudeBitstring(state, "1011", &result), OK);

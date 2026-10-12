@@ -273,7 +273,8 @@ struct SimulationStateStruct {
    * @param self The instance to query.
    * @param index The index of the state.
    * @param output A reference to a `Complex` instance to store the amplitude.
-   * @return The result of the operation.
+   * @return `OK` on success or `ERROR` if the index is outside the state
+   * vector.
    */
   Result (*getAmplitudeIndex)(SimulationState* self, size_t index,
                               Complex* output);
