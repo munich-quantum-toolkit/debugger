@@ -90,8 +90,6 @@ def _run_tests(
         "--no-dev",  # do not auto-install dev dependencies
         "--no-build-isolation-package",
         "mqt-debugger",  # build the project without isolation
-        "--extra",
-        "check",
         *install_args,
         env=env,
     )
