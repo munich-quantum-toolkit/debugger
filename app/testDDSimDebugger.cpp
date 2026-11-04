@@ -45,7 +45,7 @@ int main() {
 
   file.close();
 
-  CliFrontEnd cli;
+  CliFrontEnd cli{std::cout};
   cli.run(code.c_str(), &state.interface);
 
   destroyDDSimulationState(&state);
