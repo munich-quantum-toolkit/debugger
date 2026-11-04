@@ -87,5 +87,5 @@ class RestartDAPMessage(DAPMessage):
             "type": "response",
             "request_seq": self.sequence_number,
             "success": True,
-            "command": "launch",
+            "command": "restart",
         }
