@@ -18,7 +18,9 @@ package_add_test(
   test_custom_code.cpp
   test_parsing.cpp
   test_assertion_movement.cpp
-  test_assertion_creation.cpp)
+  test_assertion_creation.cpp
+  test_line_editor.cpp
+  test_renderer.cpp)
 
 # set include directories
 target_include_directories(mqt_debugger_test PUBLIC ${PROJECT_SOURCE_DIR}/test/utils)
