@@ -2,8 +2,6 @@ ignore:
   - "extern/**/*"
   - "bindings/**/*"
   - "test/**/*"
-  - "python/mqt/debugger/dap/**/*"
-  - "python/mqt/debugger/dap/*"
   - "app/*"
   - "src/frontend/**/*"
   - "**/__main__.py"
