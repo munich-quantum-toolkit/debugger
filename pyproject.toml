@@ -22,7 +22,7 @@ readme = "README.md"
 keywords = [ "dap", "debugging", "design-automation", "MQT", "quantum-computing", "verification" ]
 license = "MIT"
 license-files = [ "LICENSE" ]
-requires-python = ">=3.11"
+requires-python = ">=3.11.5"
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Information Technology",
