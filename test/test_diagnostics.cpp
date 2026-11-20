@@ -29,6 +29,7 @@
 #include <vector>
 
 namespace mqt::debugger::test {
+namespace {
 
 /**
  * @brief Fixture for testing the correctness of the diagnostics module.
@@ -53,7 +54,8 @@ TEST_F(DiagnosticsTest, DataDependencies) {
       {7, {1, 2, 4, 7}},
       {8, {1, 2, 4, 7, 8}},
       {9, {1, 2, 4, 9}},
-      {10, {1, 2, 3, 4, 7, 8, 10}}};
+      {10, {1, 2, 3, 4, 7, 8, 10}},
+  };
 
   for (const auto& [instruction, expectedDependencies] : expected) {
     std::vector<uint8_t> dependencies(state->getInstructionCount(state), 0);
@@ -149,21 +151,54 @@ TEST_F(DiagnosticsTest, MaximumMultipleCauses) {
   const std::vector<size_t> maxErrors = {20, 8, 7, 4};
   const std::vector<std::pair<size_t, std::vector<ErrorCauseType>>>
       expectedTypes = {
-          {9,
-           {MissingInteraction, MissingInteraction, MissingInteraction,
-            MissingInteraction, MissingInteraction, MissingInteraction,
-            MissingInteraction, ControlAlwaysZero, ControlAlwaysZero}},
-          {8,
-           {MissingInteraction, MissingInteraction, MissingInteraction,
-            MissingInteraction, MissingInteraction, MissingInteraction,
-            MissingInteraction, ControlAlwaysZero}},
-          {7,
-           {MissingInteraction, MissingInteraction, MissingInteraction,
-            MissingInteraction, MissingInteraction, MissingInteraction,
-            MissingInteraction}},
-          {4,
-           {MissingInteraction, MissingInteraction, MissingInteraction,
-            MissingInteraction}},
+          {
+              9,
+              {
+                  MissingInteraction,
+                  MissingInteraction,
+                  MissingInteraction,
+                  MissingInteraction,
+                  MissingInteraction,
+                  MissingInteraction,
+                  MissingInteraction,
+                  ControlAlwaysZero,
+                  ControlAlwaysZero,
+              },
+          },
+          {
+              8,
+              {
+                  MissingInteraction,
+                  MissingInteraction,
+                  MissingInteraction,
+                  MissingInteraction,
+                  MissingInteraction,
+                  MissingInteraction,
+                  MissingInteraction,
+                  ControlAlwaysZero,
+              },
+          },
+          {
+              7,
+              {
+                  MissingInteraction,
+                  MissingInteraction,
+                  MissingInteraction,
+                  MissingInteraction,
+                  MissingInteraction,
+                  MissingInteraction,
+                  MissingInteraction,
+              },
+          },
+          {
+              4,
+              {
+                  MissingInteraction,
+                  MissingInteraction,
+                  MissingInteraction,
+                  MissingInteraction,
+              },
+          },
   };
   for (size_t i = 0; i < maxErrors.size(); i++) {
     const auto [expectedCount, types] = expectedTypes[i];
@@ -246,7 +281,8 @@ TEST_F(DiagnosticsTest, DataDependenciesWithJumps) {
 
       {17, {17, 16}},
 
-      {18, {18, 13, 10, 7, 6, 5, 2, 1, 17, 16}}};
+      {18, {18, 13, 10, 7, 6, 5, 2, 1, 17, 16}},
+  };
 
   for (const auto& pair : expected) {
     std::vector<uint8_t> dependencies(state->getInstructionCount(state), 0);
@@ -282,7 +318,8 @@ TEST_F(DiagnosticsTest, InteractionsWithJumps) {
       {{10, 0}, {0}},
 
       {{17, 0}, {0}},       {{18, 0}, {1, 2, 0}}, {{18, 1}, {0, 2, 1}},
-      {{18, 2}, {0, 1, 2}}, {{18, 3}, {3}}};
+      {{18, 2}, {0, 1, 2}}, {{18, 3}, {3}},
+  };
 
   for (const auto& pair : expected) {
     std::vector<uint8_t> interactions(state->getNumQubits(state), 0);
@@ -324,4 +361,5 @@ TEST_F(DiagnosticsTest, RuntimeInteractions) {
   ASSERT_EQ(errors[0].instruction, 6);
 }
 
+} // namespace
 } // namespace mqt::debugger::test

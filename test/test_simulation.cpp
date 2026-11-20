@@ -26,6 +26,7 @@
 #include <vector>
 
 namespace mqt::debugger::test {
+namespace {
 
 /**
  * @brief Fixture for testing the correctness of the simulation methods.
@@ -34,13 +35,13 @@ namespace mqt::debugger::test {
  * defines the specific file to run the tests on.
  */
 class SimulationTest : public testing::TestWithParam<std::string> {
+protected:
   void SetUp() override {
     createDDSimulationState(&ddState);
     state = &ddState.interface;
     loadFromFile(GetParam());
   }
 
-protected:
   /**
    * @brief The DDSimulationState to use for testing.
    */
@@ -143,9 +144,15 @@ protected:
  */
 TEST_P(SimulationTest, StepThroughCode) {
   const std::map<const std::string, std::vector<size_t>> expected = {
-      {"complex-jumps", {0, 1,  4, 9,  12, 5, 6, 10, 2,  3,  11, 7, 10, 2,
-                         3, 11, 8, 13, 10, 2, 3, 11, 14, 10, 2,  3, 11}},
-      {"failing-assertions", {0, 1, 2, 3, 4, 5, 6, 6, 7, 8, 9, 9, 10}}};
+      {
+          "complex-jumps",
+          {
+              0, 1,  4, 9,  12, 5, 6, 10, 2,  3,  11, 7, 10, 2,
+              3, 11, 8, 13, 10, 2, 3, 11, 14, 10, 2,  3, 11,
+          },
+      },
+      {"failing-assertions", {0, 1, 2, 3, 4, 5, 6, 6, 7, 8, 9, 9, 10}},
+  };
   for (const auto exp : expected.at(GetParam())) {
     ASSERT_EQ(state->getCurrentInstruction(state), exp);
     state->stepForward(state);
@@ -162,41 +169,68 @@ TEST_P(SimulationTest, StepThroughCode) {
  */
 TEST_P(SimulationTest, StackTraceRetrieval) {
   const std::map<const std::string, std::vector<size_t>> expectedDepths = {
-      {"complex-jumps", {1, 1, 1, 1, 1, 2, 2, 3, 4, 4, 3, 2, 3, 4,
-                         4, 3, 2, 1, 2, 3, 3, 2, 1, 2, 3, 3, 2}},
-      {"failing-assertions", {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}}};
+      {
+          "complex-jumps",
+          {
+              1, 1, 1, 1, 1, 2, 2, 3, 4, 4, 3, 2, 3, 4,
+              4, 3, 2, 1, 2, 3, 3, 2, 1, 2, 3, 3, 2,
+          },
+      },
+      {"failing-assertions", {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}},
+  };
   const std::map<const std::string, std::vector<std::vector<size_t>>>
       expectedStacks = {
-          {"complex-jumps",
-           {{0},
-            {1},
-            {4},
-            {9},
-            {12},
-            {5, 12},
-            {6, 12},
-            {10, 6, 12},
-            {2, 10, 6, 12},
-            {3, 10, 6, 12},
-            {11, 6, 12},
-            {7, 12},
-            {10, 7, 12},
-            {2, 10, 7, 12},
-            {3, 10, 7, 12},
-            {11, 7, 12},
-            {8, 12},
-            {13},
-            {10, 13},
-            {2, 10, 13},
-            {3, 10, 13},
-            {11, 13},
-            {14},
-            {10, 14},
-            {2, 10, 14},
-            {3, 10, 14},
-            {11, 14}}},
-          {"failing-assertions",
-           {{0}, {1}, {2}, {3}, {4}, {5}, {6}, {6}, {7}, {8}, {9}, {9}, {10}}}};
+          {
+              "complex-jumps",
+              {
+                  {0},
+                  {1},
+                  {4},
+                  {9},
+                  {12},
+                  {5, 12},
+                  {6, 12},
+                  {10, 6, 12},
+                  {2, 10, 6, 12},
+                  {3, 10, 6, 12},
+                  {11, 6, 12},
+                  {7, 12},
+                  {10, 7, 12},
+                  {2, 10, 7, 12},
+                  {3, 10, 7, 12},
+                  {11, 7, 12},
+                  {8, 12},
+                  {13},
+                  {10, 13},
+                  {2, 10, 13},
+                  {3, 10, 13},
+                  {11, 13},
+                  {14},
+                  {10, 14},
+                  {2, 10, 14},
+                  {3, 10, 14},
+                  {11, 14},
+              },
+          },
+          {
+              "failing-assertions",
+              {
+                  {0},
+                  {1},
+                  {2},
+                  {3},
+                  {4},
+                  {5},
+                  {6},
+                  {6},
+                  {7},
+                  {8},
+                  {9},
+                  {9},
+                  {10},
+              },
+          },
+  };
 
   for (size_t index = 0; index < expectedDepths.at(GetParam()).size();
        index++) {
@@ -238,10 +272,13 @@ TEST_P(SimulationTest, StackTraceRetrieval) {
 TEST_P(SimulationTest, TopLevelBreakpoints) {
   const std::map<const std::string, std::vector<size_t>> breakpointPositions = {
       {"complex-jumps", {174, 451, 488, 525}},
-      {"failing-assertions", {58, 322, 374, 427, 487}}};
+      {"failing-assertions", {58, 322, 374, 427, 487}},
+  };
   const std::map<const std::string, std::vector<size_t>>
-      expectedBreakpointPositions = {{"complex-jumps", {4, 12, 13, 14}},
-                                     {"failing-assertions", {1, 5, 6, 7, 8}}};
+      expectedBreakpointPositions = {
+          {"complex-jumps", {4, 12, 13, 14}},
+          {"failing-assertions", {1, 5, 6, 7, 8}},
+  };
 
   for (size_t index = 0; index < breakpointPositions.at(GetParam()).size();
        index++) {
@@ -416,26 +453,33 @@ TEST_P(SimulationTest, StepOver) {
   const std::map<const std::string,
                  std::vector<std::pair<const std::string, size_t>>>
       expected = {
-          {"complex-jumps",
-           {
-               {"of", 1},  {"of", 4},  {"sf", 9},  {"sf", 12}, {"of", 13},
-               {"ob", 12}, {"sf", 5},  {"of", 6},  {"of", 7},  {"ob", 6},
-               {"sf", 10}, {"of", 11}, {"ob", 10}, {"sf", 2},  {"of", 3},
-               {"of", 11}, {"of", 7},  {"sb", 11}, {"of", 7},  {"of", 8},
-               {"of", 13}, {"sb", 8},  {"of", 13}, {"of", 14},
-           }},
-          {"failing-assertions",
-           {{"of", 1},        {"of", 2},        {"of", 3},
-            {"of", 4},        {"of", 5},        {"of", 6},
-            {"of", 6},        {"assertion", 6}, {"of", 7},
-            {"ob", 6},        {"assertion", 6}, {"of", 7},
-            {"ob", 6},        {"assertion", 6}, {"ob", 5},
-            {"of", 6},        {"of", 6},        {"assertion", 6},
-            {"of", 7},        {"of", 8},        {"sf", 9},
-            {"sb", 8},        {"sf", 9},        {"sf", 9},
-            {"assertion", 9}, {"sb", 8},        {"sf", 9},
-            {"sf", 9},        {"assertion", 9}, {"sf", 10},
-            {"sb", 9},        {"assertion", 9}, {"sf", 10}}}};
+          {
+              "complex-jumps",
+              {
+                  {"of", 1},  {"of", 4},  {"sf", 9},  {"sf", 12}, {"of", 13},
+                  {"ob", 12}, {"sf", 5},  {"of", 6},  {"of", 7},  {"ob", 6},
+                  {"sf", 10}, {"of", 11}, {"ob", 10}, {"sf", 2},  {"of", 3},
+                  {"of", 11}, {"of", 7},  {"sb", 11}, {"of", 7},  {"of", 8},
+                  {"of", 13}, {"sb", 8},  {"of", 13}, {"of", 14},
+              },
+          },
+          {
+              "failing-assertions",
+              {
+                  {"of", 1},        {"of", 2},        {"of", 3},
+                  {"of", 4},        {"of", 5},        {"of", 6},
+                  {"of", 6},        {"assertion", 6}, {"of", 7},
+                  {"ob", 6},        {"assertion", 6}, {"of", 7},
+                  {"ob", 6},        {"assertion", 6}, {"ob", 5},
+                  {"of", 6},        {"of", 6},        {"assertion", 6},
+                  {"of", 7},        {"of", 8},        {"sf", 9},
+                  {"sb", 8},        {"sf", 9},        {"sf", 9},
+                  {"assertion", 9}, {"sb", 8},        {"sf", 9},
+                  {"sf", 9},        {"assertion", 9}, {"sf", 10},
+                  {"sb", 9},        {"assertion", 9}, {"sf", 10},
+              },
+          },
+  };
   moveAndCheck(expected.at(GetParam()));
 }
 
@@ -454,23 +498,33 @@ TEST_P(SimulationTest, StepOver) {
 TEST_P(SimulationTest, StepOut) {
   const std::map<const std::string,
                  std::vector<std::pair<const std::string, size_t>>>
-      expected = {{"complex-jumps",
-                   {{"sf", 1},  {"sf", 4}, {"sf", 9},  {"sf", 12}, {"sf", 5},
-                    {"ub", 12}, {"sf", 5}, {"sf", 6},  {"ub", 12}, {"sf", 5},
-                    {"of", 6},  {"of", 7}, {"ub", 12}, {"sf", 5},  {"sf", 6},
-                    {"sf", 10}, {"ub", 6}, {"sf", 10}, {"sf", 2},  {"sf", 3},
-                    {"ub", 10}, {"uf", 7}, {"ob", 6},  {"sf", 10}, {"sf", 2},
-                    {"uf", 11}, {"uf", 7}, {"uf", 13}}},
-                  {"failing-assertions",
-                   {{"sf", 1},
-                    {"uf", 6},
-                    {"uf", 9},
-                    {"uf", 11},
-                    {"ub", 0},
-                    {"uf", 6},
-                    {"ub", 0},
-                    {"uf", 6},
-                    {"uf", 9}}}};
+      expected = {
+          {
+              "complex-jumps",
+              {
+                  {"sf", 1},  {"sf", 4}, {"sf", 9},  {"sf", 12}, {"sf", 5},
+                  {"ub", 12}, {"sf", 5}, {"sf", 6},  {"ub", 12}, {"sf", 5},
+                  {"of", 6},  {"of", 7}, {"ub", 12}, {"sf", 5},  {"sf", 6},
+                  {"sf", 10}, {"ub", 6}, {"sf", 10}, {"sf", 2},  {"sf", 3},
+                  {"ub", 10}, {"uf", 7}, {"ob", 6},  {"sf", 10}, {"sf", 2},
+                  {"uf", 11}, {"uf", 7}, {"uf", 13},
+              },
+          },
+          {
+              "failing-assertions",
+              {
+                  {"sf", 1},
+                  {"uf", 6},
+                  {"uf", 9},
+                  {"uf", 11},
+                  {"ub", 0},
+                  {"uf", 6},
+                  {"ub", 0},
+                  {"uf", 6},
+                  {"uf", 9},
+              },
+          },
+  };
   moveAndCheck(expected.at(GetParam()));
 }
 
@@ -489,30 +543,40 @@ TEST_P(SimulationTest, StepOut) {
 TEST_P(SimulationTest, RunSimulation) {
   const std::map<const std::string,
                  std::vector<std::pair<const std::string, size_t>>>
-      expected = {{"complex-jumps",
-                   {{"sf", 1},
-                    {"rf", 15},
-                    {"rb", 0},
-                    {"sf", 1},
-                    {"sf", 4},
-                    {"sf", 9},
-                    {"sf", 12},
-                    {"sf", 5},
-                    {"sf", 6},
-                    {"rf", 15},
-                    {"rb", 0},
-                    {"rf", 15}}},
-                  {"failing-assertions",
-                   {{"sf", 1},
-                    {"rf", 6},
-                    {"rf", 9},
-                    {"rf", 11},
-                    {"rb", 0},
-                    {"rf", 6},
-                    {"rb", 0},
-                    {"rf", 6},
-                    {"rf", 9},
-                    {"rf", 11}}}};
+      expected = {
+          {
+              "complex-jumps",
+              {
+                  {"sf", 1},
+                  {"rf", 15},
+                  {"rb", 0},
+                  {"sf", 1},
+                  {"sf", 4},
+                  {"sf", 9},
+                  {"sf", 12},
+                  {"sf", 5},
+                  {"sf", 6},
+                  {"rf", 15},
+                  {"rb", 0},
+                  {"rf", 15},
+              },
+          },
+          {
+              "failing-assertions",
+              {
+                  {"sf", 1},
+                  {"rf", 6},
+                  {"rf", 9},
+                  {"rf", 11},
+                  {"rb", 0},
+                  {"rf", 6},
+                  {"rb", 0},
+                  {"rf", 6},
+                  {"rf", 9},
+                  {"rf", 11},
+              },
+          },
+  };
   moveAndCheck(expected.at(GetParam()));
   ASSERT_TRUE(state->isFinished(state));
 }
@@ -530,14 +594,19 @@ TEST_P(SimulationTest, InGateDefinitionBreakpoints) {
   }
 
   const std::map<const std::string, std::vector<size_t>> breakpointPositions = {
-      {"complex-jumps", {86, 280, 411}}, {"failing-assertions", {}}};
+      {"complex-jumps", {86, 280, 411}},
+      {"failing-assertions", {}},
+  };
   const std::map<const std::string, std::vector<size_t>>
-      expectedBreakpointPositions = {{"complex-jumps", {2, 7, 11}},
-                                     {"failing-assertions", {}}};
+      expectedBreakpointPositions = {
+          {"complex-jumps", {2, 7, 11}},
+          {"failing-assertions", {}},
+  };
   const std::map<const std::string, std::vector<size_t>>
       expectedBreakpointHits = {
           {"complex-jumps", {2, 11, 7, 2, 11, 2, 11, 2, 11}},
-          {"failing-assertions", {}}};
+          {"failing-assertions", {}},
+  };
 
   for (size_t index = 0; index < breakpointPositions.at(GetParam()).size();
        index++) {
@@ -627,4 +696,5 @@ INSTANTIATE_TEST_SUITE_P(StringParams, SimulationTest,
                          ::testing::Values("complex-jumps",
                                            "failing-assertions"));
 
+} // namespace
 } // namespace mqt::debugger::test

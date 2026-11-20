@@ -25,9 +25,10 @@
 namespace mqt::debugger {
 
 std::string trim(const std::string& str) {
-  auto start = std::ranges::find_if_not(str, ::isspace);
-  auto end = std::ranges::find_if_not(std::ranges::reverse_view(str), ::isspace)
-                 .base();
+  const auto start = std::ranges::find_if_not(str, ::isspace);
+  const auto end =
+      std::ranges::find_if_not(std::ranges::reverse_view(str), ::isspace)
+          .base();
   return (start < end) ? std::string(start, end) : std::string();
 }
 

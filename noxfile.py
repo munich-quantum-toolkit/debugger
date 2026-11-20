@@ -32,7 +32,7 @@ nox.needs_version = ">=2025.10.16"
 nox.options.default_venv_backend = "uv"
 
 
-PYTHON_ALL_VERSIONS = ["3.11", "3.12", "3.13", "3.14"]
+PYTHON_ALL_VERSIONS = ["3.11", "3.12", "3.13", "3.14", "3.15"]
 
 if os.environ.get("CI", None):
     nox.options.error_on_missing_interpreters = True
@@ -90,8 +90,6 @@ def _run_tests(
         "--no-dev",  # do not auto-install dev dependencies
         "--no-build-isolation-package",
         "mqt-debugger",  # build the project without isolation
-        "--extra",
-        "check",
         *install_args,
         env=env,
     )

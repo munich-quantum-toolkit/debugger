@@ -54,8 +54,6 @@ void checkOrThrow(Result result) {
   }
 }
 
-} // namespace
-
 /**
  * @brief A representation of statevectors in C++ style, using std::vector
  * instead of a raw pointer.
@@ -68,8 +66,10 @@ struct StatevectorCPP {
   std::vector<Complex> amplitudes;
 };
 
+} // namespace
+
 // NOLINTNEXTLINE(misc-use-internal-linkage)
-void bindFramework(nb::module_& m) {
+void bindFramework(const nb::module_& m) {
   // Bind the Result enum
   nb::enum_<Result>(m, "Result", "Represents the result of an operation.")
       .value("OK", OK, "Indicates that the operation was successful.")
@@ -555,13 +555,17 @@ Returns:
           "get_state_vector_full",
           [](SimulationState* self) {
             const size_t numQubits = self->getNumQubits(self);
-            const std::vector<Complex> amplitudes(1 << numQubits);
-            StatevectorCPP result{.numQubits = numQubits,
-                                  .numStates = 1ULL << numQubits,
-                                  .amplitudes = amplitudes};
-            Statevector output{.numQubits = numQubits,
-                               .numStates = result.numStates,
-                               .amplitudes = result.amplitudes.data()};
+            const std::vector<Complex> amplitudes(1ULL << numQubits);
+            StatevectorCPP result{
+                .numQubits = numQubits,
+                .numStates = 1ULL << numQubits,
+                .amplitudes = amplitudes,
+            };
+            const Statevector output{
+                .numQubits = numQubits,
+                .numStates = result.numStates,
+                .amplitudes = result.amplitudes.data(),
+            };
             checkOrThrow(self->getStateVectorFull(self, &output));
             return result;
           },
@@ -573,13 +577,17 @@ Returns:
           "get_state_vector_sub",
           [](SimulationState* self, std::vector<size_t> qubits) {
             const size_t numQubits = qubits.size();
-            const std::vector<Complex> amplitudes(1 << numQubits);
-            StatevectorCPP result{.numQubits = numQubits,
-                                  .numStates = 1ULL << numQubits,
-                                  .amplitudes = amplitudes};
-            Statevector output{.numQubits = numQubits,
-                               .numStates = result.numStates,
-                               .amplitudes = result.amplitudes.data()};
+            const std::vector<Complex> amplitudes(1ULL << numQubits);
+            StatevectorCPP result{
+                .numQubits = numQubits,
+                .numStates = 1ULL << numQubits,
+                .amplitudes = amplitudes,
+            };
+            const Statevector output{
+                .numQubits = numQubits,
+                .numStates = result.numStates,
+                .amplitudes = result.amplitudes.data(),
+            };
             checkOrThrow(self->getStateVectorSub(self, numQubits, qubits.data(),
                                                  &output));
             return result;
@@ -690,7 +698,7 @@ This is the main class of the `mqt-debugger` library, allowing developers to ste
 }
 
 // NOLINTNEXTLINE(misc-use-internal-linkage)
-void bindDiagnostics(nb::module_& m) {
+void bindDiagnostics(const nb::module_& m) {
   // Bind the ErrorCauseType enum
   nb::enum_<ErrorCauseType>(m, "ErrorCauseType",
                             "The type of a potential error cause.")
@@ -882,7 +890,7 @@ Returns:
       .def(
           "suggest_new_assertions",
           [](Diagnostics* self) {
-            const size_t stringSize = 2 << 17;
+            const size_t stringSize = 2U << 17U;
             const size_t count =
                 self->suggestNewAssertions(self, nullptr, nullptr, 0);
             std::vector<size_t> positions(count);

@@ -21,8 +21,8 @@ namespace nb = nanobind;
 using namespace nb::literals;
 
 // forward declarations
-void bindFramework(nb::module_& m);
-void bindDiagnostics(nb::module_& m);
+void bindFramework(const nb::module_& m);
+void bindDiagnostics(const nb::module_& m);
 void bindBackend(nb::module_& m);
 
 NB_MODULE(MQT_DEBUGGER_MODULE_NAME, m) {

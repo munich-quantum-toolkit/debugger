@@ -41,7 +41,7 @@ namespace {
  * @return The computed trace of the square.
  */
 Complex getTraceOfSquare(const std::vector<std::vector<Complex>>& matrix) {
-  Complex runningSum{0, 0};
+  Complex runningSum{.real = 0, .imaginary = 0};
   for (size_t i = 0; i < matrix.size(); i++) {
     for (size_t k = 0; k < matrix.size(); k++) {
       runningSum = complexAddition(
@@ -73,13 +73,13 @@ std::pair<size_t, size_t> splitBitString(size_t number, size_t n,
 
   for (size_t index = 0; index < n; index++) {
     if (std::ranges::find(bits, index) != bits.end()) {
-      first |= (number & 1) << lenFirst;
+      first |= (number & 1U) << lenFirst;
       lenFirst++;
     } else {
-      second |= (number & 1) << lenSecond;
+      second |= (number & 1U) << lenSecond;
       lenSecond++;
     }
-    number >>= 1;
+    number >>= 1U;
   }
   return {first, second};
 }
@@ -96,7 +96,7 @@ getPartialTrace(const std::vector<std::vector<Complex>>& matrix,
                 const std::vector<size_t>& indicesToTraceOut, size_t nQubits) {
   const auto traceSize = 1ULL << (nQubits - indicesToTraceOut.size());
   std::vector<std::vector<Complex>> traceMatrix(
-      traceSize, std::vector<Complex>(traceSize, {0, 0}));
+      traceSize, std::vector<Complex>(traceSize, {.real = 0, .imaginary = 0}));
   for (size_t i = 0; i < matrix.size(); i++) {
     for (size_t j = 0; j < matrix.size(); j++) {
       const auto split1 = splitBitString(i, nQubits, indicesToTraceOut);
@@ -173,18 +173,20 @@ std::string doubleToString(const double d) {
 Complex complexAddition(const Complex& c1, const Complex& c2) {
   const double real = c1.real + c2.real;
   const double imaginary = c1.imaginary + c2.imaginary;
-  return {real, imaginary};
+  return {.real = real, .imaginary = imaginary};
 }
 
 Complex complexMultiplication(const Complex& c1, const Complex& c2) {
   const double real = (c1.real * c2.real) - (c1.imaginary * c2.imaginary);
   const double imaginary = (c1.real * c2.imaginary) + (c1.imaginary * c2.real);
-  return {real, imaginary};
+  return {.real = real, .imaginary = imaginary};
 }
 
-Complex complexConjugate(const Complex& c) { return {c.real, -c.imaginary}; }
+Complex complexConjugate(const Complex& c) {
+  return {.real = c.real, .imaginary = -c.imaginary};
+}
 
-bool areQubitsEntangled(std::vector<std::vector<Complex>>& densityMatrix,
+bool areQubitsEntangled(const std::vector<std::vector<Complex>>& densityMatrix,
                         size_t qubit1, size_t qubit2) {
   const auto numQubits = static_cast<size_t>(std::log2(densityMatrix.size()));
   if (numQubits == 2) {
@@ -204,7 +206,8 @@ bool areQubitsEntangled(std::vector<std::vector<Complex>>& densityMatrix,
 std::vector<std::vector<Complex>> toDensityMatrix(const Statevector& sv) {
   const Span<Complex> amplitudes(sv.amplitudes, sv.numStates);
   std::vector<std::vector<Complex>> densityMatrix(
-      sv.numStates, std::vector<Complex>(sv.numStates, {0, 0}));
+      sv.numStates,
+      std::vector<Complex>(sv.numStates, {.real = 0, .imaginary = 0}));
   for (size_t i = 0; i < sv.numStates; i++) {
     for (size_t j = 0; j < sv.numStates; j++) {
       densityMatrix[i][j] =
@@ -230,7 +233,7 @@ getPartialTraceFromStateVector(const Statevector& sv,
   const auto traceSize = 1ULL << (sv.numQubits - traceOut.size());
   const Span<Complex> amplitudes(sv.amplitudes, sv.numStates);
   std::vector<std::vector<Complex>> traceMatrix(
-      traceSize, std::vector<Complex>(traceSize, {0, 0}));
+      traceSize, std::vector<Complex>(traceSize, {.real = 0, .imaginary = 0}));
   for (size_t i = 0; i < sv.numStates; i++) {
     for (size_t j = 0; j < sv.numStates; j++) {
       const auto split1 = splitBitString(i, sv.numQubits, traceOut);
@@ -260,7 +263,7 @@ toEigenMatrix(const std::vector<std::vector<Complex>>& matrix) {
   return mat;
 }
 
-double complexMagnitude(Complex& c) {
+double complexMagnitude(const Complex& c) {
   return std::sqrt((c.real * c.real) + (c.imaginary * c.imaginary));
 }
 
@@ -302,8 +305,10 @@ getSubStateVectorAmplitudes(const Statevector& sv,
   std::vector<Complex> amplitudes(traced.size());
 
   for (size_t i = 0; i < traced.size(); i++) {
-    amplitudes[i] = {.real = vectors(static_cast<int>(i), index).real(),
-                     .imaginary = vectors(static_cast<int>(i), index).imag()};
+    amplitudes[i] = {
+        .real = vectors(static_cast<int>(i), index).real(),
+        .imaginary = vectors(static_cast<int>(i), index).imag(),
+    };
   }
   return amplitudes;
 }
@@ -327,12 +332,12 @@ double dotProduct(const Statevector& sv1, const Statevector& sv2) {
   const Span<Complex> amplitudes2(sv2.amplitudes, sv2.numStates);
 
   for (size_t i = 0; i < sv1.numStates; i++) {
-    resultReal += amplitudes1[i].real * amplitudes2[i].real +
-                  amplitudes1[i].imaginary * amplitudes2[i].imaginary;
-    resultImag += -1 * amplitudes1[i].real * amplitudes2[i].imaginary +
-                  amplitudes1[i].imaginary * amplitudes2[i].real;
+    resultReal += (amplitudes1[i].real * amplitudes2[i].real) +
+                  (amplitudes1[i].imaginary * amplitudes2[i].imaginary);
+    resultImag += (-1 * amplitudes1[i].real * amplitudes2[i].imaginary) +
+                  (amplitudes1[i].imaginary * amplitudes2[i].real);
   }
-  Complex result{resultReal, resultImag};
+  const Complex result{.real = resultReal, .imaginary = resultImag};
   return complexMagnitude(result);
 }
 

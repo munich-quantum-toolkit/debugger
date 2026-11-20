@@ -23,6 +23,7 @@
 #include <utility>
 
 namespace mqt::debugger::test {
+namespace {
 
 /**
  * @brief Fixture for testing the correctness of utility functions.
@@ -49,7 +50,8 @@ TEST_F(UtilityTest, GetInstructionPosition) {
 
   const std::map<size_t, std::pair<size_t, size_t>> expected = {
       {0, {0, 9}},     {1, {38, 112}},  {2, {79, 88}},
-      {3, {112, 112}}, {4, {150, 298}}, {12, {452, 477}}};
+      {3, {112, 112}}, {4, {150, 298}}, {12, {452, 477}},
+  };
   for (const auto& [instruction, expectedPosition] : expected) {
     size_t start = 0;
     size_t end = 0;
@@ -73,4 +75,5 @@ TEST_F(UtilityTest, BadInstructionPosition) {
   ASSERT_EQ(state->getInstructionPosition(state, 100, &start, &end), ERROR);
 }
 
+} // namespace
 } // namespace mqt::debugger::test

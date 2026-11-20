@@ -163,7 +163,7 @@ LineColumn lineColumnForTarget(const std::string& code, size_t instructionStart,
   const size_t lineStart = (lineStartPos == std::string::npos)
                                ? 0
                                : static_cast<size_t>(lineStartPos + 1);
-  auto lineEndPos = code.find('\n', instructionStart);
+  const auto lineEndPos = code.find('\n', instructionStart);
   const size_t lineEnd = (lineEndPos == std::string::npos)
                              ? code.size()
                              : static_cast<size_t>(lineEndPos);
@@ -202,7 +202,7 @@ std::string invalidTargetDetail(const std::string& target,
   std::string detail = "Invalid target qubit ";
   detail += target;
   detail += context;
-  detail += ".";
+  detail += '.';
   return detail;
 }
 
@@ -214,7 +214,7 @@ std::string invalidTargetDetail(const std::string& target,
 std::string invalidRegisterDetail(const std::string& trimmedLine) {
   std::string detail = "Invalid register declaration ";
   detail += trimmedLine;
-  detail += ".";
+  detail += '.';
   return detail;
 }
 
@@ -236,7 +236,7 @@ void validateTargets(const std::string& code, size_t instructionStart,
     if (target.empty()) {
       std::string detail = "Empty target";
       detail += context;
-      detail += ".";
+      detail += '.';
       throw makeParseError(code, instructionStart, detail);
     }
     const auto ref = parseRegisterRef(target);
@@ -273,7 +273,7 @@ std::string sweepBlocks(const std::string& code,
   int level = 0;
   size_t pos = 0;
   while (pos < result.size()) {
-    auto c = result[pos];
+    const auto c = result[pos];
     if (c == '{') {
       if (level == 0) {
         start = pos;
@@ -304,7 +304,7 @@ std::string sweepBlocks(const std::string& code,
 std::string removeComments(const std::string& code) {
   std::string result = code;
   for (size_t pos = 0; pos < result.size(); pos++) {
-    auto nextComment = result.find("//", pos);
+    const auto nextComment = result.find("//", pos);
     if (nextComment == std::string::npos) {
       break;
     }
@@ -324,11 +324,11 @@ std::string removeComments(const std::string& code) {
  * @return The parsed function definition.
  */
 FunctionDefinition parseFunctionDefinition(const std::string& signature) {
-  auto parts = splitString(
+  const auto parts = splitString(
       replaceString(replaceString(signature, "\n", " "), "\t", " "), ' ');
   std::string name;
   size_t index = 0;
-  for (auto& part : parts) {
+  for (const auto& part : parts) {
     index++;
     if (part != "gate" && !part.empty()) {
       name = part;
@@ -340,7 +340,7 @@ FunctionDefinition parseFunctionDefinition(const std::string& signature) {
   for (size_t i = index; i < parts.size(); i++) {
     parameterParts += parts[i];
   }
-  auto parameters = splitString(removeWhitespace(parameterParts), ',');
+  const auto parameters = splitString(removeWhitespace(parameterParts), ',');
 
   return {.name = name, .parameters = parameters};
 }
@@ -464,14 +464,16 @@ parseClassicConditionExpression(const std::string& condition) {
     qc::ComparisonKind kind;
   };
   using OperatorsT = std::array<OperatorMatch, 6>;
-  static constexpr OperatorsT OPERATORS{{
-      {.text = "<=", .kind = qc::Leq},
-      {.text = ">=", .kind = qc::Geq},
-      {.text = "==", .kind = qc::Eq},
-      {.text = "!=", .kind = qc::Neq},
-      {.text = "<", .kind = qc::Lt},
-      {.text = ">", .kind = qc::Gt},
-  }};
+  static constexpr OperatorsT OPERATORS{
+      {
+          {.text = "<=", .kind = qc::Leq},
+          {.text = ">=", .kind = qc::Geq},
+          {.text = "==", .kind = qc::Eq},
+          {.text = "!=", .kind = qc::Neq},
+          {.text = "<", .kind = qc::Lt},
+          {.text = ">", .kind = qc::Gt},
+      },
+  };
 
   auto normalized = removeWhitespace(condition);
   if (!normalized.empty() && normalized.front() == '(') {
@@ -508,10 +510,12 @@ parseClassicConditionExpression(const std::string& condition) {
   }
 
   if (const auto ref = parseRegisterRef(operand); ref.has_value()) {
-    return ClassicCondition{.registerName = ref->name,
-                            .bitIndex = ref->index,
-                            .expectedValue = expected,
-                            .kind = kind};
+    return ClassicCondition{
+        .registerName = ref->name,
+        .bitIndex = ref->index,
+        .expectedValue = expected,
+        .kind = kind,
+    };
   }
   return std::nullopt;
 }
@@ -625,10 +629,10 @@ preprocessCode(const std::string& code, size_t startIndex,
     }
 
     std::string line = blocksRemoved.substr(pos, end - pos + 1);
-    auto trimmedLine = trim(line);
+    const auto trimmedLine = trim(line);
     auto tokens = splitString(trimmedLine, ' ');
-    auto isAssert = isAssertion(line);
-    auto blockPos = line.find("$__block");
+    const auto isAssert = isAssertion(line);
+    const auto blockPos = line.find("$__block");
 
     const auto leadingPos = blocksRemoved.find_first_not_of(" \t\r\n", pos);
     const size_t trueStart =
@@ -703,7 +707,7 @@ preprocessCode(const std::string& code, size_t startIndex,
       instructions.emplace_back(i - subInstructions.size() - 1, line, a,
                                 targets, trueStart, trueEnd, i + 1, false, "",
                                 false, true, block);
-      for (auto& instr : subInstructions) {
+      for (const auto& instr : subInstructions) {
         instructions.back().childInstructions.push_back(instr.lineNumber);
       }
       instructions.insert(instructions.end(),
