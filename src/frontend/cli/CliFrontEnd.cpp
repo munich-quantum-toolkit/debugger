@@ -356,14 +356,16 @@ void CliFrontEnd::suggestUpdatedAssertions(SimulationState* state) {
 
 void CliFrontEnd::printHelpBar() {
   using Cell = std::pair<std::string_view, std::string_view>;
-  const std::vector<Cell> row1 = {{"F5", "Run"},       {"F6", "Step"},
-                                  {"F7", "Step over"}, {"F9", "Run back"},
-                                  {"F10", "Back"},     {"F11", "Back over"},
-                                  {"q", "Quit"}};
-  const std::vector<Cell> row2 = {{"a", "Assertions"}, {"b <line#>", "Break"},
-                                  {"d", "Diagnose"},   {"g <var>", "Get"},
-                                  {"i", "Inspect"},    {"r", "Reset"},
-                                  {"s", "State"}};
+  const std::vector<Cell> row1 = {
+      {"F5", "Run"},      {"F6", "Step"},  {"F7", "Step over"},
+      {"F9", "Run back"}, {"F10", "Back"}, {"F11", "Back over"},
+      {"q", "Quit"},
+  };
+  const std::vector<Cell> row2 = {
+      {"a", "Assertions"}, {"b <line#>", "Break"}, {"d", "Diagnose"},
+      {"g <var>", "Get"},  {"i", "Inspect"},       {"r", "Reset"},
+      {"s", "State"},
+  };
 
   const size_t n = row1.size();
   std::vector<size_t> keyWidths(n);
